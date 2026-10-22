@@ -2,11 +2,12 @@
 
 ## authority and workflow
 
-- the user is the product architect. trust their vision. do not silently decide product behavior, visual identity, release policy, or tradeoffs that the documents leave open.
+- the user is the product architect and has delegated engineering execution and agent coordination to the lead engineer. the lead engineer decides architecture, task order, interfaces, implementation, and verification. the architect approves changes to settled product behavior, final visual and sound identity, and release policy. do not silently make those product decisions.
 - before implementing a feature, read this file and the linked documents. ask the architect every relevant question needed to make the intended behavior clear. group questions, explain the consequence of each decision, and use Codex multiple choice questions when available. do useful investigation while waiting, but do not implement a dependent choice before the answer.
 - proactively flag gaps, conflicts, platform constraints, privacy concerns, and better options. make a specific recommendation with its tradeoff. record unresolved choices in [decisions.md](decisions.md) and ask; do not turn a recommendation into a requirement without the architect's answer.
 - preserve approved behavior and scope. changes to a settled product rule need the architect's decision. update the relevant documents in the same change as implementation.
 - this is a public macOS product. prioritize stability, predictable performance, privacy, accessibility, and a native feel.
+- follow [delivery-plan.md](delivery-plan.md) for iteration order, agent handoffs, repository setup, CI/CD, and release gates. keep one integration owner responsible for the complete result. the first planning stage is documentation only; implementation begins in the next stage.
 
 ## source of truth
 
@@ -16,6 +17,7 @@
 4. [architecture.md](architecture.md): proposed technical stack, boundaries, and experiments.
 5. [definition-of-done.md](definition-of-done.md): required evidence before any feature is complete.
 6. [decisions.md](decisions.md): confirmed choices, pending questions, and change log.
+7. [delivery-plan.md](delivery-plan.md): execution order and engineering governance.
 
 if documents conflict, stop dependent work and ask the architect. the most recent explicit answer from the architect overrides an older document; then update the documents.
 

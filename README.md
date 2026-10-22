@@ -13,4 +13,5 @@ the planned source license is AGPL-3.0-or-later. the full license text and bundl
 - [architecture and experiments](architecture.md)
 - [definition of done](definition-of-done.md)
 - [decisions and open questions](decisions.md)
+- [delivery plan](delivery-plan.md)
 # gifferent

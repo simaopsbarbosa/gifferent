@@ -1,5 +1,11 @@
 # decisions and questions
 
+## execution authority confirmed on 2026-10-22
+
+- the lead engineer owns engineering choices, task order, agent assignments, integration, repository setup, CI/CD, and quality gates. the architect retains approval of changes to settled experience, final visual and sound identity, and release policy.
+- deliver the complete documented first release through tested iterations described in [delivery-plan.md](delivery-plan.md). this stage is documentation and planning only; implementation starts in the next stage.
+- the release plan may depend on Apple Developer access and a real-Mac acceptance pass supplied at the release gate. neither is assumed available for initial development.
+
 ## confirmed by the architect on 2026-10-20
 
 - macOS 14+, direct notarized download, menu bar only, background hotkeys, native SwiftUI UI.
