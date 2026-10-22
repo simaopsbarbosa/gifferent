@@ -1,0 +1,59 @@
+name: ci
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    runs-on: macos-26
+    timeout-minutes: 20
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: verify toolchain
+        run: bash Scripts/check-toolchain.sh
+      - name: check documentation
+        run: python3 Scripts/check-docs.py
+      - name: check formatting
+        run: bash Scripts/format-check.sh
+      - name: lint
+        run: bash Scripts/lint.sh
+
+  tests:
+    runs-on: macos-26
+    timeout-minutes: 60
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_26.2.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: verify toolchain
+        run: bash Scripts/check-toolchain.sh
+      - name: build
+        run: bash Scripts/build.sh
+      - name: unit and integration tests
+        run: bash Scripts/test-unit.sh
+      - name: deterministic UI acceptance
+        run: bash Scripts/test-ui.sh
+      - name: upload failure evidence
+        if: failure()
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: gifferent-ci-failure-${{ github.run_id }}
+          path: .build/ci
+          include-hidden-files: true
+          if-no-files-found: warn
+          retention-days: 7
