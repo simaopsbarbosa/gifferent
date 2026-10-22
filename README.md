@@ -29,5 +29,5 @@ bash Scripts/test-unit.sh
 bash Scripts/test-ui.sh
 ```
 
-the build and test scripts write logs and `.xcresult` bundles under `.build/ci/`. UI tests need a macOS session that permits Xcode automation. passing the current smoke tests establishes the menu bar foundation only; capture, export, and release checks are later iterations in [delivery-plan.md](delivery-plan.md).
+the build and test scripts write logs and `.xcresult` bundles under `.build/ci/`. UI tests need a macOS session that permits Xcode automation. the deterministic UI test opens the production SwiftUI menu content in a debug-only test window; actual menu bar clicking remains a real-Mac acceptance check. passing the current smoke tests establishes the menu bar foundation only; capture, export, and release checks are later iterations in [delivery-plan.md](delivery-plan.md).
 # gifferent
