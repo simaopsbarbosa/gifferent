@@ -2,6 +2,18 @@
 
 use the same synthetic source fixtures and machine configuration when comparing a change against its baseline. keep generated frames and outputs under `Benchmarks/generated/` or `Benchmarks/outputs/`; both are ignored by Git. commit the fixture generator, exact commands, small reviewable results, and representative visual comparisons once they exist.
 
+## synthetic source fixture
+
+generate the default 10-second, 24 fps fixture with Python's standard library:
+
+```sh
+python3 Benchmarks/generate_fixture.py --output Benchmarks/generated/reference-640x360 --width 640 --height 360 --seed 7 --frames 240
+```
+
+the output directory must be new. the generator writes `frame_0000.png` through `frame_0239.png` and a `manifest.json`. frame `n` starts at `n / 24` seconds; each frame lasts `1 / 24` second. the manifest records the seed, dimensions, frame count, rate, and timing rule. the pixels are synthetic: bitmap text, flat UI shapes, a moving cursor-like mark, and moving color gradients. its colors and layout are benchmark inputs, not approved product artwork. no screen content is read.
+
+for a quick smoke run, use `--frames 6 --width 320 --height 180` with a different new output directory. keep the same seed, dimensions, and frame count for every candidate in one comparison.
+
 for each run, record:
 
 - commit, date, macOS and Xcode versions, Mac model, chip, memory, power mode, and thermal conditions;
