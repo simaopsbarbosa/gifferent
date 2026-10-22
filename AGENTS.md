@@ -7,7 +7,7 @@
 - proactively flag gaps, conflicts, platform constraints, privacy concerns, and better options. make a specific recommendation with its tradeoff. record unresolved choices in [decisions.md](decisions.md) and ask; do not turn a recommendation into a requirement without the architect's answer.
 - preserve approved behavior and scope. changes to a settled product rule need the architect's decision. update the relevant documents in the same change as implementation.
 - this is a public macOS product. prioritize stability, predictable performance, privacy, accessibility, and a native feel.
-- follow [delivery-plan.md](delivery-plan.md) for iteration order, agent handoffs, repository setup, CI/CD, and release gates. keep one integration owner responsible for the complete result. the first planning stage is documentation only; implementation begins in the next stage.
+- follow [delivery-plan.md](delivery-plan.md) for iteration order, agent handoffs, repository setup, CI/CD, and release gates. keep one integration owner responsible for the complete result. the planning stage is complete; work through the implementation gates in order.
 
 ## source of truth
 

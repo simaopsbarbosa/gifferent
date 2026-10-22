@@ -6,6 +6,12 @@
 - deliver the complete documented first release through tested iterations described in [delivery-plan.md](delivery-plan.md). this stage is documentation and planning only; implementation starts in the next stage.
 - the release plan may depend on Apple Developer access and a real-Mac acceptance pass supplied at the release gate. neither is assumed available for initial development.
 
+## recording and cleanup confirmed on 2026-10-22
+
+- if a selected window is minimized or closed during recording, stop capture with a clear message and keep any usable frames as a partial result for preview or discard. if no usable frame exists, show an actionable error and clean up the session.
+- when a selected window moves to another display, continue following that window. the one-monitor limit still applies to region and display capture.
+- keep completed preview media only while its preview is active. remove temporary media after the preview closes following export or after confirmed discard. clear orphaned preview media on the next launch after a crash; an exported file remains intact.
+
 ## confirmed by the architect on 2026-10-20
 
 - macOS 14+, direct notarized download, menu bar only, background hotkeys, native SwiftUI UI.
@@ -26,8 +32,7 @@
 3. **benchmark device:** choose the exact baseline Apple Silicon laptop model, OS version, power mode, source fixtures, and percentile for the under-one-second capture and under-two-second preview goals.
 4. **minimum visual quality:** define how much text blur, temporal noise, and dither pattern are acceptable for automatic size-goal search. collect architect-reviewed comparison samples.
 5. **clipboard contract:** test actual animated GIF paste into GitHub and other destinations. choose pasteboard representations from observed compatibility; do not claim success based only on reading pasteboard bytes back.
-6. **recording frame:** settle its shape, placement, and how it behaves when a tracked window is minimized or moves to another monitor.
-7. **temporary data:** choose when to remove finished but unsaved previews and confirm cleanup of unfinished recordings on next launch after a crash.
+6. **recording frame:** settle its shape and placement. window disappearance and cross-display behavior are now recorded above.
 
 ## research notes, not product decisions
 

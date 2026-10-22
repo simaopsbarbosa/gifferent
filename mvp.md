@@ -6,10 +6,12 @@
 - background activation with configurable `⌃⌥G` capture and `⌃⌥R` start/stop hotkeys. settings warn about conflicts. selection opens when record is pressed before choosing a target.
 - full-screen selection overlay with display, selected-window, and free-region modes. capture one monitor at a time. regions can be moved and resized before recording. a corner magnifier appears while dragging. the last selection is restored when valid; reselect is immediate.
 - record at an initial 24 fps target. capture the cursor by default, with a setting to disable it. show a subtle recording frame outside the resulting GIF. keep normal Mac interaction available while recording. follow a selected window as it moves or resizes.
+- if a selected window moves to another display, keep following it. if it is minimized or closed, stop recording with a clear message and keep usable captured frames as a partial result. if there are no usable frames, show an error and clean up.
 - stop with the same hotkey. show a floating, animated preview with file size, duration, dimensions, and clear processing status. offer copy, save, discard, and compress. `⌘C` copies and confirms success; `⌘S` opens the save dialog. closing an unexported preview asks before discarding.
 - trim the beginning and end before export. choose playback speed, which changes exported duration. choose loop forever or once. preview and export must agree.
 - compression uses bundled local command-line tooling. preserve the original; show compressed output with a back action. offer dithering-strength slider, original/75%/50%/25% resolution choices, and goal buttons for Discord and GitHub. each button shows the destination logo and current published maximum. aim below the limit with a safety margin. automatically search resolution, frame rate, palette, and dithering settings for the smallest file under the target. report the best attempt and a warning if the goal cannot be met acceptably.
 - guided screen-recording permission setup; clear failures for missing permissions, hotkey conflict, unavailable display/window, full disk, encoder failure, and failed clipboard or save operations.
+- retain temporary completed media while its preview is active. remove it when the preview closes after export or after confirmed discard; remove orphaned preview media on the next launch after a crash without touching exported files.
 - subtle optional interaction sounds, brief motion feedback, reduced-motion support, keyboard navigation, and accessible labels.
 
 ## acceptance journeys
