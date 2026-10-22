@@ -1,0 +1,574 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		0E4EEAC639BB613FE8693F5B /* gifferentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */; };
+		18A3DD66F086C88BED0CC4CC /* MenuBarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8280944F649D87921ECE18EA /* MenuBarSmokeTests.swift */; };
+		791857B04814FECFF2C7738E /* FoundationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65197CF250A3B835861EEADE /* FoundationTests.swift */; };
+		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
+		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
+		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		08502EBD0B9D36A7A364F87E /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D5A70B2A1EB249A383D6FE69 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 07200D745A2F700D1B775866;
+			remoteInfo = gifferent;
+		};
+		79136152769CC352C29C1558 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = D5A70B2A1EB249A383D6FE69 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 07200D745A2F700D1B775866;
+			remoteInfo = gifferent;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		376FC03193E927FB3537C6BF /* gifferentUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = gifferentUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		65197CF250A3B835861EEADE /* FoundationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FoundationTests.swift; sourceTree = "<group>"; };
+		6DA34E31B61360BD7E90802F /* gifferentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = gifferentTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		8280944F649D87921ECE18EA /* MenuBarSmokeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuBarSmokeTests.swift; sourceTree = "<group>"; };
+		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
+		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
+		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		09EFF76528DC8AD0933DBABB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		2C4B53AFDB8AFAB7CB96789E /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		57FA281335BF239B6A4A1F9C /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		12BFA10479042CB0CDC0249A /* OS X */ = {
+			isa = PBXGroup;
+			children = (
+				C9098AF55DC2ED2342D2F705 /* Cocoa.framework */,
+			);
+			name = "OS X";
+			sourceTree = "<group>";
+		};
+		22B3A887A5B11C2C39B78B53 /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+				2D703F7BE264A0A08A3C6F63 /* gifferentTests */,
+				93672067CA564BC944DECEEA /* gifferentUITests */,
+			);
+			name = Tests;
+			path = Tests;
+			sourceTree = "<group>";
+		};
+		2BC845C9A5ED004036D69199 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DCB8D59C663FC63226BFA0F7 /* gifferent.app */,
+				6DA34E31B61360BD7E90802F /* gifferentTests.xctest */,
+				376FC03193E927FB3537C6BF /* gifferentUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		2D703F7BE264A0A08A3C6F63 /* gifferentTests */ = {
+			isa = PBXGroup;
+			children = (
+				65197CF250A3B835861EEADE /* FoundationTests.swift */,
+			);
+			name = gifferentTests;
+			path = gifferentTests;
+			sourceTree = "<group>";
+		};
+		69737C93F8460AA5ED0C4529 = {
+			isa = PBXGroup;
+			children = (
+				2BC845C9A5ED004036D69199 /* Products */,
+				7124CE2B8C64C1E739E4E078 /* Frameworks */,
+				B85EEE5F45021D0C24CDB424 /* Sources */,
+				22B3A887A5B11C2C39B78B53 /* Tests */,
+			);
+			sourceTree = "<group>";
+		};
+		7124CE2B8C64C1E739E4E078 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				12BFA10479042CB0CDC0249A /* OS X */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		88ACE777636DC5510DBDB558 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */,
+			);
+			name = App;
+			path = App;
+			sourceTree = "<group>";
+		};
+		93672067CA564BC944DECEEA /* gifferentUITests */ = {
+			isa = PBXGroup;
+			children = (
+				8280944F649D87921ECE18EA /* MenuBarSmokeTests.swift */,
+			);
+			name = gifferentUITests;
+			path = gifferentUITests;
+			sourceTree = "<group>";
+		};
+		B85EEE5F45021D0C24CDB424 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				88ACE777636DC5510DBDB558 /* App */,
+			);
+			name = Sources;
+			path = Sources;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		07200D745A2F700D1B775866 /* gifferent */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = DC9E9815992D65AE67C735A8 /* Build configuration list for PBXNativeTarget "gifferent" */;
+			buildPhases = (
+				B0B7F1FF7E36BE6E0D88BC86 /* Sources */,
+				2C4B53AFDB8AFAB7CB96789E /* Frameworks */,
+				A2144E85F6F97DAA567E5DA2 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = gifferent;
+			productName = gifferent;
+			productReference = DCB8D59C663FC63226BFA0F7 /* gifferent.app */;
+			productType = "com.apple.product-type.application";
+		};
+		30E982B9101EB19EF125774E /* gifferentTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 6F7C033A161C82B3B8202073 /* Build configuration list for PBXNativeTarget "gifferentTests" */;
+			buildPhases = (
+				67FF97C03F25F253FF44BE97 /* Sources */,
+				57FA281335BF239B6A4A1F9C /* Frameworks */,
+				826C60DA379813CA0A00D579 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				E98D99D2EA972000617CDF9D /* PBXTargetDependency */,
+			);
+			name = gifferentTests;
+			productName = gifferentTests;
+			productReference = 6DA34E31B61360BD7E90802F /* gifferentTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		344607D2203B6880B686027D /* gifferentUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7305FE4728EEE714F751325C /* Build configuration list for PBXNativeTarget "gifferentUITests" */;
+			buildPhases = (
+				20C9E98A565EB69CA476D8F1 /* Sources */,
+				09EFF76528DC8AD0933DBABB /* Frameworks */,
+				6885ACE90DA8B8016432DBE8 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F64B3E1D85A0D0489B2931A0 /* PBXTargetDependency */,
+			);
+			name = gifferentUITests;
+			productName = gifferentUITests;
+			productReference = 376FC03193E927FB3537C6BF /* gifferentUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		D5A70B2A1EB249A383D6FE69 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 2620;
+				TargetAttributes = {
+					30E982B9101EB19EF125774E = {
+						TestTargetID = 07200D745A2F700D1B775866;
+					};
+					344607D2203B6880B686027D = {
+						TestTargetID = 07200D745A2F700D1B775866;
+					};
+				};
+			};
+			buildConfigurationList = E07A81B7825E54B12F8504BB /* Build configuration list for PBXProject "gifferent" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 69737C93F8460AA5ED0C4529;
+			minimizedProjectReferenceProxies = 0;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 2BC845C9A5ED004036D69199 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				07200D745A2F700D1B775866 /* gifferent */,
+				30E982B9101EB19EF125774E /* gifferentTests */,
+				344607D2203B6880B686027D /* gifferentUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		6885ACE90DA8B8016432DBE8 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		826C60DA379813CA0A00D579 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A2144E85F6F97DAA567E5DA2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		20C9E98A565EB69CA476D8F1 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				18A3DD66F086C88BED0CC4CC /* MenuBarSmokeTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		67FF97C03F25F253FF44BE97 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				791857B04814FECFF2C7738E /* FoundationTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		B0B7F1FF7E36BE6E0D88BC86 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				0E4EEAC639BB613FE8693F5B /* gifferentApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		E98D99D2EA972000617CDF9D /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = gifferent;
+			target = 07200D745A2F700D1B775866 /* gifferent */;
+			targetProxy = 79136152769CC352C29C1558 /* PBXContainerItemProxy */;
+		};
+		F64B3E1D85A0D0489B2931A0 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			name = gifferent;
+			target = 07200D745A2F700D1B775866 /* gifferent */;
+			targetProxy = 08502EBD0B9D36A7A364F87E /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		252E90CE135A5900649855A8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gifferent.app.tests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/gifferent.app/Contents/MacOS/gifferent";
+			};
+			name = Release;
+		};
+		43F381F136E49FD028C3FBF7 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gifferent.app.uitests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = gifferent;
+			};
+			name = Debug;
+		};
+		6709AB17C1B19BB11F28B5B4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gifferent.app.tests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/gifferent.app/Contents/MacOS/gifferent";
+			};
+			name = Debug;
+		};
+		6A9CB3BAA83B84EE988A7CE7 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				GENERATE_INFOPLIST_FILE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gifferent.app.uitests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 6.0;
+				TEST_TARGET_NAME = gifferent;
+			};
+			name = Release;
+		};
+		87F4665A7449051D7BB03023 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		9F99949E022D961D9C0EA28B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = gifferent;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gifferent.app;
+				PRODUCT_NAME = gifferent;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		CE6FE253D078B2611527316B /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+		D1C276362FF7E05C29400A41 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_APP_SANDBOX = NO;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_CFBundleDisplayName = gifferent;
+				INFOPLIST_KEY_LSUIElement = YES;
+				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/../Frameworks";
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.gifferent.app;
+				PRODUCT_NAME = gifferent;
+				SDKROOT = macosx;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		6F7C033A161C82B3B8202073 /* Build configuration list for PBXNativeTarget "gifferentTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				252E90CE135A5900649855A8 /* Release */,
+				6709AB17C1B19BB11F28B5B4 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7305FE4728EEE714F751325C /* Build configuration list for PBXNativeTarget "gifferentUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6A9CB3BAA83B84EE988A7CE7 /* Release */,
+				43F381F136E49FD028C3FBF7 /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		DC9E9815992D65AE67C735A8 /* Build configuration list for PBXNativeTarget "gifferent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D1C276362FF7E05C29400A41 /* Release */,
+				9F99949E022D961D9C0EA28B /* Debug */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		E07A81B7825E54B12F8504BB /* Build configuration list for PBXProject "gifferent" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				CE6FE253D078B2611527316B /* Debug */,
+				87F4665A7449051D7BB03023 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = D5A70B2A1EB249A383D6FE69 /* Project object */;
+}
