@@ -25,6 +25,13 @@
 		A0000000000000000000000D /* CaptureSelectionOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* CaptureSelectionOverlayView.swift */; };
 		A0000000000000000000000E /* CaptureSelectionOverlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */; };
 		A0000000000000000000000F /* GifferentRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* GifferentRuntime.swift */; };
+		A00000000000000000000040 /* ScreenCaptureRecordingStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000050 /* ScreenCaptureRecordingStream.swift */; };
+		A00000000000000000000041 /* RecordingFrameTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000051 /* RecordingFrameTransport.swift */; };
+		A00000000000000000000042 /* RecordingTargetMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000052 /* RecordingTargetMonitor.swift */; };
+		A00000000000000000000043 /* SessionWorkspaceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000053 /* SessionWorkspaceStore.swift */; };
+		A00000000000000000000044 /* RecordingFrameTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000054 /* RecordingFrameTransportTests.swift */; };
+		A00000000000000000000045 /* RecordingTargetMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000055 /* RecordingTargetMonitorTests.swift */; };
+		A00000000000000000000046 /* SessionWorkspaceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000056 /* SessionWorkspaceStoreTests.swift */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -67,6 +74,13 @@
 		A0000000000000000000001D /* CaptureSelectionOverlayView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSelectionOverlayView.swift; sourceTree = "<group>"; };
 		A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSelectionOverlayTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000001F /* GifferentRuntime.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GifferentRuntime.swift; sourceTree = "<group>"; };
+		A00000000000000000000050 /* ScreenCaptureRecordingStream.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenCaptureRecordingStream.swift; sourceTree = "<group>"; };
+		A00000000000000000000051 /* RecordingFrameTransport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingFrameTransport.swift; sourceTree = "<group>"; };
+		A00000000000000000000052 /* RecordingTargetMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingTargetMonitor.swift; sourceTree = "<group>"; };
+		A00000000000000000000053 /* SessionWorkspaceStore.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceStore.swift; sourceTree = "<group>"; };
+		A00000000000000000000054 /* RecordingFrameTransportTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingFrameTransportTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000055 /* RecordingTargetMonitorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingTargetMonitorTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000056 /* SessionWorkspaceStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceStoreTests.swift; sourceTree = "<group>"; };
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -138,6 +152,9 @@
 				A0000000000000000000001A /* HotkeySettingsTests.swift */,
 				A0000000000000000000001B /* ScreenRecordingPermissionGuideTests.swift */,
 				A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */,
+				A00000000000000000000054 /* RecordingFrameTransportTests.swift */,
+				A00000000000000000000055 /* RecordingTargetMonitorTests.swift */,
+				A00000000000000000000056 /* SessionWorkspaceStoreTests.swift */,
 			);
 			name = gifferentTests;
 			path = gifferentTests;
@@ -211,6 +228,18 @@
 			path = Permissions;
 			sourceTree = "<group>";
 		};
+		A00000000000000000000025 /* Recording */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000050 /* ScreenCaptureRecordingStream.swift */,
+				A00000000000000000000051 /* RecordingFrameTransport.swift */,
+				A00000000000000000000052 /* RecordingTargetMonitor.swift */,
+				A00000000000000000000053 /* SessionWorkspaceStore.swift */,
+			);
+			name = Recording;
+			path = Recording;
+			sourceTree = "<group>";
+		};
 		93672067CA564BC944DECEEA /* gifferentUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -228,6 +257,7 @@
 				A00000000000000000000022 /* Hotkeys */,
 				A00000000000000000000023 /* Selection */,
 				A00000000000000000000024 /* Permissions */,
+				A00000000000000000000025 /* Recording */,
 			);
 			name = Sources;
 			path = Sources;
@@ -372,6 +402,9 @@
 				A0000000000000000000000A /* HotkeySettingsTests.swift in Sources */,
 				A0000000000000000000000B /* ScreenRecordingPermissionGuideTests.swift in Sources */,
 				A0000000000000000000000E /* CaptureSelectionOverlayTests.swift in Sources */,
+				A00000000000000000000044 /* RecordingFrameTransportTests.swift in Sources */,
+				A00000000000000000000045 /* RecordingTargetMonitorTests.swift in Sources */,
+				A00000000000000000000046 /* SessionWorkspaceStoreTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -389,6 +422,10 @@
 				A0000000000000000000000C /* CaptureSelectionCoordinator.swift in Sources */,
 				A0000000000000000000000D /* CaptureSelectionOverlayView.swift in Sources */,
 				A0000000000000000000000F /* GifferentRuntime.swift in Sources */,
+				A00000000000000000000040 /* ScreenCaptureRecordingStream.swift in Sources */,
+				A00000000000000000000041 /* RecordingFrameTransport.swift in Sources */,
+				A00000000000000000000042 /* RecordingTargetMonitor.swift in Sources */,
+				A00000000000000000000043 /* SessionWorkspaceStore.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

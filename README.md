@@ -2,7 +2,7 @@
 
 a fast, native GIF maker for macOS. summon capture, record while using your Mac, then copy, save, or compress locally.
 
-the app and its test suite are being built in tested iterations. the selection branch has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. recording and GIF export are not implemented yet.
+the app and its test suite are being built in tested iterations. capture selection has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. recording components are being integrated, but recording and GIF export are not available yet.
 
 the source license is [AGPL-3.0-or-later](LICENSE). [third-party notices](THIRD-PARTY-NOTICES.md) track bundled dependencies and tools.
 
