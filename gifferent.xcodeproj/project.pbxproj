@@ -34,6 +34,8 @@
 		A00000000000000000000046 /* SessionWorkspaceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000056 /* SessionWorkspaceStoreTests.swift */; };
 		A00000000000000000000047 /* PNGFrameEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000057 /* PNGFrameEncoder.swift */; };
 		A00000000000000000000048 /* PNGFrameEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000058 /* PNGFrameEncoderTests.swift */; };
+		A00000000000000000000049 /* RecordingCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000059 /* RecordingCoordinator.swift */; };
+		A0000000000000000000004A /* RecordingCoordinatorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000005A /* RecordingCoordinatorTests.swift */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -85,6 +87,8 @@
 		A00000000000000000000056 /* SessionWorkspaceStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceStoreTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000057 /* PNGFrameEncoder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PNGFrameEncoder.swift; sourceTree = "<group>"; };
 		A00000000000000000000058 /* PNGFrameEncoderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PNGFrameEncoderTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000059 /* RecordingCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingCoordinator.swift; sourceTree = "<group>"; };
+		A0000000000000000000005A /* RecordingCoordinatorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingCoordinatorTests.swift; sourceTree = "<group>"; };
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -160,6 +164,7 @@
 				A00000000000000000000055 /* RecordingTargetMonitorTests.swift */,
 				A00000000000000000000056 /* SessionWorkspaceStoreTests.swift */,
 				A00000000000000000000058 /* PNGFrameEncoderTests.swift */,
+				A0000000000000000000005A /* RecordingCoordinatorTests.swift */,
 			);
 			name = gifferentTests;
 			path = gifferentTests;
@@ -240,6 +245,7 @@
 				A00000000000000000000051 /* RecordingFrameTransport.swift */,
 				A00000000000000000000052 /* RecordingTargetMonitor.swift */,
 				A00000000000000000000053 /* SessionWorkspaceStore.swift */,
+				A00000000000000000000059 /* RecordingCoordinator.swift */,
 			);
 			name = Recording;
 			path = Recording;
@@ -421,6 +427,7 @@
 				A00000000000000000000045 /* RecordingTargetMonitorTests.swift in Sources */,
 				A00000000000000000000046 /* SessionWorkspaceStoreTests.swift in Sources */,
 				A00000000000000000000048 /* PNGFrameEncoderTests.swift in Sources */,
+				A0000000000000000000004A /* RecordingCoordinatorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -443,6 +450,7 @@
 				A00000000000000000000042 /* RecordingTargetMonitor.swift in Sources */,
 				A00000000000000000000043 /* SessionWorkspaceStore.swift in Sources */,
 				A00000000000000000000047 /* PNGFrameEncoder.swift in Sources */,
+				A00000000000000000000049 /* RecordingCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

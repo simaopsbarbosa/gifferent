@@ -10,17 +10,20 @@ enum RecordingStreamError: Error, Equatable {
   case invalidDimensions
 }
 
-/// this prototype owns only capture and frame delivery; encoding consumes `transport.frames`.
+/// this adapter owns capture and frame delivery; a consumer must be installed before `start()`.
 @MainActor
-final class ScreenCaptureRecordingStream {
+final class ScreenCaptureRecordingStream: RecordingCaptureSession {
   let transport: RecordingFrameTransport
+  var frames: AsyncStream<RecordingFrame> { transport.frames }
 
   private let stream: SCStream
   private let output: ScreenFrameOutput
   private let target: RecordingTarget
   private let sourceService: CaptureSourceService
-  private let onStop: @MainActor (CaptureTerminationReason) async -> Void
+  private let onTermination: @MainActor (CaptureTerminationReason) -> Void
   private var monitorTask: Task<Void, Never>?
+  private var startTask: Task<Void, Error>?
+  private var stopTask: Task<Void, Never>?
   private var stopped = false
 
   private init(
@@ -29,21 +32,23 @@ final class ScreenCaptureRecordingStream {
     target: RecordingTarget,
     sourceService: CaptureSourceService,
     transport: RecordingFrameTransport,
-    onStop: @escaping @MainActor (CaptureTerminationReason) async -> Void
+    onTermination: @escaping @MainActor (CaptureTerminationReason) -> Void
   ) {
     self.stream = stream
     self.output = output
     self.target = target
     self.sourceService = sourceService
     self.transport = transport
-    self.onStop = onStop
+    self.onTermination = onTermination
   }
 
-  static func start(
+  /// prepares filters and outputs without starting capture, so the owner can begin
+  /// consuming `transport.frames` before the first sample is delivered.
+  static func prepare(
     target: RecordingTarget,
     showsCursor: Bool,
     sourceService: CaptureSourceService = CaptureSourceService(),
-    onStop: @escaping @MainActor (CaptureTerminationReason) async -> Void
+    onTermination: @escaping @MainActor (CaptureTerminationReason) -> Void
   ) async throws -> ScreenCaptureRecordingStream {
     guard sourceService.authorizationStatus() == .granted else {
       throw CaptureSourceError.permissionRequired
@@ -66,35 +71,65 @@ final class ScreenCaptureRecordingStream {
       target: target,
       sourceService: sourceService,
       transport: transport,
-      onStop: onStop
+      onTermination: onTermination
     )
     output.onStreamFailure = { [weak session] in
       Task { @MainActor in
-        await session?.stop(reason: .streamFailed)
+        await session?.terminate(reason: .streamFailed)
       }
     }
-    do {
-      try await stream.startCapture()
-    } catch {
-      transport.finish()
-      throw error
-    }
-    session.startMonitoring()
     return session
   }
 
+  func start() async throws {
+    guard !stopped, startTask == nil else { return }
+    let task = Task { @MainActor [stream] in try await stream.startCapture() }
+    startTask = task
+    do {
+      try await task.value
+      startTask = nil
+      guard !stopped else { return }
+      startMonitoring()
+    } catch {
+      startTask = nil
+      transport.finish()
+      stopped = true
+      throw error
+    }
+  }
+
   func stop(reason: CaptureTerminationReason = .userStopped) async {
+    await shutDown(reason: reason, notifyOwner: false)
+  }
+
+  private func terminate(reason: CaptureTerminationReason) async {
+    await shutDown(reason: reason, notifyOwner: true)
+  }
+
+  private func shutDown(reason: CaptureTerminationReason, notifyOwner: Bool) async {
+    if let stopTask {
+      await stopTask.value
+      return
+    }
     guard !stopped else { return }
     stopped = true
     monitorTask?.cancel()
     monitorTask = nil
-    do {
-      try await stream.stopCapture()
-    } catch {
-      // a failed stop still closes the local frame handoff.
+    let pendingStart = startTask
+    let task = Task { @MainActor [stream, transport, onTermination] in
+      if let pendingStart {
+        _ = try? await pendingStart.value
+      }
+      do {
+        try await stream.stopCapture()
+      } catch {
+        // a failed stop still closes the local frame handoff.
+      }
+      transport.finish()
+      if notifyOwner { onTermination(reason) }
     }
-    transport.finish()
-    await onStop(reason)
+    stopTask = task
+    await task.value
   }
 
   private func startMonitoring() {
@@ -111,16 +146,16 @@ final class ScreenCaptureRecordingStream {
             visibleWindowIDs: Set(inventory.windows.map(\.id))
           )
           if let reason = RecordingTargetMonitor.lossReason(for: self.target, in: snapshot) {
-            await self.stop(reason: reason)
+            await self.terminate(reason: reason)
             return
           }
         } catch CaptureSourceError.permissionRequired {
-          await self.stop(reason: .permissionLost)
+          await self.terminate(reason: .permissionLost)
           return
         } catch {
           consecutiveListingFailures += 1
           if consecutiveListingFailures >= 3 {
-            await self.stop(reason: .streamFailed)
+            await self.terminate(reason: .streamFailed)
             return
           }
         }
