@@ -13,6 +13,7 @@ final class GifferentRuntime: ObservableObject {
 
   private let sourceService: CaptureSourceService
   private let selectionCoordinator: CaptureSelectionCoordinator
+  private let recordingFrameOverlay = RecordingFrameOverlayController()
   let recordingCoordinator: RecordingCoordinator
   private var permissionWindow: NSWindow?
   private var settingsWindow: NSWindow?
@@ -219,6 +220,22 @@ final class GifferentRuntime: ObservableObject {
     }
   }
 
+  #if DEBUG
+    func showRecordingFrameFixture() {
+      recordingFrameOverlay.showFixture(
+        frame: CGRect(x: 110, y: 110, width: 220, height: 130))
+    }
+
+    func moveRecordingFrameFixture() {
+      recordingFrameOverlay.moveFixture(
+        to: CGRect(x: 180, y: 160, width: 260, height: 150))
+    }
+
+    func hideRecordingFrameFixture() {
+      recordingFrameOverlay.hide()
+    }
+  #endif
+
   private func startAfterSelectionIfNeeded(_ selection: CaptureSelection) {
     guard recordAfterSelection else { return }
     recordAfterSelection = false
@@ -244,14 +261,17 @@ final class GifferentRuntime: ObservableObject {
   private func updateStatus(for state: RecordingCoordinatorState) {
     switch state {
     case .idle:
+      recordingFrameOverlay.hide()
       status = lastSelection == nil ? "idle" : "selection ready"
     case .starting:
       status = "starting recording"
     case .recording:
       status = "recording"
+      showRecordingFrame(for: lastSelection)
     case .stopping:
       status = "stopping recording"
     case .captured(_, let snapshot):
+      recordingFrameOverlay.hide()
       switch snapshot.stopReason {
       case .windowUnavailable:
         status = "window ended; partial frames ready to discard"
@@ -261,6 +281,7 @@ final class GifferentRuntime: ObservableObject {
         status = "frames captured; GIF preview is not available yet"
       }
     case .failed(let failure):
+      recordingFrameOverlay.hide()
       switch failure {
       case .permissionRequired:
         status = "screen recording access needed"
@@ -279,6 +300,18 @@ final class GifferentRuntime: ObservableObject {
       case .cancelled:
         status = "recording cancelled"
       }
+    }
+  }
+
+  private func showRecordingFrame(for selection: CaptureSelection?) {
+    guard let selection else { return }
+    switch selection {
+    case .display:
+      recordingFrameOverlay.hide()
+    case .region(let geometry):
+      recordingFrameOverlay.show(region: geometry)
+    case .window(let id):
+      recordingFrameOverlay.show(windowID: id)
     }
   }
 

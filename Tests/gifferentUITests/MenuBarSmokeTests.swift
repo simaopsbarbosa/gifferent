@@ -77,6 +77,33 @@ final class MenuBarSmokeTests: XCTestCase {
     waitForStatus("selection ready", in: testWindow)
   }
 
+  func testRecordingFrameFixtureShowsMovesAndHidesAccessibly() {
+    let app = XCUIApplication()
+    app.launchArguments.append("--ui-testing")
+    app.launch()
+
+    let testWindow = app.windows["gifferent test menu"]
+    XCTAssertTrue(testWindow.waitForExistence(timeout: 10))
+    testWindow.buttons["show-recording-frame-button"].click()
+
+    let frameWindow = app.windows["recording frame"]
+    XCTAssertTrue(frameWindow.waitForExistence(timeout: 5))
+    let label = frameWindow.staticTexts["recording-frame-label"]
+    XCTAssertTrue(label.waitForExistence(timeout: 5))
+    XCTAssertEqual(label.label, "recording")
+    let originalFrame = label.frame
+
+    testWindow.buttons["move-recording-frame-button"].click()
+    let deadline = Date().addingTimeInterval(5)
+    while label.frame.minX <= originalFrame.minX && Date() < deadline {
+      Thread.sleep(forTimeInterval: 0.05)
+    }
+    XCTAssertGreaterThan(label.frame.minX, originalFrame.minX)
+
+    testWindow.buttons["hide-recording-frame-button"].click()
+    XCTAssertFalse(frameWindow.waitForExistence(timeout: 1))
+  }
+
   private func waitForStatus(
     _ expected: String,
     in testWindow: XCUIElement,
