@@ -10,6 +10,13 @@
 		0E4EEAC639BB613FE8693F5B /* gifferentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */; };
 		18A3DD66F086C88BED0CC4CC /* MenuBarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8280944F649D87921ECE18EA /* MenuBarSmokeTests.swift */; };
 		791857B04814FECFF2C7738E /* FoundationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65197CF250A3B835861EEADE /* FoundationTests.swift */; };
+		A00000000000000000000001 /* CaptureSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* CaptureSources.swift */; };
+		A00000000000000000000002 /* CarbonHotkeyBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* CarbonHotkeyBackend.swift */; };
+		A00000000000000000000003 /* GlobalHotkeyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* GlobalHotkeyController.swift */; };
+		A00000000000000000000004 /* SelectionGeometry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000014 /* SelectionGeometry.swift */; };
+		A00000000000000000000005 /* CaptureSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000015 /* CaptureSourceTests.swift */; };
+		A00000000000000000000006 /* GlobalHotkeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* GlobalHotkeyTests.swift */; };
+		A00000000000000000000007 /* SelectionGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* SelectionGeometryTests.swift */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -37,6 +44,13 @@
 		65197CF250A3B835861EEADE /* FoundationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FoundationTests.swift; sourceTree = "<group>"; };
 		6DA34E31B61360BD7E90802F /* gifferentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = gifferentTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8280944F649D87921ECE18EA /* MenuBarSmokeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuBarSmokeTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000011 /* CaptureSources.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSources.swift; sourceTree = "<group>"; };
+		A00000000000000000000012 /* CarbonHotkeyBackend.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CarbonHotkeyBackend.swift; sourceTree = "<group>"; };
+		A00000000000000000000013 /* GlobalHotkeyController.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GlobalHotkeyController.swift; sourceTree = "<group>"; };
+		A00000000000000000000014 /* SelectionGeometry.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SelectionGeometry.swift; sourceTree = "<group>"; };
+		A00000000000000000000015 /* CaptureSourceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSourceTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000016 /* GlobalHotkeyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GlobalHotkeyTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000017 /* SelectionGeometryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SelectionGeometryTests.swift; sourceTree = "<group>"; };
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -102,6 +116,9 @@
 			isa = PBXGroup;
 			children = (
 				65197CF250A3B835861EEADE /* FoundationTests.swift */,
+				A00000000000000000000015 /* CaptureSourceTests.swift */,
+				A00000000000000000000016 /* GlobalHotkeyTests.swift */,
+				A00000000000000000000017 /* SelectionGeometryTests.swift */,
 			);
 			name = gifferentTests;
 			path = gifferentTests;
@@ -134,6 +151,34 @@
 			path = App;
 			sourceTree = "<group>";
 		};
+		A00000000000000000000021 /* Capture */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000011 /* CaptureSources.swift */,
+			);
+			name = Capture;
+			path = Capture;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000022 /* Hotkeys */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000012 /* CarbonHotkeyBackend.swift */,
+				A00000000000000000000013 /* GlobalHotkeyController.swift */,
+			);
+			name = Hotkeys;
+			path = Hotkeys;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000023 /* Selection */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000014 /* SelectionGeometry.swift */,
+			);
+			name = Selection;
+			path = Selection;
+			sourceTree = "<group>";
+		};
 		93672067CA564BC944DECEEA /* gifferentUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -147,6 +192,9 @@
 			isa = PBXGroup;
 			children = (
 				88ACE777636DC5510DBDB558 /* App */,
+				A00000000000000000000021 /* Capture */,
+				A00000000000000000000022 /* Hotkeys */,
+				A00000000000000000000023 /* Selection */,
 			);
 			name = Sources;
 			path = Sources;
@@ -285,6 +333,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				791857B04814FECFF2C7738E /* FoundationTests.swift in Sources */,
+				A00000000000000000000005 /* CaptureSourceTests.swift in Sources */,
+				A00000000000000000000006 /* GlobalHotkeyTests.swift in Sources */,
+				A00000000000000000000007 /* SelectionGeometryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -293,6 +344,10 @@
 			buildActionMask = 2147483647;
 			files = (
 				0E4EEAC639BB613FE8693F5B /* gifferentApp.swift in Sources */,
+				A00000000000000000000001 /* CaptureSources.swift in Sources */,
+				A00000000000000000000002 /* CarbonHotkeyBackend.swift in Sources */,
+				A00000000000000000000003 /* GlobalHotkeyController.swift in Sources */,
+				A00000000000000000000004 /* SelectionGeometry.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

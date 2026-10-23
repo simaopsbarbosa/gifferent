@@ -34,7 +34,6 @@ the encoder benchmark, hotkey mechanism, and clipboard representation are experi
 | gate | earliest affected work | resolution needed |
 | --- | --- | --- |
 | reference Mac and visual quality floor | final encoder and speed selection | record the benchmark machine, OS, power mode, fixture set, percentile, and architect-reviewed quality examples before declaring the speed and size goals met. |
-| recording frame placement | window recording and overlay | confirm frame shape and placement, including its exclusion from captured pixels. window disappearance and cross-display behavior are settled in [decisions.md](decisions.md). |
 | final loop-frame artwork, color, motion, and sound | branded production UI and release | present small-size, light/dark, high-contrast, and reduced-motion studies for architect approval. studies may proceed in parallel with engineering. |
 | destination limits and logo use | size presets and release | recheck official limits and logo terms when implementing the preset and again before release; show the scope and date of each value. |
 

@@ -11,6 +11,8 @@
 - if a selected window is minimized or closed during recording, stop capture with a clear message and keep any usable frames as a partial result for preview or discard. if no usable frame exists, show an actionable error and clean up the session.
 - when a selected window moves to another display, continue following that window. the one-monitor limit still applies to region and display capture.
 - keep completed preview media only while its preview is active. remove temporary media after the preview closes following export or after confirmed discard. clear orphaned preview media on the next launch after a crash; an exported file remains intact.
+- show a thin, high-contrast recording outline just outside a selected region or window, with a small `recording` label at its top edge. adapt it to light and dark backgrounds and keep it out of the GIF.
+- if the selected display disconnects during recording, stop with a clear message and keep usable captured frames as a partial result. if no usable frame exists, show an actionable error and clean up.
 
 ## confirmed by the architect on 2026-10-20
 
@@ -32,7 +34,6 @@
 3. **benchmark device:** choose the exact baseline Apple Silicon laptop model, OS version, power mode, source fixtures, and percentile for the under-one-second capture and under-two-second preview goals.
 4. **minimum visual quality:** define how much text blur, temporal noise, and dither pattern are acceptable for automatic size-goal search. collect architect-reviewed comparison samples.
 5. **clipboard contract:** test actual animated GIF paste into GitHub and other destinations. choose pasteboard representations from observed compatibility; do not claim success based only on reading pasteboard bytes back.
-6. **recording frame:** settle its shape and placement. window disappearance and cross-display behavior are now recorded above.
 
 ## research notes, not product decisions
 
