@@ -15,7 +15,7 @@
 
 ## current implementation boundary
 
-the recording iteration has a ScreenCaptureKit stream adapter, bounded newest-frame transport, target-loss monitor, and quota-limited temporary workspace with an orphan-cleanup method. the app does not yet start a recording or connect these parts to an encoder, preview, clipboard, or export; launch-time cleanup is not wired yet. stream behavior, frame exclusion, and window movement still need real-Mac verification. the workspace owns raw frame files only; playable GIF validation belongs to the encoding seam before a preview can be shown.
+the recording iteration has a ScreenCaptureKit stream adapter, bounded newest-frame transport, target-loss monitor, and quota-limited temporary workspace with an orphan-cleanup method. a tested ImageIO seam converts captured BGRA frames to PNG for encoder input. the app does not yet start a recording or connect these parts to a GIF encoder, preview, clipboard, or export; launch-time cleanup is not wired yet. stream behavior, frame exclusion, and window movement still need real-Mac verification. the workspace owns frame files only; playable GIF validation belongs to the encoding seam before a preview can be shown.
 
 ## performance experiments before choosing a pipeline
 

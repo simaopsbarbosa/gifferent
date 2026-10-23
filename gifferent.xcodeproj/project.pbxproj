@@ -32,6 +32,8 @@
 		A00000000000000000000044 /* RecordingFrameTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000054 /* RecordingFrameTransportTests.swift */; };
 		A00000000000000000000045 /* RecordingTargetMonitorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000055 /* RecordingTargetMonitorTests.swift */; };
 		A00000000000000000000046 /* SessionWorkspaceStoreTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000056 /* SessionWorkspaceStoreTests.swift */; };
+		A00000000000000000000047 /* PNGFrameEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000057 /* PNGFrameEncoder.swift */; };
+		A00000000000000000000048 /* PNGFrameEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000058 /* PNGFrameEncoderTests.swift */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -81,6 +83,8 @@
 		A00000000000000000000054 /* RecordingFrameTransportTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingFrameTransportTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000055 /* RecordingTargetMonitorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingTargetMonitorTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000056 /* SessionWorkspaceStoreTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SessionWorkspaceStoreTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000057 /* PNGFrameEncoder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PNGFrameEncoder.swift; sourceTree = "<group>"; };
+		A00000000000000000000058 /* PNGFrameEncoderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = PNGFrameEncoderTests.swift; sourceTree = "<group>"; };
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -155,6 +159,7 @@
 				A00000000000000000000054 /* RecordingFrameTransportTests.swift */,
 				A00000000000000000000055 /* RecordingTargetMonitorTests.swift */,
 				A00000000000000000000056 /* SessionWorkspaceStoreTests.swift */,
+				A00000000000000000000058 /* PNGFrameEncoderTests.swift */,
 			);
 			name = gifferentTests;
 			path = gifferentTests;
@@ -240,6 +245,15 @@
 			path = Recording;
 			sourceTree = "<group>";
 		};
+		A00000000000000000000026 /* Encoding */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000057 /* PNGFrameEncoder.swift */,
+			);
+			name = Encoding;
+			path = Encoding;
+			sourceTree = "<group>";
+		};
 		93672067CA564BC944DECEEA /* gifferentUITests */ = {
 			isa = PBXGroup;
 			children = (
@@ -258,6 +272,7 @@
 				A00000000000000000000023 /* Selection */,
 				A00000000000000000000024 /* Permissions */,
 				A00000000000000000000025 /* Recording */,
+				A00000000000000000000026 /* Encoding */,
 			);
 			name = Sources;
 			path = Sources;
@@ -405,6 +420,7 @@
 				A00000000000000000000044 /* RecordingFrameTransportTests.swift in Sources */,
 				A00000000000000000000045 /* RecordingTargetMonitorTests.swift in Sources */,
 				A00000000000000000000046 /* SessionWorkspaceStoreTests.swift in Sources */,
+				A00000000000000000000048 /* PNGFrameEncoderTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -426,6 +442,7 @@
 				A00000000000000000000041 /* RecordingFrameTransport.swift in Sources */,
 				A00000000000000000000042 /* RecordingTargetMonitor.swift in Sources */,
 				A00000000000000000000043 /* SessionWorkspaceStore.swift in Sources */,
+				A00000000000000000000047 /* PNGFrameEncoder.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
