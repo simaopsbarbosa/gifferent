@@ -4,7 +4,7 @@
 
 this is the execution plan for the complete first release in [mvp.md](mvp.md). the engineer owns technical decisions, task order, agent assignments, integration, quality, and CI/CD. the architect approves changes to settled product behavior, the final visual and sound identity, and release policy. the engineer records technical decisions and evidence without waiting for routine approval. open product choices in [decisions.md](decisions.md) remain gates for the affected work.
 
-this stage produces documentation only. implementation, repository automation, GitHub settings, signing, and distribution start in the next stage. a passing CI build will never be described as proof of real screen capture, paste into a third-party app, or release readiness.
+the planning stage is complete. implementation follows the iteration gates below. a passing CI build will never be described as proof of real screen capture, paste into a third-party app, or release readiness.
 
 ## operating model
 

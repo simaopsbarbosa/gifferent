@@ -17,6 +17,14 @@
 		A00000000000000000000005 /* CaptureSourceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000015 /* CaptureSourceTests.swift */; };
 		A00000000000000000000006 /* GlobalHotkeyTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000016 /* GlobalHotkeyTests.swift */; };
 		A00000000000000000000007 /* SelectionGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000017 /* SelectionGeometryTests.swift */; };
+		A00000000000000000000008 /* HotkeySettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000018 /* HotkeySettings.swift */; };
+		A00000000000000000000009 /* ScreenRecordingPermissionGuide.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000019 /* ScreenRecordingPermissionGuide.swift */; };
+		A0000000000000000000000A /* HotkeySettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001A /* HotkeySettingsTests.swift */; };
+		A0000000000000000000000B /* ScreenRecordingPermissionGuideTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001B /* ScreenRecordingPermissionGuideTests.swift */; };
+		A0000000000000000000000C /* CaptureSelectionCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001C /* CaptureSelectionCoordinator.swift */; };
+		A0000000000000000000000D /* CaptureSelectionOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* CaptureSelectionOverlayView.swift */; };
+		A0000000000000000000000E /* CaptureSelectionOverlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */; };
+		A0000000000000000000000F /* GifferentRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* GifferentRuntime.swift */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -51,6 +59,14 @@
 		A00000000000000000000015 /* CaptureSourceTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSourceTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000016 /* GlobalHotkeyTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GlobalHotkeyTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000017 /* SelectionGeometryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = SelectionGeometryTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000018 /* HotkeySettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HotkeySettings.swift; sourceTree = "<group>"; };
+		A00000000000000000000019 /* ScreenRecordingPermissionGuide.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenRecordingPermissionGuide.swift; sourceTree = "<group>"; };
+		A0000000000000000000001A /* HotkeySettingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = HotkeySettingsTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000001B /* ScreenRecordingPermissionGuideTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenRecordingPermissionGuideTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000001C /* CaptureSelectionCoordinator.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSelectionCoordinator.swift; sourceTree = "<group>"; };
+		A0000000000000000000001D /* CaptureSelectionOverlayView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSelectionOverlayView.swift; sourceTree = "<group>"; };
+		A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSelectionOverlayTests.swift; sourceTree = "<group>"; };
+		A0000000000000000000001F /* GifferentRuntime.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GifferentRuntime.swift; sourceTree = "<group>"; };
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -119,6 +135,9 @@
 				A00000000000000000000015 /* CaptureSourceTests.swift */,
 				A00000000000000000000016 /* GlobalHotkeyTests.swift */,
 				A00000000000000000000017 /* SelectionGeometryTests.swift */,
+				A0000000000000000000001A /* HotkeySettingsTests.swift */,
+				A0000000000000000000001B /* ScreenRecordingPermissionGuideTests.swift */,
+				A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */,
 			);
 			name = gifferentTests;
 			path = gifferentTests;
@@ -146,6 +165,7 @@
 			isa = PBXGroup;
 			children = (
 				C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */,
+				A0000000000000000000001F /* GifferentRuntime.swift */,
 			);
 			name = App;
 			path = App;
@@ -165,6 +185,7 @@
 			children = (
 				A00000000000000000000012 /* CarbonHotkeyBackend.swift */,
 				A00000000000000000000013 /* GlobalHotkeyController.swift */,
+				A00000000000000000000018 /* HotkeySettings.swift */,
 			);
 			name = Hotkeys;
 			path = Hotkeys;
@@ -174,9 +195,20 @@
 			isa = PBXGroup;
 			children = (
 				A00000000000000000000014 /* SelectionGeometry.swift */,
+				A0000000000000000000001C /* CaptureSelectionCoordinator.swift */,
+				A0000000000000000000001D /* CaptureSelectionOverlayView.swift */,
 			);
 			name = Selection;
 			path = Selection;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000024 /* Permissions */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000019 /* ScreenRecordingPermissionGuide.swift */,
+			);
+			name = Permissions;
+			path = Permissions;
 			sourceTree = "<group>";
 		};
 		93672067CA564BC944DECEEA /* gifferentUITests */ = {
@@ -195,6 +227,7 @@
 				A00000000000000000000021 /* Capture */,
 				A00000000000000000000022 /* Hotkeys */,
 				A00000000000000000000023 /* Selection */,
+				A00000000000000000000024 /* Permissions */,
 			);
 			name = Sources;
 			path = Sources;
@@ -336,6 +369,9 @@
 				A00000000000000000000005 /* CaptureSourceTests.swift in Sources */,
 				A00000000000000000000006 /* GlobalHotkeyTests.swift in Sources */,
 				A00000000000000000000007 /* SelectionGeometryTests.swift in Sources */,
+				A0000000000000000000000A /* HotkeySettingsTests.swift in Sources */,
+				A0000000000000000000000B /* ScreenRecordingPermissionGuideTests.swift in Sources */,
+				A0000000000000000000000E /* CaptureSelectionOverlayTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -348,6 +384,11 @@
 				A00000000000000000000002 /* CarbonHotkeyBackend.swift in Sources */,
 				A00000000000000000000003 /* GlobalHotkeyController.swift in Sources */,
 				A00000000000000000000004 /* SelectionGeometry.swift in Sources */,
+				A00000000000000000000008 /* HotkeySettings.swift in Sources */,
+				A00000000000000000000009 /* ScreenRecordingPermissionGuide.swift in Sources */,
+				A0000000000000000000000C /* CaptureSelectionCoordinator.swift in Sources */,
+				A0000000000000000000000D /* CaptureSelectionOverlayView.swift in Sources */,
+				A0000000000000000000000F /* GifferentRuntime.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

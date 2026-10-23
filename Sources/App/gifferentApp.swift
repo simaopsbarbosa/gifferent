@@ -7,7 +7,7 @@ struct GifferentApp: App {
 
   var body: some Scene {
     MenuBarExtra("gifferent") {
-      GifferentMenuContent()
+      GifferentMenuContent(runtime: .shared)
     }
   }
 }
@@ -18,7 +18,10 @@ private final class GifferentAppDelegate: NSObject, NSApplicationDelegate {
     private var testingWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-      guard ProcessInfo.processInfo.arguments.contains("--ui-testing") else { return }
+      if !ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+        GifferentRuntime.shared.start()
+        return
+      }
 
       let window = NSWindow(
         contentRect: NSRect(x: 0, y: 0, width: 320, height: 160),
@@ -27,18 +30,43 @@ private final class GifferentAppDelegate: NSObject, NSApplicationDelegate {
         defer: false
       )
       window.title = "gifferent test menu"
-      window.contentView = NSHostingView(rootView: GifferentMenuContent().padding())
+      window.contentView = NSHostingView(rootView: GifferentMenuContent(runtime: .shared).padding())
       window.center()
       window.makeKeyAndOrderFront(nil)
       testingWindow = window
     }
   #endif
+
+  #if !DEBUG
+    func applicationDidFinishLaunching(_ notification: Notification) {
+      GifferentRuntime.shared.start()
+    }
+  #endif
 }
 
 private struct GifferentMenuContent: View {
+  @ObservedObject var runtime: GifferentRuntime
+
   var body: some View {
-    Text("idle")
+    Text(runtime.status)
       .accessibilityIdentifier("app-status")
+
+    if let selectionDescription = runtime.selectionDescription {
+      Text(selectionDescription)
+        .accessibilityIdentifier("selection-status")
+    }
+
+    Divider()
+
+    Button("select capture…") {
+      runtime.beginSelection()
+    }
+    .accessibilityIdentifier("select-capture-button")
+
+    Button("shortcuts…") {
+      runtime.showHotkeySettings()
+    }
+    .accessibilityIdentifier("shortcuts-button")
 
     Divider()
 

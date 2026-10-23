@@ -3,7 +3,7 @@
 ## execution authority confirmed on 2026-10-22
 
 - the lead engineer owns engineering choices, task order, agent assignments, integration, repository setup, CI/CD, and quality gates. the architect retains approval of changes to settled experience, final visual and sound identity, and release policy.
-- deliver the complete documented first release through tested iterations described in [delivery-plan.md](delivery-plan.md). this stage is documentation and planning only; implementation starts in the next stage.
+- deliver the complete documented first release through tested iterations described in [delivery-plan.md](delivery-plan.md). the planning stage is complete and implementation has begun.
 - the release plan may depend on Apple Developer access and a real-Mac acceptance pass supplied at the release gate. neither is assumed available for initial development.
 
 ## recording and cleanup confirmed on 2026-10-22
@@ -13,6 +13,7 @@
 - keep completed preview media only while its preview is active. remove temporary media after the preview closes following export or after confirmed discard. clear orphaned preview media on the next launch after a crash; an exported file remains intact.
 - show a thin, high-contrast recording outline just outside a selected region or window, with a small `recording` label at its top edge. adapt it to light and dark backgrounds and keep it out of the GIF.
 - if the selected display disconnects during recording, stop with a clear message and keep usable captured frames as a partial result. if no usable frame exists, show an actionable error and clean up.
+- global shortcut registration cannot prove delivery because macOS can let another app use the same chord. settings must ask the user to press each shortcut from another app and warn that it is unverified until gifferent receives it.
 
 ## confirmed by the architect on 2026-10-20
 

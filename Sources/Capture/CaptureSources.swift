@@ -119,11 +119,11 @@ final class CaptureSourceService {
   private let listing: any CaptureSourceListing
 
   init(
-    permission: any ScreenRecordingPermissionProviding = SystemScreenRecordingPermission(),
-    listing: any CaptureSourceListing = ScreenCaptureKitSourceListing()
+    permission: (any ScreenRecordingPermissionProviding)? = nil,
+    listing: (any CaptureSourceListing)? = nil
   ) {
-    self.permission = permission
-    self.listing = listing
+    self.permission = permission ?? SystemScreenRecordingPermission()
+    self.listing = listing ?? ScreenCaptureKitSourceListing()
   }
 
   func authorizationStatus() -> ScreenRecordingAuthorization {

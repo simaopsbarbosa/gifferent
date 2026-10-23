@@ -3,7 +3,7 @@
 ## supported product
 
 - macOS 14 and later; notarized direct download; menu bar presence without a Dock icon.
-- background activation with configurable `⌃⌥G` capture and `⌃⌥R` start/stop hotkeys. settings warn about conflicts. selection opens when record is pressed before choosing a target.
+- background activation with configurable `⌃⌥G` capture and `⌃⌥R` start/stop hotkeys. settings warn when a shortcut is unverified and ask the user to test it from another app; receiving the shortcut clears that warning. selection opens when record is pressed before choosing a target.
 - full-screen selection overlay with display, selected-window, and free-region modes. capture one monitor at a time. regions can be moved and resized before recording. a corner magnifier appears while dragging. the last selection is restored when valid; reselect is immediate.
 - record at an initial 24 fps target. capture the cursor by default, with a setting to disable it. show a thin, high-contrast outline just outside a selected region or window, with a small `recording` label at its top edge. adapt it to light and dark backgrounds and keep it out of the GIF. keep normal Mac interaction available while recording. follow a selected window as it moves or resizes.
 - if a selected window moves to another display, keep following it. if it is minimized or closed, stop recording with a clear message and keep usable captured frames as a partial result. if there are no usable frames, show an error and clean up.

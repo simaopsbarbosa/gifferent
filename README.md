@@ -2,7 +2,7 @@
 
 a fast, native GIF maker for macOS. summon capture, record while using your Mac, then copy, save, or compress locally.
 
-the app and its test suite are being built in tested iterations. the current branch begins with a menu bar foundation; capture and export are not implemented yet.
+the app and its test suite are being built in tested iterations. the selection branch has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. recording and GIF export are not implemented yet.
 
 the source license is [AGPL-3.0-or-later](LICENSE). [third-party notices](THIRD-PARTY-NOTICES.md) track bundled dependencies and tools.
 
@@ -29,5 +29,5 @@ bash Scripts/test-unit.sh
 bash Scripts/test-ui.sh
 ```
 
-the build and test scripts write logs and `.xcresult` bundles under `.build/ci/`. UI tests need a macOS session that permits Xcode automation. the deterministic UI test opens the production SwiftUI menu content in a debug-only test window; actual menu bar clicking remains a real-Mac acceptance check. passing the current smoke tests establishes the menu bar foundation only; capture, export, and release checks are later iterations in [delivery-plan.md](delivery-plan.md).
+the build and test scripts write logs and `.xcresult` bundles under `.build/ci/`. UI tests need a macOS session that permits Xcode automation. deterministic UI tests open the production SwiftUI menu content in a debug-only test window and use a synthetic selection display without requesting screen access. actual menu bar clicking, screen permission, shortcut delivery, and overlay interaction remain real-Mac acceptance checks. recording, export, and release checks are later iterations in [delivery-plan.md](delivery-plan.md).
 # gifferent
