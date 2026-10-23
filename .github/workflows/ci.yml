@@ -26,6 +26,8 @@ jobs:
         run: bash Scripts/check-toolchain.sh
       - name: check documentation
         run: python3 Scripts/check-docs.py
+      - name: test encoder benchmark harness
+        run: python3 -m unittest discover -s Benchmarks -p 'test_encoder_benchmark.py' -v
       - name: check formatting
         run: bash Scripts/format-check.sh
       - name: lint
