@@ -16,8 +16,8 @@
 ## performance experiments before choosing a pipeline
 
 1. build representative fixtures: mostly static UI, fast scrolling, video-like motion, small region, full display, ten seconds, and thirty seconds. include light/dark UI and fine text.
-2. compare streaming encode during recording with encode after stop. measure stop-to-usable-preview, CPU, memory, temporary bytes, final GIF bytes, and dropped frames. the under-two-second preview goal may require incremental encoding; prove it on a baseline Apple Silicon laptop, with the exact model and configuration recorded before measurement.
-3. compare `gifski` alone, `gifski` plus `gifsicle`, and a viable native baseline at equal output dimensions and frame timing. inspect text legibility, temporal artifacts, and dither character alongside bytes and time.
+2. compare streaming encode during recording with encode after stop. measure stop-to-usable-preview, CPU, memory, temporary bytes, final GIF bytes, and dropped frames. the under-two-second preview goal may require incremental encoding; prove it on the [selected performance reference](Benchmarks/environment.md), recording its actual configuration for each run.
+3. compare complete `gifski`, ImageMagick, and native ImageIO paths at equal output dimensions and frame timing. keep a `gifsicle` path research-only until its distribution license is resolved. inspect text legibility, temporal artifacts, and dither character alongside bytes and time.
 4. measure size-goal search: try the cheapest transformations first, cache intermediate results where safe, stop when the result meets the target, and cap work so the UI never looks frozen. the search order is an experiment, not a fixed requirement.
 5. measure the overlay and magnifier at 1× and 2× scaling, with separate displays, and verify that the overlay cannot enter captured frames.
 

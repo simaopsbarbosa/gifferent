@@ -14,6 +14,7 @@
 - show a thin, high-contrast recording outline just outside a selected region or window, with a small `recording` label at its top edge. adapt it to light and dark backgrounds and keep it out of the GIF.
 - if the selected display disconnects during recording, stop with a clear message and keep usable captured frames as a partial result. if no usable frame exists, show an actionable error and clean up.
 - global shortcut registration cannot prove delivery because macOS can let another app use the same chord. settings must ask the user to press each shortcut from another app and warn that it is unverified until gifferent receives it.
+- use the development MacBook Air (Apple M2, 8 GB) as the first release performance reference, currently macOS 27.0.1 (build 26A434), with low power mode off. publish the synthetic fixtures and report median and p90 timing; record every additional Mac separately. re-record the OS and power mode for each benchmark run rather than treating this snapshot as permanent.
 
 ## confirmed by the architect on 2026-10-20
 
@@ -32,9 +33,8 @@
 
 1. **brand asset:** develop loop-frame sketches with a warm orange accent. the exact artwork, orange values, motion signature, and sound palette still need architect review.
 2. **bundled tool license:** verify which candidate CLIs can be distributed with an AGPL-3.0-or-later app and document their notices and source obligations before packaging.
-3. **benchmark device:** choose the exact baseline Apple Silicon laptop model, OS version, power mode, source fixtures, and percentile for the under-one-second capture and under-two-second preview goals.
-4. **minimum visual quality:** define how much text blur, temporal noise, and dither pattern are acceptable for automatic size-goal search. collect architect-reviewed comparison samples.
-5. **clipboard contract:** test actual animated GIF paste into GitHub and other destinations. choose pasteboard representations from observed compatibility; do not claim success based only on reading pasteboard bytes back.
+3. **minimum visual quality:** define how much text blur, temporal noise, and dither pattern are acceptable for automatic size-goal search. collect architect-reviewed comparison samples.
+4. **clipboard contract:** test actual animated GIF paste into GitHub and other destinations. choose pasteboard representations from observed compatibility; do not claim success based only on reading pasteboard bytes back.
 
 ## research notes, not product decisions
 
