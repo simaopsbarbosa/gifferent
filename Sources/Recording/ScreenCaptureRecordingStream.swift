@@ -19,7 +19,7 @@ final class ScreenCaptureRecordingStream {
   private let output: ScreenFrameOutput
   private let target: RecordingTarget
   private let sourceService: CaptureSourceService
-  private let onStop: @MainActor (CaptureTerminationReason) -> Void
+  private let onStop: @MainActor (CaptureTerminationReason) async -> Void
   private var monitorTask: Task<Void, Never>?
   private var stopped = false
 
@@ -29,7 +29,7 @@ final class ScreenCaptureRecordingStream {
     target: RecordingTarget,
     sourceService: CaptureSourceService,
     transport: RecordingFrameTransport,
-    onStop: @escaping @MainActor (CaptureTerminationReason) -> Void
+    onStop: @escaping @MainActor (CaptureTerminationReason) async -> Void
   ) {
     self.stream = stream
     self.output = output
@@ -43,7 +43,7 @@ final class ScreenCaptureRecordingStream {
     target: RecordingTarget,
     showsCursor: Bool,
     sourceService: CaptureSourceService = CaptureSourceService(),
-    onStop: @escaping @MainActor (CaptureTerminationReason) -> Void
+    onStop: @escaping @MainActor (CaptureTerminationReason) async -> Void
   ) async throws -> ScreenCaptureRecordingStream {
     guard sourceService.authorizationStatus() == .granted else {
       throw CaptureSourceError.permissionRequired
@@ -94,7 +94,7 @@ final class ScreenCaptureRecordingStream {
       // a failed stop still closes the local frame handoff.
     }
     transport.finish()
-    onStop(reason)
+    await onStop(reason)
   }
 
   private func startMonitoring() {
