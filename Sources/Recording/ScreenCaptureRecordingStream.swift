@@ -48,6 +48,8 @@ final class ScreenCaptureRecordingStream {
     guard sourceService.authorizationStatus() == .granted else {
       throw CaptureSourceError.permissionRequired
     }
+    let inventory = try await sourceService.availableSources()
+    try validate(target: target, against: inventory)
     let content = try await SCShareableContent.excludingDesktopWindows(
       false, onScreenWindowsOnly: true)
     let filter = try makeFilter(target: target, content: content)
@@ -131,7 +133,17 @@ final class ScreenCaptureRecordingStream {
     content: SCShareableContent
   ) throws -> SCContentFilter {
     switch target {
-    case .display(let id), .region(let id, _):
+    case .display(let id):
+      guard let display = content.displays.first(where: { $0.displayID == id }) else {
+        throw RecordingStreamError.displayUnavailable
+      }
+      let ownApplication = content.applications.filter {
+        $0.bundleIdentifier == Bundle.main.bundleIdentifier
+      }
+      return SCContentFilter(
+        display: display, excludingApplications: ownApplication, exceptingWindows: [])
+    case .region(let geometry):
+      let id = geometry.display.id
       guard let display = content.displays.first(where: { $0.displayID == id }) else {
         throw RecordingStreamError.displayUnavailable
       }
@@ -155,7 +167,8 @@ final class ScreenCaptureRecordingStream {
   ) throws -> SCStreamConfiguration {
     let sourceRect: CGRect
     switch target {
-    case .region(_, let rect):
+    case .region(let geometry):
+      let rect = geometry.regionInDisplayPoints
       guard rect.origin.x.isFinite, rect.origin.y.isFinite,
         rect.width.isFinite, rect.height.isFinite,
         rect.width > 0, rect.height > 0,
@@ -182,11 +195,43 @@ final class ScreenCaptureRecordingStream {
     configuration.queueDepth = 3
     configuration.showsCursor = showsCursor
     configuration.capturesAudio = false
-    configuration.scalesToFit = false
+    configuration.scalesToFit = target.isWindow
+    configuration.preservesAspectRatio = target.isWindow
     if case .region = target {
       configuration.sourceRect = sourceRect
     }
     return configuration
+  }
+
+  private static func validate(
+    target: RecordingTarget,
+    against inventory: CaptureSourceInventory
+  ) throws {
+    switch target {
+    case .display(let id):
+      _ = try inventory.display(id: id)
+    case .window(let id):
+      _ = try inventory.window(id: id)
+    case .region(let selection):
+      let source = try inventory.display(id: selection.display.id)
+      guard
+        let current = DisplayGeometry(
+          id: source.id,
+          frameInGlobalPoints: source.frame,
+          pixelWidth: CGDisplayPixelsWide(source.id),
+          pixelHeight: CGDisplayPixelsHigh(source.id)
+        ), selection.isValid(on: current)
+      else {
+        throw RecordingStreamError.invalidRegion
+      }
+    }
+  }
+}
+
+extension RecordingTarget {
+  fileprivate var isWindow: Bool {
+    if case .window = self { return true }
+    return false
   }
 }
 

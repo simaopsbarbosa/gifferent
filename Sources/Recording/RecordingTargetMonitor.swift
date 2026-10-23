@@ -2,8 +2,27 @@ import CoreGraphics
 
 enum RecordingTarget: Equatable {
   case display(CGDirectDisplayID)
-  case region(displayID: CGDirectDisplayID, sourceRectInPoints: CGRect)
+  case region(SelectionGeometry)
   case window(CGWindowID)
+
+  init(selection: CaptureSelection) {
+    switch selection {
+    case .display(let id):
+      self = .display(id)
+    case .window(let id):
+      self = .window(id)
+    case .region(let geometry):
+      self = .region(geometry)
+    }
+  }
+
+  var displayID: CGDirectDisplayID? {
+    switch self {
+    case .display(let id): id
+    case .region(let geometry): geometry.display.id
+    case .window: nil
+    }
+  }
 }
 
 enum CaptureTerminationReason: Equatable {
@@ -25,8 +44,10 @@ enum RecordingTargetMonitor {
     in snapshot: RecordingTargetSnapshot
   ) -> CaptureTerminationReason? {
     switch target {
-    case .display(let id), .region(let id, _):
+    case .display(let id):
       return snapshot.displayIDs.contains(id) ? nil : .displayDisconnected
+    case .region(let geometry):
+      return snapshot.displayIDs.contains(geometry.display.id) ? nil : .displayDisconnected
     case .window(let id):
       return snapshot.visibleWindowIDs.contains(id) ? nil : .windowUnavailable
     }
