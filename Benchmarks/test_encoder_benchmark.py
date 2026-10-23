@@ -13,12 +13,14 @@ from run_encoder_benchmark import (
     expected_frame_delays,
     fixture_digest,
     gif_metadata,
+    path_availability,
     run_one,
 )
 
 
 def tiny_gif_with_delays(delays):
     header = bytes.fromhex("47494638396101000100800000000000ffffff")
+    loop = bytes.fromhex("21ff0b4e45545343415045322e300301000000")
     image = bytes.fromhex("2c0000000001000100000202440100")
     frames = b"".join(
         bytes.fromhex("21f90401")
@@ -27,7 +29,7 @@ def tiny_gif_with_delays(delays):
         + image
         for delay in delays
     )
-    return header + frames + bytes.fromhex("3b")
+    return header + loop + frames + bytes.fromhex("3b")
 
 
 MANIFEST = {"fps": 24, "width": 1, "height": 1, "duration_seconds": 2 / 24}
@@ -191,6 +193,32 @@ class CleanupTests(unittest.TestCase):
             self.assertEqual(result["status"], "invalid_output")
             self.assertIn("dimensions", result["error"])
 
+    def test_non_looping_gif_is_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            encoder = output / "fake-encoder"
+            gif = output / "non-looping.gif"
+            gif.write_bytes(tiny_gif_with_delays([4]).replace(bytes.fromhex("21ff0b4e45545343415045322e300301000000"), b""))
+            encoder.write_text("#!/bin/sh\ncp " + shlex.quote(str(gif)) + " \"$2\"\nexit 0\n")
+            encoder.chmod(0o755)
+            frame = output / "frame.png"
+            frame.write_bytes(b"synthetic")
+
+            result = run_one(
+                "imageio",
+                {"imageio": {"path": str(encoder)}},
+                {**MANIFEST, "duration_seconds": 1 / 24},
+                [frame],
+                output,
+                "non-looping",
+                2,
+                False,
+            )
+
+            self.assertEqual(result["status"], "invalid_output")
+            self.assertIn("loop count must be 0", result["error"])
+            self.assertFalse((output / "gifs" / "imageio" / "non-looping.gif").exists())
+
     def test_24_fps_schedule_rounds_cumulative_boundaries(self):
         delays = expected_frame_delays(24, 240)
         self.assertEqual(sum(delays), 1000)
@@ -297,6 +325,169 @@ class CleanupTests(unittest.TestCase):
             Path("output.gif"),
         )
         self.assertLess(command.index("frame_0001.png"), command.index("-loop"))
+
+    def test_magick_path_preserves_optimized_default_and_adds_unoptimized_path(self):
+        tools = {"magick": {"path": "/opt/homebrew/bin/magick"}}
+        frames = [Path("frame_0000.png"), Path("frame_0001.png")]
+        optimized = command_for("magick", tools, 24, frames, Path("optimized.gif"))
+        unoptimized = command_for("magick-unoptimized", tools, 24, frames, Path("unoptimized.gif"))
+        self.assertIn("Optimize", optimized)
+        self.assertNotIn("-layers", unoptimized)
+        self.assertEqual(optimized[:13], unoptimized[:13])
+
+    def test_gifski_and_both_magick_paths_run_through_output_validation(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            frame = output / "frame.png"
+            frame.write_bytes(b"synthetic")
+            fake_gif = tiny_gif_with_delays([4]).hex()
+            encoder = output / "fake-encoder"
+            encoder.write_text(
+                "#!/usr/bin/env python3\n"
+                "from pathlib import Path\n"
+                "import sys\n"
+                f"payload = bytes.fromhex('{fake_gif}')\n"
+                "args = sys.argv[1:]\n"
+                "destination = Path(args[args.index('-o') + 1]) if '-o' in args else Path(args[-1])\n"
+                "destination.write_bytes(payload)\n"
+            )
+            encoder.chmod(0o755)
+            tools = {"gifski": {"path": str(encoder)}, "magick": {"path": str(encoder)}}
+
+            for candidate in ("gifski", "magick", "magick-unoptimized"):
+                with self.subTest(candidate=candidate):
+                    result = run_one(
+                        candidate,
+                        tools,
+                        {**MANIFEST, "duration_seconds": 1 / 24},
+                        [frame],
+                        output,
+                        candidate,
+                        2,
+                        False,
+                    )
+                    self.assertEqual(result["status"], "ok")
+                    self.assertEqual(result["gif"]["loop_count"], 0)
+                    self.assertEqual(result["gif"]["frame_delays_centiseconds"], [4])
+                    self.assertFalse((output / "work" / f"{candidate}-{candidate}").exists())
+
+    def test_imageio_gifsicle_pipeline_orders_full_gif_path(self):
+        from run_encoder_benchmark import command_sequence_for
+
+        work = Path("work")
+        stages = command_sequence_for(
+            "imageio-gifsicle",
+            {"imageio": {"path": "imageio_encode"}, "gifsicle": {"path": "gifsicle"}},
+            24,
+            [Path("frame-0.png"), Path("frame-1.png")],
+            Path("output.gif"),
+            work,
+        )
+        self.assertEqual([stage["stage"] for stage in stages], ["imageio", "gifsicle"])
+        self.assertEqual(stages[0]["command"][:3], ["imageio_encode", "24", "work/imageio-input.gif"])
+        self.assertEqual(
+            stages[1]["command"],
+            ["gifsicle", "--optimize=3", "--loopcount=0", "--output", "output.gif", "work/imageio-input.gif"],
+        )
+
+    def test_gifsicle_pipeline_runs_all_stages_and_validates_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            gif = output / "valid.gif"
+            gif.write_bytes(tiny_gif_with_delays([4]))
+            imageio = output / "fake-imageio"
+            imageio.write_text("#!/bin/sh\ncp " + shlex.quote(str(gif)) + " \"$2\"\nexit 0\n")
+            imageio.chmod(0o755)
+            gifsicle = output / "fake-gifsicle"
+            gifsicle.write_text("#!/bin/sh\ncp \"$5\" \"$4\"\nexit 0\n")
+            gifsicle.chmod(0o755)
+            frame = output / "frame.png"
+            frame.write_bytes(b"synthetic")
+
+            result = run_one(
+                "imageio-gifsicle",
+                {"imageio": {"path": str(imageio)}, "gifsicle": {"path": str(gifsicle)}},
+                {**MANIFEST, "duration_seconds": 1 / 24},
+                [frame],
+                output,
+                "pipeline",
+                2,
+                False,
+            )
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual([stage["stage"] for stage in result["stage_results"]], ["imageio", "gifsicle"])
+            self.assertEqual(len(result["commands"]), 2)
+            self.assertEqual(result["gif"]["loop_count"], 0)
+            self.assertTrue(Path(result["output"]).is_file())
+            self.assertFalse((output / "work" / "imageio-gifsicle-pipeline").exists())
+
+    def test_gifsicle_pipeline_stops_and_cleans_up_after_first_stage_timeout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            imageio = output / "slow-imageio"
+            imageio.write_text("#!/bin/sh\nsleep 3\n")
+            imageio.chmod(0o755)
+            marker = output / "gifsicle-ran"
+            gifsicle = output / "fake-gifsicle"
+            gifsicle.write_text("#!/bin/sh\ntouch " + shlex.quote(str(marker)) + "\n")
+            gifsicle.chmod(0o755)
+            frame = output / "frame.png"
+            frame.write_bytes(b"synthetic")
+
+            result = run_one(
+                "imageio-gifsicle",
+                {"imageio": {"path": str(imageio)}, "gifsicle": {"path": str(gifsicle)}},
+                MANIFEST,
+                [frame],
+                output,
+                "timeout",
+                0.05,
+                False,
+            )
+
+            self.assertEqual(result["status"], "timeout")
+            self.assertTrue(result["timed_out"])
+            self.assertEqual(len(result["stage_results"]), 1)
+            self.assertFalse(marker.exists())
+            self.assertFalse((output / "work" / "imageio-gifsicle-timeout").exists())
+
+    def test_gifsicle_pipeline_cleans_intermediate_and_partial_output_after_second_stage_timeout(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            gif = output / "valid.gif"
+            gif.write_bytes(tiny_gif_with_delays([4]))
+            imageio = output / "fake-imageio"
+            imageio.write_text("#!/bin/sh\ncp " + shlex.quote(str(gif)) + " \"$2\"\nexit 0\n")
+            imageio.chmod(0o755)
+            gifsicle = output / "slow-gifsicle"
+            gifsicle.write_text("#!/bin/sh\nprintf partial > \"$4\"\nsleep 3\n")
+            gifsicle.chmod(0o755)
+            frame = output / "frame.png"
+            frame.write_bytes(b"synthetic")
+
+            result = run_one(
+                "imageio-gifsicle",
+                {"imageio": {"path": str(imageio)}, "gifsicle": {"path": str(gifsicle)}},
+                {**MANIFEST, "duration_seconds": 1 / 24},
+                [frame],
+                output,
+                "second-stage-timeout",
+                1,
+                False,
+            )
+
+            self.assertEqual(result["status"], "timeout")
+            self.assertTrue(result["timed_out"])
+            self.assertEqual([stage["stage"] for stage in result["stage_results"]], ["imageio", "gifsicle"])
+            self.assertFalse((output / "work" / "imageio-gifsicle-second-stage-timeout").exists())
+            self.assertFalse((output / "gifs" / "imageio-gifsicle" / "second-stage-timeout.gif").exists())
+
+    def test_candidate_path_reports_missing_gifsicle_as_unavailable(self):
+        tools = {"imageio": {"available": True, "path": "/usr/bin/imageio"}, "gifsicle": {"available": False}}
+        availability = path_availability("imageio-gifsicle", tools)
+        self.assertFalse(availability["available"])
+        self.assertEqual(availability["missing_tools"], ["gifsicle"])
 
 
 class FixtureProfileTests(unittest.TestCase):
