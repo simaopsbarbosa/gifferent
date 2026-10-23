@@ -12,7 +12,31 @@ python3 Benchmarks/generate_fixture.py --output Benchmarks/generated/reference-6
 
 the output directory must be new. the generator writes `frame_0000.png` through `frame_0239.png` and a `manifest.json`. frame `n` starts at `n / 24` seconds; each frame lasts `1 / 24` second. the manifest records the seed, dimensions, frame count, rate, and timing rule. the pixels are synthetic: bitmap text, flat UI shapes, a moving cursor-like mark, and moving color gradients. its colors and layout are benchmark inputs, not approved product artwork. no screen content is read.
 
-for a quick smoke run, use `--frames 6 --width 320 --height 180` with a different new output directory. keep the same seed, dimensions, and frame count for every candidate in one comparison.
+the "mixed" profile remains the default and preserves the original composite fixture. three focused profiles isolate visual stresses:
+
+- "mostly-static-ui": fine text and mostly static controls with a one-pixel moving caret;
+- "fast-scrolling": repeated text rows moving five pixels per frame;
+- "high-motion-gradient-cursor": a rapidly changing gradient field and fast cursor motion.
+
+generate all four full reference fixtures from the repository root. each destination must be new:
+
+```sh
+python3 Benchmarks/generate_fixture.py --output Benchmarks/generated/mixed-640x360 --width 640 --height 360 --seed 7 --frames 240 --profile mixed
+python3 Benchmarks/generate_fixture.py --output Benchmarks/generated/mostly-static-ui-640x360 --width 640 --height 360 --seed 7 --frames 240 --profile mostly-static-ui
+python3 Benchmarks/generate_fixture.py --output Benchmarks/generated/fast-scrolling-640x360 --width 640 --height 360 --seed 7 --frames 240 --profile fast-scrolling
+python3 Benchmarks/generate_fixture.py --output Benchmarks/generated/high-motion-gradient-cursor-640x360 --width 640 --height 360 --seed 7 --frames 240 --profile high-motion-gradient-cursor
+```
+
+to run the encoder candidates against each generated profile, give each run a new output directory:
+
+```sh
+python3 Benchmarks/run_encoder_benchmark.py --fixture Benchmarks/generated/mixed-640x360 --output Benchmarks/outputs/mixed-01 --runs 7
+python3 Benchmarks/run_encoder_benchmark.py --fixture Benchmarks/generated/mostly-static-ui-640x360 --output Benchmarks/outputs/mostly-static-ui-01 --runs 7
+python3 Benchmarks/run_encoder_benchmark.py --fixture Benchmarks/generated/fast-scrolling-640x360 --output Benchmarks/outputs/fast-scrolling-01 --runs 7
+python3 Benchmarks/run_encoder_benchmark.py --fixture Benchmarks/generated/high-motion-gradient-cursor-640x360 --output Benchmarks/outputs/high-motion-gradient-cursor-01 --runs 7
+```
+
+generated frames, GIFs, and reports belong under the ignored "Benchmarks/generated/" and "Benchmarks/outputs/" directories. do not commit those bulk outputs; keep small reviewed summaries and representative comparisons when they exist. for a quick smoke run, use `--frames 6 --width 320 --height 180` with a different new output directory. keep the same seed, dimensions, and frame count for every candidate in one comparison.
 
 for each run, record:
 
@@ -33,8 +57,8 @@ on the [reference Mac](environment.md), run one command from the repository root
 python3 Benchmarks/run_encoder_benchmark.py --output Benchmarks/outputs/reference-640x360-01 --frames 240 --width 640 --height 360 --runs 7
 ```
 
-the runner creates the synthetic fixture once, records one cold and seven warm samples for each available candidate, and alternates candidate order. it tries `gifski` and `magick` from `PATH`, then compiles the benchmark-only ImageIO helper with `xcrun swiftc`. missing or unbuildable candidates are reported as unavailable. `gifski` uses its documented quality default of 90 explicitly and `--no-sort` to preserve manifest order; ImageMagick's `-loop 0` follows the input frames so it applies to the output animation. each successful GIF is retained under `gifs/` for visual review. `raw.json` contains exact argument arrays, elapsed time, CPU user/system time when obtainable, exit status, sampled peak workspace bytes, peak resident bytes when obtainable, stderr, and parsed GIF metadata for every run. `summary.json` contains environment/tool provenance, manifest and frame-content checksums, median/p90 of successful warm runs, and the per-run size, frame count, and duration. a failed, invalid, timed-out, incomplete-frame, or out-of-tolerance-duration run removes its partial GIF and work directory, remains in both reports, and is not counted in the statistic.
+the runner creates the requested synthetic fixture once, records one first-invocation sample and seven warm samples for each available candidate, and alternates candidate order. it tries `gifski` and `magick` from `PATH`, then compiles the benchmark-only ImageIO helper with `xcrun swiftc`. missing or unbuildable candidates are reported as unavailable. `gifski` pins quality 90 explicitly and `--no-sort` to preserve manifest order; ImageMagick's `-loop 0` follows the input frames so it applies to the output animation. each successful GIF is retained under `gifs/` for visual review. `raw.json` contains exact argument arrays, elapsed time, CPU user/system time when obtainable, exit status, sampled peak workspace bytes, peak resident bytes when obtainable, stderr, and parsed GIF metadata for every run. `summary.json` contains environment/tool provenance, manifest and frame-content checksums, median/p90 of successful warm runs, and the per-run size, frame count, duration, and frame delays. a failed, invalid, timed-out, wrong-dimension, wrong-frame-count, wrong-per-frame-delay, or out-of-tolerance-duration run removes its partial GIF and work directory, remains in both reports, and is not counted in the statistic.
 
 run the harness checks with `python3 -m unittest discover -s Benchmarks -p 'test_encoder_benchmark.py' -v`. for a quick real-encoder smoke test, use a new output directory with `--frames 6 --width 320 --height 180 --runs 1`; it does not provide a valid performance comparison.
 
-the runner measures offline PNG-to-GIF conversion. it does not measure screen capture, streaming encode, stop-to-preview latency, or visual quality. the ImageIO helper is a native comparison path, not the approved bundled CLI. GIF timing is quantized to centiseconds; candidates must match fixture frame count and cumulative duration within 20 ms total to enter timing statistics. compare parsed per-frame delays and visual playback with the fixture manifest during review. workspace size is sampled every 20 ms and can miss short-lived files. memory uses macOS `/usr/bin/time -l` when allowed, then sampled `ps` as a fallback; a short run or restricted host can yield `null`. the tool binary and build still need an exact license, dependency, architecture, signature, and source audit before packaging. no result from this harness alone selects a release encoder.
+the runner measures offline PNG-to-GIF conversion. it does not measure screen capture, streaming encode, stop-to-preview latency, or visual quality. the ImageIO helper is a native comparison path, not the approved bundled CLI. GIF timing is quantized to centiseconds; each frame's delay must match the fixture schedule derived by rounding cumulative frame boundaries to the nearest centisecond, and cumulative duration must be within 20 ms. the high-motion gradient/cursor profile is the recommended first visual review for the later quality-floor gate because it stresses gradients, motion, and temporal dithering; also review static UI/text separately for legibility. workspace size is sampled every 20 ms and can miss short-lived files. memory uses macOS `/usr/bin/time -l` when allowed, then sampled `ps` as a fallback; a short run or restricted host can yield `null`. the tool binary and build still need an exact license, dependency, architecture, signature, and source audit before packaging. no result from this harness alone selects a release encoder.

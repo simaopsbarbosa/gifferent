@@ -153,6 +153,14 @@ def percentile(values, fraction):
     return ordered[max(0, math.ceil(fraction * len(ordered)) - 1)]
 
 
+def expected_frame_delays(fps, frame_count):
+    """Return centisecond delays from rounded cumulative frame boundaries."""
+    def boundary(index):
+        return math.floor(index * 100 / fps + 0.5)
+
+    return [boundary(index + 1) - boundary(index) for index in range(frame_count)]
+
+
 def environment():
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -196,7 +204,10 @@ def command_for(name, tools, fps, frames, output):
     if name == "gifski":
         return [binary, "--fps", str(fps), "--quality", "90", "--repeat", "0", "--no-sort", "-o", str(output), *map(str, frames)]
     if name == "magick":
-        return [binary, "-delay", f"1x{fps}", *map(str, frames), "-loop", "0", "-dither", "FloydSteinberg", "-define", "dither:diffusion-amount=100%", "-colors", "256", "-layers", "Optimize", str(output)]
+        timed_frames = []
+        for frame, delay in zip(frames, expected_frame_delays(fps, len(frames))):
+            timed_frames.extend(["-delay", f"{delay}x100", str(frame)])
+        return [binary, *timed_frames, "-dither", "FloydSteinberg", "-define", "dither:diffusion-amount=100%", "-colors", "256", "-layers", "Optimize", "-loop", "0", str(output)]
     return [binary, str(fps), str(output), *map(str, frames)]
 
 
@@ -240,7 +251,8 @@ def run_command(command, work, timeout_seconds, use_system_time):
     return {"command": command, "elapsed_seconds": elapsed, "cpu_user_seconds": float(cpu.group(2)) if cpu else None, "cpu_system_seconds": float(cpu.group(3)) if cpu else None, "exit_code": process.returncode, "timed_out": timed_out, "peak_workspace_bytes_sampled": peak_bytes, "peak_resident_bytes_reported": int(match.group(1)) if match else peak_rss_bytes, "memory_measurement": "system_time" if match else "sampled_ps" if peak_rss_bytes is not None else "unavailable", "stdout": stdout[-16000:], "stderr": stderr[-16000:]}
 
 
-def run_one(name, tools, fps, frames, output, label, timeout_seconds, use_system_time):
+def run_one(name, tools, manifest, frames, output, label, timeout_seconds, use_system_time):
+    fps = manifest["fps"]
     work = output / "work" / f"{name}-{label}"
     work.mkdir(parents=True)
     temporary_gif = work / "output.gif"
@@ -254,7 +266,24 @@ def run_one(name, tools, fps, frames, output, label, timeout_seconds, use_system
                     raise ValueError("GIF has no frames")
                 if metadata["frame_count"] != len(frames):
                     raise ValueError(f"GIF frame count {metadata['frame_count']} differs from fixture count {len(frames)}")
-                expected_duration = len(frames) / fps
+                if metadata["width"] != manifest["width"] or metadata["height"] != manifest["height"]:
+                    raise ValueError(
+                        f"GIF dimensions {metadata['width']}x{metadata['height']} differ from fixture "
+                        f"dimensions {manifest['width']}x{manifest['height']}"
+                    )
+                expected_delays = expected_frame_delays(fps, len(frames))
+                actual_delays = metadata["frame_delays_centiseconds"]
+                if actual_delays != expected_delays:
+                    mismatch = next(
+                        index
+                        for index, (actual, expected) in enumerate(zip(actual_delays, expected_delays))
+                        if actual != expected
+                    )
+                    raise ValueError(
+                        f"GIF per-frame centisecond delay differs at frame {mismatch}: "
+                        f"expected {expected_delays[mismatch]}, got {actual_delays[mismatch]}"
+                    )
+                expected_duration = manifest["duration_seconds"]
                 duration_tolerance = 0.02
                 if abs(metadata["duration_seconds"] - expected_duration) > duration_tolerance:
                     raise ValueError(
@@ -262,6 +291,7 @@ def run_one(name, tools, fps, frames, output, label, timeout_seconds, use_system
                         f"{expected_duration:.4f}s by more than {duration_tolerance:.4f}s"
                     )
                 metadata["expected_duration_seconds"] = expected_duration
+                metadata["expected_frame_delays_centiseconds"] = expected_delays
                 metadata["duration_tolerance_seconds"] = duration_tolerance
                 result["gif"] = metadata
                 destination = output / "gifs" / name / f"{label}.gif"
@@ -287,6 +317,12 @@ def main():
     parser.add_argument("--width", type=int, default=640)
     parser.add_argument("--height", type=int, default=360)
     parser.add_argument("--seed", type=int, default=7)
+    parser.add_argument(
+        "--profile",
+        choices=("mixed", "mostly-static-ui", "fast-scrolling", "high-motion-gradient-cursor"),
+        default="mixed",
+        help="synthetic scene profile for a generated fixture",
+    )
     parser.add_argument("--runs", type=int, default=7, help="warm runs per candidate after one cold run")
     parser.add_argument("--timeout", type=float, default=180, help="seconds allowed per encoding")
     parser.add_argument("--candidates", nargs="+", choices=CANDIDATES, default=CANDIDATES)
@@ -296,7 +332,22 @@ def main():
     args.output.mkdir(parents=True, exist_ok=False)
     fixture = args.fixture.resolve() if args.fixture else args.output / "fixture"
     if args.fixture is None:
-        generate = [sys.executable, str(ROOT / "generate_fixture.py"), "--output", str(fixture), "--frames", str(args.frames), "--width", str(args.width), "--height", str(args.height), "--seed", str(args.seed)]
+        generate = [
+            sys.executable,
+            str(ROOT / "generate_fixture.py"),
+            "--output",
+            str(fixture),
+            "--frames",
+            str(args.frames),
+            "--width",
+            str(args.width),
+            "--height",
+            str(args.height),
+            "--seed",
+            str(args.seed),
+            "--profile",
+            args.profile,
+        ]
         subprocess.run(generate, check=True)
     manifest_path = fixture / "manifest.json"
     manifest = json.loads(manifest_path.read_text())
@@ -315,10 +366,10 @@ def main():
         for name in order:
             if not available[name]["available"]:
                 continue
-            label = "cold" if round_index == 0 else f"warm-{round_index:02d}"
+            label = "first-invocation" if round_index == 0 else f"warm-{round_index:02d}"
             print(f"running {name} {label}", flush=True)
             try:
-                result = run_one(name, available, fps, frames, args.output, label, args.timeout, use_system_time)
+                result = run_one(name, available, manifest, frames, args.output, label, args.timeout, use_system_time)
             except (OSError, ValueError) as error:
                 result = {"status": "runner_error", "error": str(error), "command": command_for(name, available, fps, frames, args.output / "work" / f"{name}-{label}" / "output.gif"), "elapsed_seconds": None, "cpu_user_seconds": None, "cpu_system_seconds": None, "exit_code": None, "timed_out": False, "peak_workspace_bytes_sampled": None, "peak_resident_bytes_reported": None, "memory_measurement": "unavailable", "stdout": "", "stderr": ""}
             result.update({"candidate": name, "run": label, "round": round_index})
@@ -327,9 +378,9 @@ def main():
     summary = {}
     for name in selected:
         samples = [sample for sample in records if sample["candidate"] == name]
-        warm = [sample["elapsed_seconds"] for sample in samples if sample["run"] != "cold" and sample["status"] == "ok"]
-        summary[name] = {"available": available[name]["available"], "status": "unavailable" if not available[name]["available"] else "ok" if len(warm) == args.runs else "incomplete", "successful_warm_runs": len(warm), "median_warm_seconds": statistics.median(warm) if warm else None, "p90_warm_seconds": percentile(warm, 0.9) if warm else None, "samples": [{"run": sample["run"], "status": sample["status"], "elapsed_seconds": sample["elapsed_seconds"], "cpu_user_seconds": sample["cpu_user_seconds"], "cpu_system_seconds": sample["cpu_system_seconds"], "bytes": sample.get("gif", {}).get("bytes"), "frame_count": sample.get("gif", {}).get("frame_count"), "duration_seconds": sample.get("gif", {}).get("duration_seconds"), "peak_resident_bytes_reported": sample["peak_resident_bytes_reported"], "peak_workspace_bytes_sampled": sample["peak_workspace_bytes_sampled"]} for sample in samples]}
-    report = {"environment": environment(), "fixture": {"path": str(fixture), "manifest": manifest, "manifest_sha256": digest(manifest_path), "frames_sha256": fixture_digest(frames)}, "tools": available, "system_time_probe": time_probe, "runs_requested": args.runs, "timeout_seconds": args.timeout, "summary": summary, "limits": ["this measures offline PNG-to-GIF encoding, not capture or stop-to-preview latency", "peak workspace bytes are polled every 20 ms and can miss short-lived files", "memory uses macOS /usr/bin/time -l when available, otherwise sampled ps; either may include helper processes or miss short peaks", "GIF parsing checks structure and metadata, not visual fidelity or playback in another app"]}
+        warm = [sample["elapsed_seconds"] for sample in samples if sample["run"] != "first-invocation" and sample["status"] == "ok"]
+        summary[name] = {"available": available[name]["available"], "status": "unavailable" if not available[name]["available"] else "ok" if len(warm) == args.runs else "incomplete", "successful_warm_runs": len(warm), "median_warm_seconds": statistics.median(warm) if warm else None, "p90_warm_seconds": percentile(warm, 0.9) if warm else None, "samples": [{"run": sample["run"], "status": sample["status"], "elapsed_seconds": sample["elapsed_seconds"], "cpu_user_seconds": sample["cpu_user_seconds"], "cpu_system_seconds": sample["cpu_system_seconds"], "bytes": sample.get("gif", {}).get("bytes"), "frame_count": sample.get("gif", {}).get("frame_count"), "duration_seconds": sample.get("gif", {}).get("duration_seconds"), "frame_delays_centiseconds": sample.get("gif", {}).get("frame_delays_centiseconds"), "peak_resident_bytes_reported": sample["peak_resident_bytes_reported"], "peak_workspace_bytes_sampled": sample["peak_workspace_bytes_sampled"]} for sample in samples]}
+    report = {"environment": environment(), "fixture": {"path": str(fixture), "manifest": manifest, "manifest_sha256": digest(manifest_path), "frames_sha256": fixture_digest(frames)}, "tools": available, "system_time_probe": time_probe, "runs_requested": args.runs, "timeout_seconds": args.timeout, "summary": summary, "limits": ["this measures offline PNG-to-GIF encoding, not capture or stop-to-preview latency", "per-frame centisecond delays must exactly match rounded cumulative fixture boundaries", "peak workspace bytes are polled every 20 ms and can miss short-lived files", "memory uses macOS /usr/bin/time -l when available, otherwise sampled ps; either may include helper processes or miss short peaks", "GIF parsing checks structure and metadata, not visual fidelity or playback in another app"]}
     (args.output / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
     print(f"raw results: {args.output / 'raw.json'}")

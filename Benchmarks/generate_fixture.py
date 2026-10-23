@@ -44,6 +44,10 @@ FONT = {
     "s": (0, 15, 16, 14, 1, 1, 30),
     "t": (8, 8, 30, 8, 8, 8, 6),
     "u": (0, 17, 17, 17, 17, 17, 15),
+    "v": (0, 17, 17, 17, 17, 10, 4),
+    "w": (0, 17, 17, 21, 21, 21, 10),
+    "y": (0, 17, 17, 17, 15, 1, 14),
+    "x": (0, 17, 10, 4, 10, 17, 17),
 }
 
 
@@ -116,7 +120,14 @@ def gradient(canvas: Canvas, frame: int, seed: int):
         canvas.pixels[start : start + len(row)] = row
 
 
-def draw_frame(width: int, height: int, frame: int, seed: int) -> Canvas:
+def draw_frame(width: int, height: int, frame: int, seed: int, profile: str = "mixed") -> Canvas:
+    if profile == "mostly-static-ui":
+        return draw_static_ui(width, height, frame)
+    if profile == "fast-scrolling":
+        return draw_fast_scrolling(width, height, frame)
+    if profile == "high-motion-gradient-cursor":
+        return draw_high_motion_gradient_cursor(width, height, frame, seed)
+
     canvas = Canvas(width, height)
     canvas.rect(20, 16, 620, 344, (39, 43, 50))
     canvas.rect(20, 16, 620, 50, (52, 57, 65))
@@ -155,6 +166,68 @@ def draw_frame(width: int, height: int, frame: int, seed: int) -> Canvas:
     return canvas
 
 
+def draw_static_ui(width: int, height: int, frame: int) -> Canvas:
+    canvas = Canvas(width, height)
+    canvas.rect(20, 16, 620, 344, (39, 43, 50))
+    canvas.rect(20, 16, 620, 50, (52, 57, 65))
+    canvas.rect(34, 28, 45, 39, (70, 168, 191))
+    canvas.text("capture session", 55, 27, (239, 239, 237))
+    canvas.rect(34, 70, 606, 310, (27, 31, 37))
+    canvas.text("recording status", 52, 88, (225, 226, 221))
+    canvas.text("frames captured", 52, 126, (162, 171, 181))
+    canvas.text("privacy on device", 52, 158, (162, 171, 181))
+    canvas.text("ready to preview", 52, 190, (162, 171, 181))
+    canvas.rect(52, 228, 542, 232, (70, 168, 191))
+    canvas.rect(52, 258, 542, 262, (73, 81, 91))
+    canvas.rect(52, 288, 542, 292, (73, 81, 91))
+    # keep the interface static while a one-pixel caret moves on each frame.
+    caret_x = 290 + (frame * 2) % 220
+    canvas.pixel_rect(canvas.x(caret_x), canvas.y(126), canvas.x(caret_x) + 1, canvas.y(138), (70, 168, 191))
+    return canvas
+
+
+def draw_fast_scrolling(width: int, height: int, frame: int) -> Canvas:
+    canvas = Canvas(width, height)
+    canvas.rect(20, 16, 620, 344, (39, 43, 50))
+    canvas.rect(20, 16, 620, 50, (52, 57, 65))
+    canvas.text("activity feed", 42, 27, (239, 239, 237))
+    canvas.rect(34, 66, 606, 320, (27, 31, 37))
+    labels = ("capture", "frames", "preview", "clipboard", "export", "settings", "recording", "window")
+    scroll = frame * 5
+    for index in range(12):
+        y = 76 + ((index * 25 - scroll) % 260)
+        canvas.rect(48, y, 592, y + 18, (39, 45, 52))
+        canvas.text(labels[index % len(labels)], 60, y + 5, (225, 226, 221))
+        canvas.rect(190, y + 8, 250 + (index % 5) * 22, y + 11, (101, 111, 122))
+        canvas.rect(526, y + 5, 535, y + 14, (70, 168, 191))
+    return canvas
+
+
+def draw_high_motion_gradient_cursor(width: int, height: int, frame: int, seed: int) -> Canvas:
+    canvas = Canvas(width, height)
+    canvas.rect(20, 16, 620, 344, (18, 22, 30))
+    left, top, right, bottom = canvas.x(40), canvas.y(34), canvas.x(600), canvas.y(326)
+    region_width = right - left
+    palette = [
+        bytes(((value + seed * 17) % 256, (255 - value + seed * 9) % 256, (value * 3 + seed * 5) % 256))
+        for value in range(256)
+    ]
+    for y in range(top, bottom):
+        phase = (frame * 17 + (y - top) * 5) % 256
+        row = b"".join(palette[(x * 256 // max(region_width, 1) + phase) % 256] for x in range(region_width))
+        start = (y * canvas.width + left) * 3
+        canvas.pixels[start : start + len(row)] = row
+    cursor_x = 48 + (frame * 17) % 520
+    cursor_y = 48 + (frame * 11) % 250
+    px, py = canvas.x(cursor_x), canvas.y(cursor_y)
+    size = max(8, canvas.x(18))
+    for offset in range(size):
+        canvas.pixel_rect(px, py + offset, px + max(2, offset // 2), py + offset + 1, (10, 12, 16))
+    for offset in range(size - 2):
+        canvas.pixel_rect(px + 1, py + offset + 1, px + max(2, offset // 2), py + offset + 2, (255, 255, 255))
+    return canvas
+
+
 def write_chunk(output, name: bytes, payload: bytes):
     output.write(struct.pack(">I", len(payload)))
     output.write(name)
@@ -187,6 +260,12 @@ def main():
     parser.add_argument("--height", type=int, default=BASE_HEIGHT)
     parser.add_argument("--seed", type=int, default=7)
     parser.add_argument("--frames", type=int, default=240)
+    parser.add_argument(
+        "--profile",
+        choices=("mixed", "mostly-static-ui", "fast-scrolling", "high-motion-gradient-cursor"),
+        default="mixed",
+        help="synthetic scene profile",
+    )
     args = parser.parse_args()
 
     if not 320 <= args.width <= 3840 or not 180 <= args.height <= 2160:
@@ -196,12 +275,13 @@ def main():
 
     args.output.mkdir(parents=True, exist_ok=False)
     for frame in range(args.frames):
-        canvas = draw_frame(args.width, args.height, frame, args.seed)
+        canvas = draw_frame(args.width, args.height, frame, args.seed, args.profile)
         write_png(args.output / f"frame_{frame:04d}.png", canvas)
 
     manifest = {
         "generator": "generate_fixture.py",
         "seed": args.seed,
+        "profile": args.profile,
         "width": args.width,
         "height": args.height,
         "fps": FPS,
