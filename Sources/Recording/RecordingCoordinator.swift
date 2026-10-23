@@ -114,6 +114,10 @@ final class RecordingCoordinator: ObservableObject {
     self.encoder = encoder
   }
 
+  func cleanOrphanedSessions() async throws {
+    try await workspace.cleanupOrphans()
+  }
+
   /// returns after startup has either reached recording or failed.
   func start(target: RecordingTarget, showsCursor: Bool) async {
     guard canStart, startTask == nil, stopTask == nil, stream == nil, sessionID == nil else {

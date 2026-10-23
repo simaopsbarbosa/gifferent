@@ -65,6 +65,12 @@ private struct GifferentMenuContent: View {
     }
     .accessibilityIdentifier("select-capture-button")
 
+    Button(runtime.recordingActionTitle) {
+      runtime.performRecordingAction()
+    }
+    .disabled(runtime.recordingActionIsDisabled)
+    .accessibilityIdentifier("recording-action-button")
+
     Button("shortcuts…") {
       runtime.showHotkeySettings()
     }
