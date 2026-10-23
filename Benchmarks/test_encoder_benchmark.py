@@ -133,6 +133,42 @@ class CleanupTests(unittest.TestCase):
             ["/tmp/imageio_encode", "24", "output.gif", "frame-0.png", "frame-1.png"],
         )
 
+    def test_gifski_command_pins_quality_and_preserves_frame_order(self):
+        command = command_for(
+            "gifski",
+            {"gifski": {"path": "/opt/homebrew/bin/gifski"}},
+            24,
+            [Path("frame_0000.png"), Path("frame_0001.png")],
+            Path("output.gif"),
+        )
+        self.assertEqual(
+            command,
+            [
+                "/opt/homebrew/bin/gifski",
+                "--fps",
+                "24",
+                "--quality",
+                "90",
+                "--repeat",
+                "0",
+                "--no-sort",
+                "-o",
+                "output.gif",
+                "frame_0000.png",
+                "frame_0001.png",
+            ],
+        )
+
+    def test_magick_loop_setting_follows_input_frames(self):
+        command = command_for(
+            "magick",
+            {"magick": {"path": "/opt/homebrew/bin/magick"}},
+            24,
+            [Path("frame_0000.png"), Path("frame_0001.png")],
+            Path("output.gif"),
+        )
+        self.assertLess(command.index("frame_0001.png"), command.index("-loop"))
+
 
 if __name__ == "__main__":
     unittest.main()

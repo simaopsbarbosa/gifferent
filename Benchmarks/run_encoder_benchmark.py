@@ -194,9 +194,9 @@ def discover(output):
 def command_for(name, tools, fps, frames, output):
     binary = tools[name]["path"]
     if name == "gifski":
-        return [binary, "--fps", str(fps), "--repeat", "0", "-o", str(output), *map(str, frames)]
+        return [binary, "--fps", str(fps), "--quality", "90", "--repeat", "0", "--no-sort", "-o", str(output), *map(str, frames)]
     if name == "magick":
-        return [binary, "-delay", f"1x{fps}", "-loop", "0", *map(str, frames), "-dither", "FloydSteinberg", "-define", "dither:diffusion-amount=100%", "-colors", "256", "-layers", "Optimize", str(output)]
+        return [binary, "-delay", f"1x{fps}", *map(str, frames), "-loop", "0", "-dither", "FloydSteinberg", "-define", "dither:diffusion-amount=100%", "-colors", "256", "-layers", "Optimize", str(output)]
     return [binary, str(fps), str(output), *map(str, frames)]
 
 
