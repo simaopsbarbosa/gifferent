@@ -1,3 +1,4 @@
+import Darwin
 import Foundation
 
 struct RecordingSessionID: Hashable, Sendable {
@@ -24,6 +25,7 @@ enum SessionWorkspaceError: Error, Equatable {
   case insufficientDiskSpace
   case unavailableDiskSpace
   case invalidPreviewFile
+  case unsafeWorkspace
 }
 
 struct RecordingSessionSnapshot: Sendable, Equatable {
@@ -45,14 +47,21 @@ struct PreviewOutputReservation: Sendable {
 }
 
 actor SessionWorkspaceStore {
+  private struct DirectoryIdentity: Equatable {
+    let device: dev_t
+    let inode: ino_t
+  }
+
   private struct Session {
     let directory: URL
+    let directoryIdentity: DirectoryIdentity
     var frameCount = 0
     var temporaryBytes: Int64 = 0
     var firstTimestamp: TimeInterval?
     var lastTimestamp: TimeInterval?
     var stopReason: RecordingStopReason?
     var previewReady = false
+    var previewReserved = false
 
     var isRecording: Bool { stopReason == nil }
   }
@@ -62,6 +71,7 @@ actor SessionWorkspaceStore {
   private let minimumFreeBytes: Int64
   private let fileManager: FileManager
   private var sessions: [RecordingSessionID: Session] = [:]
+  private var rootIdentity: DirectoryIdentity?
 
   init(
     rootDirectory: URL,
@@ -83,6 +93,7 @@ actor SessionWorkspaceStore {
       withIntermediateDirectories: true,
       attributes: [.posixPermissions: 0o700]
     )
+    try verifyRootDirectory()
     let id = RecordingSessionID()
     let directory = directoryURL(for: id)
     try fileManager.createDirectory(
@@ -90,13 +101,15 @@ actor SessionWorkspaceStore {
       withIntermediateDirectories: false,
       attributes: [.posixPermissions: 0o700]
     )
-    sessions[id] = Session(directory: directory)
+    let identity = try identityOfDirectory(at: directory)
+    sessions[id] = Session(directory: directory, directoryIdentity: identity)
     return id
   }
 
   func appendFrame(_ data: Data, timestamp: TimeInterval, to id: RecordingSessionID) throws -> URL {
     guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
     guard session.isRecording else { throw SessionWorkspaceError.invalidState }
+    try verify(session)
     guard timestamp.isFinite, timestamp >= 0,
       timestamp >= (session.lastTimestamp ?? 0)
     else { throw SessionWorkspaceError.invalidTimestamp }
@@ -133,14 +146,19 @@ actor SessionWorkspaceStore {
   }
 
   func reservePreviewOutput(for id: RecordingSessionID) throws -> PreviewOutputReservation {
-    guard let session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard !session.isRecording, !session.previewReady else {
+    guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
+    guard !session.isRecording, !session.previewReady, !session.previewReserved else {
       throw SessionWorkspaceError.invalidState
     }
+    try verify(session)
     let remaining = maximumSessionBytes - session.temporaryBytes
     try checkCapacity(adding: 1, current: session.temporaryBytes)
+    let previewURL = session.directory.appendingPathComponent("preview.gif", isDirectory: false)
+    guard !entryExists(at: previewURL) else { throw SessionWorkspaceError.invalidPreviewFile }
+    session.previewReserved = true
+    sessions[id] = session
     return PreviewOutputReservation(
-      url: session.directory.appendingPathComponent("preview.gif", isDirectory: false),
+      url: previewURL,
       maximumBytes: remaining
     )
   }
@@ -148,25 +166,40 @@ actor SessionWorkspaceStore {
   @discardableResult
   func commitPreviewOutput(for id: RecordingSessionID) throws -> RecordingSessionSnapshot {
     guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard !session.isRecording, !session.previewReady else {
+    guard !session.isRecording, !session.previewReady, session.previewReserved else {
       throw SessionWorkspaceError.invalidState
     }
+    try verify(session)
     let previewURL = session.directory.appendingPathComponent("preview.gif", isDirectory: false)
-    let values = try previewURL.resourceValues(forKeys: [
-      .isRegularFileKey, .isSymbolicLinkKey, .fileSizeKey,
-    ])
-    guard values.isRegularFile == true, values.isSymbolicLink != true,
-      let fileSize = values.fileSize, fileSize > 0
-    else { throw SessionWorkspaceError.invalidPreviewFile }
-    let bytes = Int64(fileSize)
-    guard bytes <= maximumSessionBytes - session.temporaryBytes else {
+    do {
+      let fileSize = try sizeOfRegularFile(at: previewURL)
+      let bytes = Int64(fileSize)
+      guard bytes <= maximumSessionBytes - session.temporaryBytes else {
+        throw SessionWorkspaceError.sizeLimitExceeded
+      }
+      session.temporaryBytes += bytes
+      session.previewReady = true
+      session.previewReserved = false
+      sessions[id] = session
+      return snapshot(of: session)
+    } catch {
       try? fileManager.removeItem(at: previewURL)
-      throw SessionWorkspaceError.sizeLimitExceeded
+      session.previewReserved = false
+      sessions[id] = session
+      throw error
     }
-    session.temporaryBytes += bytes
-    session.previewReady = true
+  }
+
+  func abandonPreviewOutput(for id: RecordingSessionID) throws {
+    guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
+    guard session.previewReserved else { throw SessionWorkspaceError.invalidState }
+    try verify(session)
+    let previewURL = session.directory.appendingPathComponent("preview.gif", isDirectory: false)
+    if entryExists(at: previewURL) {
+      try fileManager.removeItem(at: previewURL)
+    }
+    session.previewReserved = false
     sessions[id] = session
-    return snapshot(of: session)
   }
 
   func snapshot(for id: RecordingSessionID) throws -> RecordingSessionSnapshot {
@@ -190,6 +223,7 @@ actor SessionWorkspaceStore {
 
   func cleanupOrphans() throws {
     guard fileManager.fileExists(atPath: rootDirectory.path) else { return }
+    try verifyRootDirectory()
     let children = try fileManager.contentsOfDirectory(
       at: rootDirectory,
       includingPropertiesForKeys: nil
@@ -203,6 +237,7 @@ actor SessionWorkspaceStore {
 
   private func remove(_ id: RecordingSessionID) throws {
     guard let session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
+    try verify(session)
     try fileManager.removeItem(at: session.directory)
     sessions.removeValue(forKey: id)
   }
@@ -254,5 +289,54 @@ actor SessionWorkspaceStore {
     else {
       throw SessionWorkspaceError.insufficientDiskSpace
     }
+  }
+
+  private func verifyRootDirectory() throws {
+    var info = stat()
+    guard lstat(rootDirectory.path, &info) == 0,
+      info.st_mode & S_IFMT == S_IFDIR,
+      info.st_uid == geteuid()
+    else { throw SessionWorkspaceError.unsafeWorkspace }
+    if info.st_mode & 0o077 != 0 {
+      try fileManager.setAttributes(
+        [.posixPermissions: 0o700], ofItemAtPath: rootDirectory.path
+      )
+    }
+    let identity = try identityOfDirectory(at: rootDirectory)
+    if let rootIdentity, rootIdentity != identity {
+      throw SessionWorkspaceError.unsafeWorkspace
+    }
+    rootIdentity = identity
+  }
+
+  private func verify(_ session: Session) throws {
+    try verifyRootDirectory()
+    guard try identityOfDirectory(at: session.directory) == session.directoryIdentity else {
+      throw SessionWorkspaceError.unsafeWorkspace
+    }
+  }
+
+  private func identityOfDirectory(at url: URL) throws -> DirectoryIdentity {
+    var info = stat()
+    guard lstat(url.path, &info) == 0,
+      info.st_mode & S_IFMT == S_IFDIR,
+      info.st_uid == geteuid(),
+      info.st_mode & 0o077 == 0
+    else { throw SessionWorkspaceError.unsafeWorkspace }
+    return DirectoryIdentity(device: info.st_dev, inode: info.st_ino)
+  }
+
+  private func sizeOfRegularFile(at url: URL) throws -> off_t {
+    var info = stat()
+    guard lstat(url.path, &info) == 0,
+      info.st_mode & S_IFMT == S_IFREG,
+      info.st_size > 0
+    else { throw SessionWorkspaceError.invalidPreviewFile }
+    return info.st_size
+  }
+
+  private func entryExists(at url: URL) -> Bool {
+    var info = stat()
+    return lstat(url.path, &info) == 0
   }
 }
