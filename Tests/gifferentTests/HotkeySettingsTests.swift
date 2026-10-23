@@ -78,6 +78,20 @@ final class HotkeySettingsTests: XCTestCase {
     XCTAssertEqual(actions, [.capture])
   }
 
+  func testUnsupportedPersistedShortcutFallsBackToDefault() {
+    let defaults = temporaryDefaults()
+    defaults.set(
+      ["keyCode": Int(kVK_ANSI_H), "modifiers": 0, "keyLabel": "H"],
+      forKey: "gifferent.hotkey.capture"
+    )
+    let store = HotkeySettingsStore(
+      controller: GlobalHotkeyController(backend: SettingsHotkeyBackend()),
+      defaults: defaults
+    )
+
+    XCTAssertEqual(store.shortcut(for: .capture), .capture)
+  }
+
   private func temporaryDefaults() -> UserDefaults {
     let suiteName = "gifferent.hotkey.tests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!

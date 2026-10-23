@@ -263,10 +263,17 @@ final class CaptureSelectionCoordinator: ObservableObject {
   private func cancel(notify: Bool) {
     presentationTask?.cancel()
     presentationTask = nil
-    for window in windows {
-      window.close()
+    let closingWindows = windows
+    for window in closingWindows {
+      window.orderOut(nil)
     }
     windows.removeAll()
+    // close after the button event finishes so its hosting view stays alive during the callback.
+    DispatchQueue.main.async {
+      for window in closingWindows {
+        window.close()
+      }
+    }
     screens.removeAll()
     selection = nil
     inventory = CaptureSourceInventory(displays: [], windows: [])

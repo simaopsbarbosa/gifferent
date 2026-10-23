@@ -66,11 +66,7 @@ final class HotkeySettingsStore: ObservableObject {
   }
 
   func setShortcut(_ shortcut: SavedHotkey, for action: GlobalHotkeyAction) {
-    let supportedModifiers = UInt32(controlKey | optionKey | cmdKey | shiftKey)
-    let primaryModifiers = UInt32(controlKey | optionKey | cmdKey)
-    guard shortcut.chord.modifiers & ~supportedModifiers == 0,
-      shortcut.chord.modifiers & primaryModifiers != 0
-    else {
+    guard Self.isSupported(shortcut.chord) else {
       message = "add ⌃, ⌥, or ⌘ to the key."
       return
     }
@@ -151,9 +147,17 @@ final class HotkeySettingsStore: ObservableObject {
       let keyLabel = stored["keyLabel"] as? String,
       let code = UInt32(exactly: keyCode),
       let flags = UInt32(exactly: modifiers),
+      isSupported(HotkeyChord(keyCode: code, modifiers: flags)),
       (1...8).contains(keyLabel.count)
     else { return nil }
     return SavedHotkey(chord: HotkeyChord(keyCode: code, modifiers: flags), keyLabel: keyLabel)
+  }
+
+  private static func isSupported(_ chord: HotkeyChord) -> Bool {
+    let supportedModifiers = UInt32(controlKey | optionKey | cmdKey | shiftKey)
+    let primaryModifiers = UInt32(controlKey | optionKey | cmdKey)
+    return chord.modifiers & ~supportedModifiers == 0
+      && chord.modifiers & primaryModifiers != 0
   }
 
   private static func storageKey(for action: GlobalHotkeyAction, prefix: String) -> String {
