@@ -301,6 +301,7 @@ private final class SelectionOverlayWindow: NSWindow {
     backgroundColor = .black
     hasShadow = false
     acceptsMouseMovedEvents = true
+    isReleasedWhenClosed = false
   }
 
   override var canBecomeKey: Bool { true }
