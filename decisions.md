@@ -16,6 +16,10 @@
 - global shortcut registration cannot prove delivery because macOS can let another app use the same chord. settings must ask the user to press each shortcut from another app and warn that it is unverified until gifferent receives it.
 - use the development MacBook Air (Apple M2, 8 GB) as the first release performance reference, currently macOS 27.0.1 (build 26A434), with low power mode off. publish the synthetic fixtures and report median and p90 timing; record every additional Mac separately. re-record the OS and power mode for each benchmark run rather than treating this snapshot as permanent.
 
+## recording selection flow confirmed on 2026-10-24
+
+- when `⌃⌥R` opens target selection because no selection exists, confirming the target starts recording immediately. the menu's separate `select capture…` action only stores a selection.
+
 ## confirmed by the architect on 2026-10-20
 
 - macOS 14+, direct notarized download, menu bar only, background hotkeys, native SwiftUI UI.
