@@ -50,10 +50,12 @@ private struct GifferentMenuContent: View {
   var body: some View {
     Text(runtime.status)
       .accessibilityIdentifier("app-status")
+      .accessibilityLabel(runtime.status)
 
     if let selectionDescription = runtime.selectionDescription {
       Text(selectionDescription)
         .accessibilityIdentifier("selection-status")
+        .accessibilityLabel(selectionDescription)
     }
 
     Divider()

@@ -47,7 +47,13 @@ final class MenuBarSmokeTests: XCTestCase {
     selectionWindow.buttons["select-display-button"].click()
     selectionWindow.buttons["confirm-selection-button"].click()
 
-    XCTAssertTrue(testWindow.staticTexts["selection-status"].waitForExistence(timeout: 5))
-    XCTAssertEqual(testWindow.staticTexts["selection-status"].label, "display selected")
+    let selectionStatus = testWindow.staticTexts["selection-status"]
+    XCTAssertTrue(selectionStatus.waitForExistence(timeout: 5))
+    let selectedLabel = NSPredicate(format: "label == %@", "display selected")
+    let selectedExpectation = XCTNSPredicateExpectation(
+      predicate: selectedLabel,
+      object: selectionStatus
+    )
+    XCTAssertEqual(XCTWaiter.wait(for: [selectedExpectation], timeout: 5), .completed)
   }
 }
