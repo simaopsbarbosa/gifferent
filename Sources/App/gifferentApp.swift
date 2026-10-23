@@ -87,6 +87,17 @@ private struct GifferentMenuContent: View {
     }
     .accessibilityIdentifier("shortcuts-button")
 
+    #if DEBUG
+      if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+        Button("show recording frame fixture") { runtime.showRecordingFrameFixture() }
+          .accessibilityIdentifier("show-recording-frame-button")
+        Button("move recording frame fixture") { runtime.moveRecordingFrameFixture() }
+          .accessibilityIdentifier("move-recording-frame-button")
+        Button("hide recording frame fixture") { runtime.hideRecordingFrameFixture() }
+          .accessibilityIdentifier("hide-recording-frame-button")
+      }
+    #endif
+
     Divider()
 
     Button("quit") {
