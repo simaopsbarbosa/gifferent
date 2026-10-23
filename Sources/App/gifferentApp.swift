@@ -44,13 +44,24 @@ private final class GifferentAppDelegate: NSObject, NSApplicationDelegate {
   #endif
 }
 
+@MainActor
 private struct GifferentMenuContent: View {
   @ObservedObject var runtime: GifferentRuntime
+  @State private var displayedStatus: String
+
+  init(runtime: GifferentRuntime) {
+    self.runtime = runtime
+    _displayedStatus = State(initialValue: runtime.status)
+  }
 
   var body: some View {
-    Text(runtime.status)
+    Text(displayedStatus)
       .accessibilityIdentifier("app-status")
-      .accessibilityLabel(runtime.status)
+      .accessibilityLabel("status")
+      .accessibilityValue(displayedStatus)
+      .onReceive(runtime.$status) { status in
+        displayedStatus = status
+      }
 
     if let selectionDescription = runtime.selectionDescription {
       Text(selectionDescription)

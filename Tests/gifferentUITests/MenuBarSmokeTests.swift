@@ -49,7 +49,7 @@ final class MenuBarSmokeTests: XCTestCase {
 
     let selectionStatus = testWindow.staticTexts["selection-status"]
     XCTAssertTrue(selectionStatus.waitForExistence(timeout: 5))
-    waitForLabel("selection ready", on: testWindow.staticTexts["app-status"])
+    waitForStatus("selection ready", in: testWindow)
     XCTAssertEqual(testWindow.buttons["recording-action-button"].label, "start recording")
   }
 
@@ -69,22 +69,24 @@ final class MenuBarSmokeTests: XCTestCase {
 
     let status = testWindow.staticTexts["app-status"]
     XCTAssertTrue(status.waitForExistence(timeout: 5))
-    waitForLabel("recording", on: status)
+    waitForStatus("recording", in: testWindow)
     testWindow.buttons["recording-action-button"].click()
-    waitForLabel("frames captured; GIF preview is not available yet", on: status)
+    waitForStatus("frames captured; GIF preview is not available yet", in: testWindow)
 
     testWindow.buttons["recording-action-button"].click()
-    waitForLabel("selection ready", on: status)
+    waitForStatus("selection ready", in: testWindow)
   }
 
-  private func waitForLabel(
+  private func waitForStatus(
     _ expected: String,
-    on element: XCUIElement,
+    in testWindow: XCUIElement,
     file: StaticString = #filePath,
     line: UInt = #line
   ) {
     let expectation = XCTNSPredicateExpectation(
-      predicate: NSPredicate(format: "label == %@", expected), object: element)
+      predicate: NSPredicate(format: "value == %@", expected),
+      object: testWindow.staticTexts["app-status"]
+    )
     XCTAssertEqual(
       XCTWaiter.wait(for: [expectation], timeout: 5), .completed, file: file, line: line)
   }
