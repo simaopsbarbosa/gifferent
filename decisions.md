@@ -26,6 +26,12 @@
 - playback speed uses a continuous slider from 0.5× to 2× in 0.1× steps, centered at 1×.
 - the real-Mac animated clipboard paste acceptance test covers GitHub only. other destinations are outside this first-release clipboard compatibility gate.
 
+## static brand mark approved on 2026-10-24
+
+- approve the static orange mark in [the production-mark review](Brand/Studies/production-mark-review/index.html): compact orbit 03, breathing-room treatment 02, a 0.7 px curve-to-tip gap at 16 px, and `#D45D21` direction tips on a monochrome frame and loop.
+- use the light and dark SVG production assets at `Brand/mark-light.svg` and `Brand/mark-dark.svg`. keep the mark static; the optional motion study and sound are not approved.
+- validate at real menu-bar sizes, materials, and accessibility settings on supported macOS versions before release.
+
 ## recording preferences and warnings confirmed on 2026-10-24
 
 - put the configurable cursor-inclusion setting in a separate “recording settings…” window reachable from the menu. include the cursor by default; let the user turn it off.
@@ -57,7 +63,7 @@
 - GIF only; no captured sound. cursor included by default but configurable. initial target 24 fps. typical recording under 30 seconds; warn about long or large recording but do not silently stop it.
 - floating preview after stop; original retained behind a back action when viewing compression. include metadata, copy, save dialog, discard, and compress. `⌘C` copies an animated GIF suitable for pasting into GitHub; `⌘S` saves. confirm before closing an unexported preview.
 - trim, playback speed that changes duration, and forever/once loop modes in the first release.
-- compression runs locally through bundled existing command-line tooling. slider changes dithering strength. resolution: original, 75%, 50%, 25%. destination presets: Discord and GitHub. Slack is excluded until a useful size goal is defined. show logos and size limits under `optimize for:`, target slightly below the limit, search across resolution, frame rate, palette, and dithering. prefer the smallest acceptable file under target; show best attempt plus warning otherwise.
+- compression runs locally through bundled existing command-line tooling. the dithering slider follows the approved ImageMagick setting if the release candidate verifies it. resolution: original, 75%, 50%, 25%. destination presets: Discord and GitHub; show destination names with native symbols, current published maximum, and the approved 90% target (9 MB GitHub, 18 MB Discord non-Nitro). Slack is excluded until a useful size goal is defined. search across resolution, frame rate, palette, and dithering; prefer the smallest acceptable file under target and show the best attempt plus a warning otherwise.
 - brand working name `gifferent`; the first mark candidate is a simple geometric loop frame, mostly monochrome with warm orange accent; mood references Augusta Labs and Cloudflare UI; small occasional brand marks in capture UI. sound is subtle and optional.
 - prose is lowercase except proper names. all features need unit, integration, and automated end-to-end acceptance tests. CI gates build, tests, format, and lint; release includes real-Mac manual acceptance.
 - public project under AGPL-3.0-or-later; captured pixels never leave the Mac. benchmark speed goals on a baseline Apple Silicon laptop. clear partial recordings after a crash rather than restoring them. when a detail is undecided, record it and ask the architect.

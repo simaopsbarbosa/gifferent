@@ -39,6 +39,8 @@ the architect selected the 0.7 px gap at 16 px to continue into palette and fina
 
 the accessible [palette review](Brand/Studies/palette-review/index.html) holds that gap constant across a monochrome reference and three provisional warm oranges. its [review notes](Brand/Studies/palette-review/review-notes.md) document contrast tradeoffs and why flat black/white ratios do not establish appearance over translucent macOS materials. no palette, final artwork, or usage rules are approved.
 
+the architect approved the static orange mark shown in the [production-mark review sheet](Brand/Studies/production-mark-review/index.html): compact orbit 03, breathing-room treatment 02, 0.7 px curve-to-tip gap at 16 px, and direction tips in `#D45D21`. the optional motion concept remains unapproved. production assets are [light appearance](Brand/mark-light.svg) and [dark appearance](Brand/mark-dark.svg); the approved orange direction tips sit on a monochrome frame and loop.
+
 ## interface rules
 
 - use native macOS hierarchy, materials, typography, focus rings, menus, dialogs, and keyboard behavior as the base. custom chrome stays around capture selection, preview progress, and small brand moments.
@@ -46,7 +48,7 @@ the accessible [palette review](Brand/Studies/palette-review/index.html) holds t
 - keep the selected region legible over bright, dark, and moving backgrounds. the magnifier shows the exact pixels under a dragged corner and never appears in the output.
 - motion is brief and purposeful: selection snaps into place, recording begins with one clear beat, the preview resolves without a long spinner, and successful copy/save gets a short confirmation. respect reduced motion and low power mode.
 - optimize for keyboard use and VoiceOver. every icon needs an accessible name; every sound has a visible equivalent; every interaction works without hover.
-- use destination logos only when permitted by their brand guidelines, keep them subordinate to the file-size label, and provide a text name for accessibility.
+- use destination names with native symbols on optimizer controls; do not bundle third-party destination marks unless written permission is obtained.
 
 ## copy examples
 
@@ -64,7 +66,7 @@ all examples are provisional until tested for clarity in the real UI. keep prose
 
 ## pending brand decisions
 
-- review loop-frame sketches and approve the final mark.
-- choose exact warm orange values for light and dark appearance.
+- validate the approved static mark against real macOS menu-bar materials and accessibility settings.
+- keep orange `#D45D21` on the direction tips; frame and loop adapt to light and dark appearance.
+- decide whether to develop the optional motion concept; sound remains open.
 - choose whether sound resembles a soft click, a light digital pop, or another direction.
-- approve the final artwork, motion, and usage rules before any agent treats them as fixed.
