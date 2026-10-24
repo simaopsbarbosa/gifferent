@@ -60,7 +60,7 @@ for the exact candidate chosen after the separate benchmark and quality gates, a
 - all required license texts and notices in both source repository and distributable; modified-file/source notices where terms require them; exact corresponding source and build materials for copyleft binaries;
 - signature verification, nested-code signing record, notarization result, and clean supported-Mac launch with no package manager or developer tools installed.
 
-This matches the existing repository release gate. Apple requires distribution signing before direct macOS distribution and notarization; signing and notarization do not replace open-source license obligations.
+this matches the existing repository release gate. Apple requires distribution signing before direct macOS distribution and notarization; signing and notarization do not replace open-source license obligations.
 
 ## official sources checked
 

@@ -24,7 +24,7 @@ each row has seven successful warm samples; the p90 uses the harness's nearest-r
 
 ## fixtures and exact commands
 
-Fixtures used seed 7, 640×360, 240 frames, 24 fps, and 10 seconds. Their manifest SHA-256 / combined frame-content SHA-256 values were:
+fixtures used seed 7, 640×360, 240 frames, 24 fps, and 10 seconds. their manifest SHA-256 / combined frame-content SHA-256 values were:
 
 | profile | manifest SHA-256 | frames SHA-256 |
 | --- | --- | --- |
