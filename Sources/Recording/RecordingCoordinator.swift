@@ -669,10 +669,8 @@ final class RecordingCoordinator: ObservableObject {
     compressor: any GIFCompressing,
     request: UUID
   ) async {
-    guard let sessionID,
-      compressionRequest == request,
-      case .previewReady(let currentID, _, let original) = state,
-      currentID == sessionID,
+    guard compressionRequest == request,
+      case .previewReady(let previewID, _, let original) = state,
       source == original
     else {
       finishCompression(request, action: .cancelled)
@@ -683,7 +681,7 @@ final class RecordingCoordinator: ObservableObject {
     var committedURL: URL?
     do {
       let output = try await workspace.reserveCompressedPreviewOutput(
-        for: sessionID,
+        for: previewID,
         sourceURL: source.url,
         maximumCacheBytes: 0
       )
@@ -696,31 +694,31 @@ final class RecordingCoordinator: ObservableObject {
           compressed, source: source, settings: settings, reservation: output)
       }.value
       try Task.checkCancellation()
-      _ = try await workspace.commitCompressedPreviewOutput(for: sessionID, reservation: output)
+      _ = try await workspace.commitCompressedPreviewOutput(for: previewID, reservation: output)
       reservation = nil
       committedURL = output.url
       try Task.checkCancellation()
-      try await workspace.keepCompressedPreviewOutput(for: sessionID, at: output.url)
+      try await workspace.keepCompressedPreviewOutput(for: previewID, at: output.url)
       try Task.checkCancellation()
-      let snapshot = try await workspace.snapshot(for: sessionID)
+      let snapshot = try await workspace.snapshot(for: previewID)
       guard compressionRequest == request, !Task.isCancelled else {
-        try? await workspace.removeCompressedPreviewOutput(for: sessionID, at: output.url)
+        try? await workspace.removeCompressedPreviewOutput(for: previewID, at: output.url)
         finishCompression(request, action: .cancelled)
         return
       }
       compressedPreview = compressed
       previewExported = false
-      state = .previewReady(sessionID, snapshot, original)
+      state = .previewReady(previewID, snapshot, original)
       compressionAction = .compressed
       compressionTask = nil
       compressionRequest = nil
     } catch {
       if let reservation {
         try? await workspace.abandonCompressedPreviewOutput(
-          for: sessionID, reservation: reservation)
+          for: previewID, reservation: reservation)
       }
       if let committedURL {
-        try? await workspace.removeCompressedPreviewOutput(for: sessionID, at: committedURL)
+        try? await workspace.removeCompressedPreviewOutput(for: previewID, at: committedURL)
       }
       finishCompression(request, action: Task.isCancelled ? .cancelled : .failed)
     }
