@@ -2,6 +2,8 @@
 
 research snapshot: 2026-10-24. this is a shortlist and test design, not a tool selection, legal opinion, speed claim, or quality claim. no candidate CLI executable has been bundled or measured in this repository. pin an upstream tag and source commit before building or benchmarking.
 
+the distribution-license screen and required provenance evidence are summarized in [encoder license audit](encoder-license-audit.md). it is not legal advice or a release clearance; the exact source revision, build, dependencies, and binary still require review.
+
 ## shortlist
 
 | path | upstream evidence | reason to measure | distribution and product risks |
