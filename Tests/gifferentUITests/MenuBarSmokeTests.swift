@@ -273,10 +273,19 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(
       previewWindow.frame.insetBy(dx: -2, dy: -2).contains(animatedPreview.frame),
       "window: \(previewWindow.frame), image: \(animatedPreview.frame)")
+    let screenTop = NSScreen.screens.first?.frame.maxY ?? 0
     XCTAssertTrue(
       NSScreen.screens.contains { screen in
-        screen.visibleFrame.insetBy(dx: 15, dy: 15).contains(previewWindow.frame)
-      })
+        let visibleFrame = screen.visibleFrame.insetBy(dx: 15, dy: 15)
+        let accessibilityFrame = CGRect(
+          x: visibleFrame.minX,
+          y: screenTop - visibleFrame.maxY,
+          width: visibleFrame.width,
+          height: visibleFrame.height
+        )
+        return accessibilityFrame.contains(previewWindow.frame)
+      },
+      "window: \(previewWindow.frame), screens: \(NSScreen.screens.map(\.visibleFrame))")
 
     let startHandle = previewWindow.descendants(matching: .any)
       .matching(identifier: "trim-start-handle").firstMatch
