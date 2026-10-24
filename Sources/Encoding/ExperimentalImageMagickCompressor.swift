@@ -67,7 +67,8 @@ struct ExperimentalImageMagickCompressor: Sendable {
       throw ExperimentalImageMagickCompressionError.invalidDiffusionAmount
     }
     guard sourceURL.isFileURL, sourceURL.path.hasPrefix("/"),
-      sourceURL.standardizedFileURL != reservation.url.standardizedFileURL
+      sourceURL.standardizedFileURL != reservation.url.standardizedFileURL,
+      reservation.sourceURL == sourceURL.standardizedFileURL
     else { throw ExperimentalImageMagickCompressionError.invalidSource }
 
     let sourceMetadata: GIFAnimationMetadata
@@ -78,7 +79,13 @@ struct ExperimentalImageMagickCompressor: Sendable {
     }
 
     let destination = reservation.url
-    guard destination.isFileURL, destination.path.hasPrefix("/") else {
+    guard destination.isFileURL, destination.path.hasPrefix("/"),
+      let cacheDirectory = reservation.cacheDirectory,
+      cacheDirectory.deletingLastPathComponent().standardizedFileURL
+        == destination.deletingLastPathComponent().standardizedFileURL,
+      reservation.maximumCacheBytes > 0,
+      Self.isPrivateDirectory(cacheDirectory)
+    else {
       throw ExperimentalImageMagickCompressionError.invalidOutput
     }
     let temporaryURL = destination.deletingLastPathComponent()
@@ -91,7 +98,9 @@ struct ExperimentalImageMagickCompressor: Sendable {
     let arguments = Self.arguments(
       sourceURL: sourceURL,
       scale: scale,
-      diffusionAmount: diffusionAmount
+      diffusionAmount: diffusionAmount,
+      cacheDirectory: cacheDirectory,
+      maximumCacheBytes: reservation.maximumCacheBytes
     )
     let controller = ImageMagickProcessController()
     do {
@@ -150,14 +159,17 @@ struct ExperimentalImageMagickCompressor: Sendable {
   static func arguments(
     sourceURL: URL,
     scale: ExperimentalGIFScale,
-    diffusionAmount: Int
+    diffusionAmount: Int,
+    cacheDirectory: URL,
+    maximumCacheBytes: Int64
   ) -> [String] {
-    // these prototype ceilings need full-image CPU, RSS, and disk benchmarks before UI use.
+    // these pixel-cache limits still need full-image resource benchmarks before UI use.
     var arguments = [
       "-limit", "memory", "256MiB",
       "-limit", "map", "512MiB",
-      "-limit", "disk", "1GiB",
+      "-limit", "disk", String(maximumCacheBytes),
       "-limit", "thread", "2",
+      "-define", "registry:temporary-path=\(cacheDirectory.path)",
       sourceURL.path,
       "-coalesce",
     ]
@@ -172,6 +184,14 @@ struct ExperimentalImageMagickCompressor: Sendable {
       "gif:-",
     ])
     return arguments
+  }
+
+  private static func isPrivateDirectory(_ url: URL) -> Bool {
+    var info = stat()
+    return lstat(url.path, &info) == 0
+      && info.st_mode & S_IFMT == S_IFDIR
+      && info.st_uid == geteuid()
+      && info.st_mode & 0o077 == 0
   }
 
   private static func runProcess(

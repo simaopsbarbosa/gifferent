@@ -54,11 +54,25 @@ struct CompressedPreviewOutputReservation: Sendable, Equatable {
   let url: URL
   /// the output adapter must enforce this limit while writing; commit validates it again.
   let maximumBytes: Int64
+  let sourceURL: URL?
+  let cacheDirectory: URL?
+  /// the ImageMagick pixel cache must stay within this separately reserved workspace.
+  let maximumCacheBytes: Int64
   let token: UUID
 
-  init(url: URL, maximumBytes: Int64, token: UUID = UUID()) {
+  init(
+    url: URL,
+    maximumBytes: Int64,
+    sourceURL: URL? = nil,
+    cacheDirectory: URL? = nil,
+    maximumCacheBytes: Int64 = 0,
+    token: UUID = UUID()
+  ) {
     self.url = url
     self.maximumBytes = maximumBytes
+    self.sourceURL = sourceURL?.standardizedFileURL
+    self.cacheDirectory = cacheDirectory?.standardizedFileURL
+    self.maximumCacheBytes = maximumCacheBytes
     self.token = token
   }
 }
@@ -89,10 +103,13 @@ actor SessionWorkspaceStore {
     var lastTimestamp: TimeInterval?
     var stopReason: RecordingStopReason?
     var previewReady = false
+    var previewURL: URL?
+    var previewBytes: Int64?
     var previewReservedURL: URL?
     var previewReservedMaximumBytes: Int64?
     var editedPreviewURLs: [URL: Int64] = [:]
     var compressedPreviewReservation: CompressedPreviewOutputReservation?
+    var compressionCacheIdentity: DirectoryIdentity?
     var compressedPreviewURLs: [URL: Int64] = [:]
 
     var isRecording: Bool { stopReason == nil }
@@ -150,7 +167,11 @@ actor SessionWorkspaceStore {
     else { throw SessionWorkspaceError.invalidTimestamp }
     guard !data.isEmpty else { throw SessionWorkspaceError.emptyFrame }
     let bytes = Int64(data.count)
-    try checkCapacity(adding: bytes, current: session.temporaryBytes)
+    try checkCapacity(
+      adding: bytes,
+      current: session.temporaryBytes,
+      reserved: reservedBytes(in: session)
+    )
     let frameNumber = session.frameCount + 1
     let destination = session.directory.appendingPathComponent(
       String(format: "frame-%08d.bin", frameNumber),
@@ -263,6 +284,10 @@ actor SessionWorkspaceStore {
       }
       session.temporaryBytes += bytes
       session.previewReady = true
+      if reservedURL.lastPathComponent == "preview.gif" {
+        session.previewURL = reservedURL
+        session.previewBytes = bytes
+      }
       session.previewReservedURL = nil
       session.previewReservedMaximumBytes = nil
       if reservedURL.lastPathComponent != "preview.gif" {
@@ -300,6 +325,24 @@ actor SessionWorkspaceStore {
   func reserveCompressedPreviewOutput(
     for id: RecordingSessionID
   ) throws -> CompressedPreviewOutputReservation {
+    try reserveCompressedPreviewOutput(for: id, sourceURL: nil, maximumCacheBytes: 0)
+  }
+
+  func reserveCompressedPreviewOutput(
+    for id: RecordingSessionID,
+    sourceURL: URL,
+    maximumCacheBytes: Int64
+  ) throws -> CompressedPreviewOutputReservation {
+    try reserveCompressedPreviewOutput(
+      for: id, sourceURL: Optional(sourceURL), maximumCacheBytes: maximumCacheBytes
+    )
+  }
+
+  private func reserveCompressedPreviewOutput(
+    for id: RecordingSessionID,
+    sourceURL requestedSourceURL: URL?,
+    maximumCacheBytes: Int64
+  ) throws -> CompressedPreviewOutputReservation {
     guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
     guard !session.isRecording, session.previewReady,
       session.previewReservedURL == nil,
@@ -307,22 +350,53 @@ actor SessionWorkspaceStore {
     else { throw SessionWorkspaceError.invalidState }
     try verify(session)
 
+    let sourceURL = try accountedSourceURL(requestedSourceURL, in: session)
+
     let sessionRemaining = maximumSessionBytes - session.temporaryBytes
     guard sessionRemaining > 0 else { throw SessionWorkspaceError.sizeLimitExceeded }
     let availableBytes = try availableReservationBytes()
-    let maximumBytes = min(sessionRemaining, availableBytes)
+    let combinedBudget = min(sessionRemaining, availableBytes)
+    guard maximumCacheBytes >= 0, maximumCacheBytes < combinedBudget else {
+      if combinedBudget <= 0 || availableBytes <= maximumCacheBytes {
+        throw SessionWorkspaceError.insufficientDiskSpace
+      }
+      throw SessionWorkspaceError.sizeLimitExceeded
+    }
+    let maximumBytes = combinedBudget - maximumCacheBytes
     guard maximumBytes > 0 else { throw SessionWorkspaceError.insufficientDiskSpace }
 
     let outputURL = session.directory.appendingPathComponent(
       "compressed-\(UUID().uuidString).gif", isDirectory: false
     )
+    let cacheDirectory =
+      maximumCacheBytes > 0
+      ? session.directory.appendingPathComponent(
+        "compression-cache-\(UUID().uuidString)", isDirectory: true
+      )
+      : nil
     guard !entryExists(at: outputURL) else { throw SessionWorkspaceError.invalidPreviewFile }
+    let cacheIdentity: DirectoryIdentity?
+    if let cacheDirectory {
+      guard !entryExists(at: cacheDirectory) else { throw SessionWorkspaceError.unsafeWorkspace }
+      try fileManager.createDirectory(
+        at: cacheDirectory,
+        withIntermediateDirectories: false,
+        attributes: [.posixPermissions: 0o700]
+      )
+      cacheIdentity = try identityOfDirectory(at: cacheDirectory)
+    } else {
+      cacheIdentity = nil
+    }
     let reservation = CompressedPreviewOutputReservation(
       url: outputURL,
       maximumBytes: maximumBytes,
+      sourceURL: sourceURL,
+      cacheDirectory: cacheDirectory,
+      maximumCacheBytes: maximumCacheBytes,
       token: UUID()
     )
     session.compressedPreviewReservation = reservation
+    session.compressionCacheIdentity = cacheIdentity
     sessions[id] = session
     return reservation
   }
@@ -338,7 +412,11 @@ actor SessionWorkspaceStore {
       !session.compressedPreviewURLs.keys.contains(reservation.url)
     else { throw SessionWorkspaceError.invalidState }
     try verify(session)
+    let cacheBytes = try removeCompressionCache(for: reservation, session: session)
     do {
+      guard cacheBytes <= reservation.maximumCacheBytes else {
+        throw SessionWorkspaceError.sizeLimitExceeded
+      }
       let bytes = Int64(try sizeOfRegularFile(at: reservation.url))
       guard bytes <= reservation.maximumBytes,
         bytes <= maximumSessionBytes - session.temporaryBytes
@@ -346,6 +424,7 @@ actor SessionWorkspaceStore {
       session.temporaryBytes += bytes
       session.compressedPreviewURLs[reservation.url] = bytes
       session.compressedPreviewReservation = nil
+      session.compressionCacheIdentity = nil
       sessions[id] = session
       return snapshot(of: session)
     } catch {
@@ -355,6 +434,7 @@ actor SessionWorkspaceStore {
         throw SessionWorkspaceError.outputCleanupFailed
       }
       session.compressedPreviewReservation = nil
+      session.compressionCacheIdentity = nil
       sessions[id] = session
       throw error
     }
@@ -368,10 +448,12 @@ actor SessionWorkspaceStore {
       session.compressedPreviewReservation == reservation
     else { throw SessionWorkspaceError.invalidState }
     try verify(session)
+    _ = try removeCompressionCache(for: reservation, session: session)
     if entryExists(at: reservation.url) {
       try removeOutputEntry(at: reservation.url)
     }
     session.compressedPreviewReservation = nil
+    session.compressionCacheIdentity = nil
     sessions[id] = session
   }
 
@@ -497,8 +579,10 @@ actor SessionWorkspaceStore {
     )
   }
 
-  private func checkCapacity(adding bytes: Int64, current: Int64) throws {
-    guard bytes <= maximumSessionBytes - current else {
+  private func checkCapacity(adding bytes: Int64, current: Int64, reserved: Int64) throws {
+    guard reserved <= maximumSessionBytes - current,
+      bytes <= maximumSessionBytes - current - reserved
+    else {
       throw SessionWorkspaceError.sizeLimitExceeded
     }
     let availableAfterReservations = try availableReservationBytes()
@@ -515,10 +599,11 @@ actor SessionWorkspaceStore {
     let usableBytes = available - minimumFreeBytes
     var reservedBytes: Int64 = 0
     for session in sessions.values {
-      let reservations = [
-        session.previewReservedMaximumBytes,
-        session.compressedPreviewReservation?.maximumBytes,
-      ].compactMap { $0 }
+      let reservations =
+        [session.previewReservedMaximumBytes].compactMap { $0 }
+        + [session.compressedPreviewReservation].compactMap { $0 }.flatMap {
+          [$0.maximumBytes, $0.maximumCacheBytes]
+        }
       for bytes in reservations {
         let (sum, overflow) = reservedBytes.addingReportingOverflow(bytes)
         reservedBytes = overflow ? Int64.max : sum
@@ -528,6 +613,96 @@ actor SessionWorkspaceStore {
       throw SessionWorkspaceError.insufficientDiskSpace
     }
     return usableBytes - reservedBytes
+  }
+
+  private func reservedBytes(in session: Session) -> Int64 {
+    var total: Int64 = session.previewReservedMaximumBytes ?? 0
+    if let reservation = session.compressedPreviewReservation {
+      let (sum, overflow) = total.addingReportingOverflow(reservation.maximumBytes)
+      total = overflow ? Int64.max : sum
+      let (cacheSum, cacheOverflow) = total.addingReportingOverflow(reservation.maximumCacheBytes)
+      total = cacheOverflow ? Int64.max : cacheSum
+    }
+    return total
+  }
+
+  private func accountedSourceURL(_ requested: URL?, in session: Session) throws -> URL {
+    let source = requested?.standardizedFileURL ?? session.previewURL
+    guard let source else { throw SessionWorkspaceError.invalidPreviewFile }
+    let trackedBytes =
+      if source == session.previewURL {
+        session.previewBytes
+      } else if let bytes = session.editedPreviewURLs[source] {
+        Optional(bytes)
+      } else {
+        session.compressedPreviewURLs[source]
+      }
+    guard let trackedBytes, Int64(try sizeOfRegularFile(at: source)) == trackedBytes else {
+      throw SessionWorkspaceError.invalidPreviewFile
+    }
+    return source
+  }
+
+  private func removeCompressionCache(
+    for reservation: CompressedPreviewOutputReservation,
+    session: Session
+  ) throws -> Int64 {
+    guard let cacheDirectory = reservation.cacheDirectory,
+      reservation.maximumCacheBytes > 0,
+      let expectedIdentity = session.compressionCacheIdentity,
+      cacheDirectory.deletingLastPathComponent().standardizedFileURL
+        == session.directory.standardizedFileURL
+    else {
+      if reservation.maximumCacheBytes == 0, reservation.cacheDirectory == nil { return 0 }
+      throw SessionWorkspaceError.outputCleanupFailed
+    }
+    var info = stat()
+    guard lstat(cacheDirectory.path, &info) == 0 else {
+      if errno == ENOENT { return 0 }
+      throw SessionWorkspaceError.outputCleanupFailed
+    }
+    guard info.st_mode & S_IFMT == S_IFDIR,
+      DirectoryIdentity(device: info.st_dev, inode: info.st_ino) == expectedIdentity
+    else { throw SessionWorkspaceError.outputCleanupFailed }
+    let measuredBytes = try directoryFileBytes(at: cacheDirectory)
+    do {
+      try fileManager.removeItem(at: cacheDirectory)
+    } catch {
+      throw SessionWorkspaceError.outputCleanupFailed
+    }
+    return measuredBytes
+  }
+
+  private func directoryFileBytes(at directory: URL) throws -> Int64 {
+    let children: [URL]
+    do {
+      children = try fileManager.contentsOfDirectory(
+        at: directory, includingPropertiesForKeys: nil
+      )
+    } catch {
+      throw SessionWorkspaceError.outputCleanupFailed
+    }
+    var total: Int64 = 0
+    for child in children {
+      var info = stat()
+      guard lstat(child.path, &info) == 0 else {
+        throw SessionWorkspaceError.outputCleanupFailed
+      }
+      let bytes: Int64
+      switch info.st_mode & S_IFMT {
+      case S_IFREG:
+        bytes = Int64(info.st_size)
+      case S_IFDIR:
+        bytes = try directoryFileBytes(at: child)
+      case S_IFLNK:
+        bytes = Int64(info.st_size)
+      default:
+        throw SessionWorkspaceError.outputCleanupFailed
+      }
+      let (sum, overflow) = total.addingReportingOverflow(bytes)
+      total = overflow ? Int64.max : sum
+    }
+    return total
   }
 
   private func availableDiskBytes() throws -> Int64 {

@@ -10,6 +10,9 @@ from pathlib import Path
 
 from generate_fixture import draw_frame
 from run_encoder_benchmark import (
+    CANDIDATES,
+    PRIMARY_MATRIX_CANDIDATES,
+    candidate_order,
     command_for,
     diffusion_amount,
     expected_frame_delays,
@@ -17,6 +20,7 @@ from run_encoder_benchmark import (
     gif_metadata,
     path_availability,
     run_one,
+    summary_sample,
 )
 
 
@@ -39,6 +43,44 @@ SIX_FRAME_MANIFEST = {"fps": 24, "width": 1, "height": 1, "duration_seconds": 6 
 
 
 class CleanupTests(unittest.TestCase):
+    def test_primary_matrix_is_five_paths_and_alternates_order(self):
+        self.assertEqual(
+            PRIMARY_MATRIX_CANDIDATES,
+            ("gifski", "magick", "magick-unoptimized", "imageio", "imageio-gifsicle"),
+        )
+        self.assertEqual(len(CANDIDATES), 6)
+        self.assertEqual(candidate_order(PRIMARY_MATRIX_CANDIDATES, 0), list(PRIMARY_MATRIX_CANDIDATES))
+        self.assertEqual(candidate_order(PRIMARY_MATRIX_CANDIDATES, 1), list(reversed(PRIMARY_MATRIX_CANDIDATES)))
+        self.assertEqual(candidate_order(PRIMARY_MATRIX_CANDIDATES, 2), list(PRIMARY_MATRIX_CANDIDATES))
+
+    def test_summary_sample_keeps_metadata_and_per_stage_measurements(self):
+        sample = {
+            "run": "warm-01",
+            "round": 1,
+            "status": "ok",
+            "elapsed_seconds": 2.4,
+            "component_elapsed_seconds": 2.1,
+            "cpu_user_seconds": 1.2,
+            "cpu_system_seconds": 0.3,
+            "output_bytes": 1234,
+            "output_sha256": "abc",
+            "retained_output": True,
+            "retained_output_path": "out.gif",
+            "gif": {"width": 320, "height": 180, "frame_count": 6, "duration_seconds": 0.25, "frame_delays_centiseconds": [4, 4, 5, 4, 4, 4], "loop_count": 0},
+            "peak_resident_bytes_reported": 1000,
+            "memory_measurement": "system_time",
+            "peak_workspace_bytes_sampled": 2000,
+            "stage_results": [{"stage": "gifsicle", "elapsed_seconds": 1.0, "cpu_user_seconds": 0.5, "cpu_system_seconds": 0.1, "peak_resident_bytes_reported": 900, "peak_workspace_bytes_sampled": 1500}],
+        }
+
+        result = summary_sample(sample)
+
+        self.assertEqual(result["run_state"], "warm")
+        self.assertEqual((result["width"], result["height"], result["loop_count"]), (320, 180, 0))
+        self.assertEqual(result["peak_workspace_bytes_sampled"], 2000)
+        self.assertEqual(result["stages"][0]["stage"], "gifsicle")
+        self.assertEqual(result["stages"][0]["peak_resident_bytes_reported"], 900)
+
     def run_fake(self, body, timeout):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)

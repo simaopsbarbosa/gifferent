@@ -17,6 +17,8 @@
 
 the architect selected **loop frame** for the first candidate. the other concepts are reference options, not parallel implementation work. this is a concept brief, not approved artwork. create black-and-white small-size studies first and inspect at menu bar size. add warm orange only after the silhouette works. provide light and dark variants and a high-contrast option. do not lift Augusta Labs or Cloudflare assets, proportions, or icon designs.
 
+first-round monochrome studies are available in the [accessible contact sheet](Brand/Studies/index.html), with tradeoffs in [review notes](Brand/Studies/review-notes.md). these are review material only; none is approved artwork.
+
 ## interface rules
 
 - use native macOS hierarchy, materials, typography, focus rings, menus, dialogs, and keyboard behavior as the base. custom chrome stays around capture selection, preview progress, and small brand moments.

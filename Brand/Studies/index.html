@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gifferent loop-frame mark studies</title>
+  <style>
+    :root { color-scheme: light dark; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; padding: 2rem; background: Canvas; color: CanvasText; }
+    main { max-width: 1120px; margin: auto; }
+    h1, h2, p { margin-top: 0; }
+    h1 { font-size: 1.5rem; }
+    .notice { padding: .75rem 1rem; border: 2px solid currentColor; font-weight: 650; }
+    .studies { display: grid; grid-template-columns: repeat(auto-fit, minmax(290px, 1fr)); gap: 1rem; }
+    article { border: 1px solid GrayText; border-radius: .5rem; padding: 1rem; }
+    article h2 { font-size: 1.1rem; }
+    table { width: 100%; border-collapse: separate; border-spacing: .35rem; table-layout: fixed; }
+    caption { text-align: left; font-weight: 650; padding-bottom: .25rem; }
+    th, td { padding: .3rem .15rem; text-align: center; font-size: .78rem; }
+    th:first-child { width: 5rem; text-align: left; }
+    .surface { min-height: 56px; display: grid; place-items: center; border: 1px solid GrayText; border-radius: .3rem; }
+    .surface img { display: block; width: var(--size); height: var(--size); }
+    .light { background: #fff; color: #000; }
+    .dark { background: #151515; color: #fff; }
+    .hc-light { background: #fff; color: #000; outline: 2px solid #000; outline-offset: -3px; }
+    .hc-dark { background: #000; color: #fff; outline: 2px solid #fff; outline-offset: -3px; }
+    .inverse { filter: invert(1); }
+    .choice { margin-top: 1rem; padding-top: .8rem; border-top: 1px solid GrayText; }
+    @media (prefers-reduced-motion: reduce) { *, *::before, *::after { scroll-behavior: auto !important; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>loop-frame mark studies</h1>
+  <p class="notice">first-round studies only · monochrome · not approved artwork</p>
+  <p>the selected direction is an open geometric loop inside a capture frame. compare silhouette and stroke survival at menu-bar sizes. dark surfaces invert the black source artwork.</p>
+  <p><a href="review-notes.md">read the tradeoffs and open architect choices</a></p>
+  <section class="studies" aria-label="three loop-frame logo studies">
+    <article aria-labelledby="a-title">
+      <h2 id="a-title">study a · paired loop</h2>
+      <p>opposed arcs read as a continuous return; the inner arrows may merge at the smallest sizes.</p>
+      <table><caption>mark size by surface</caption><thead><tr><th scope="col">surface</th><th scope="col">16 px</th><th scope="col">24 px</th><th scope="col">32 px</th><th scope="col">128 px</th></tr></thead><tbody>
+        <tr><th scope="row">light</th><td><div class="surface light"><img src="loop-frame-a.svg" alt="study a, light surface, 16 pixels" style="--size:16px"></div></td><td><div class="surface light"><img src="loop-frame-a.svg" alt="study a, light surface, 24 pixels" style="--size:24px"></div></td><td><div class="surface light"><img src="loop-frame-a.svg" alt="study a, light surface, 32 pixels" style="--size:32px"></div></td><td><div class="surface light"><img src="loop-frame-a.svg" alt="study a, light surface, 128 pixels" style="--size:128px"></div></td></tr>
+        <tr><th scope="row">dark</th><td><div class="surface dark"><img class="inverse" src="loop-frame-a.svg" alt="study a, dark surface, 16 pixels" style="--size:16px"></div></td><td><div class="surface dark"><img class="inverse" src="loop-frame-a.svg" alt="study a, dark surface, 24 pixels" style="--size:24px"></div></td><td><div class="surface dark"><img class="inverse" src="loop-frame-a.svg" alt="study a, dark surface, 32 pixels" style="--size:32px"></div></td><td><div class="surface dark"><img class="inverse" src="loop-frame-a.svg" alt="study a, dark surface, 128 pixels" style="--size:128px"></div></td></tr>
+        <tr><th scope="row">high contrast</th><td><div class="surface hc-light"><img src="loop-frame-a.svg" alt="study a, high-contrast light surface, 16 pixels" style="--size:16px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="loop-frame-a.svg" alt="study a, high-contrast dark surface, 24 pixels" style="--size:24px"></div></td><td><div class="surface hc-light"><img src="loop-frame-a.svg" alt="study a, high-contrast light surface, 32 pixels" style="--size:32px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="loop-frame-a.svg" alt="study a, high-contrast dark surface, 128 pixels" style="--size:128px"></div></td></tr>
+      </tbody></table>
+      <p class="choice"><strong>tradeoff:</strong> clearest motion cue, but the arrowheads carry detail that may soften at 16 px.</p>
+    </article>
+    <article aria-labelledby="b-title">
+      <h2 id="b-title">study b · offset return</h2>
+      <p>tighter inner paths make a compact motion knot with a slightly wider frame opening.</p>
+      <table><caption>mark size by surface</caption><thead><tr><th scope="col">surface</th><th scope="col">16 px</th><th scope="col">24 px</th><th scope="col">32 px</th><th scope="col">128 px</th></tr></thead><tbody>
+        <tr><th scope="row">light</th><td><div class="surface light"><img src="loop-frame-b.svg" alt="study b, light surface, 16 pixels" style="--size:16px"></div></td><td><div class="surface light"><img src="loop-frame-b.svg" alt="study b, light surface, 24 pixels" style="--size:24px"></div></td><td><div class="surface light"><img src="loop-frame-b.svg" alt="study b, light surface, 32 pixels" style="--size:32px"></div></td><td><div class="surface light"><img src="loop-frame-b.svg" alt="study b, light surface, 128 pixels" style="--size:128px"></div></td></tr>
+        <tr><th scope="row">dark</th><td><div class="surface dark"><img class="inverse" src="loop-frame-b.svg" alt="study b, dark surface, 16 pixels" style="--size:16px"></div></td><td><div class="surface dark"><img class="inverse" src="loop-frame-b.svg" alt="study b, dark surface, 24 pixels" style="--size:24px"></div></td><td><div class="surface dark"><img class="inverse" src="loop-frame-b.svg" alt="study b, dark surface, 32 pixels" style="--size:32px"></div></td><td><div class="surface dark"><img class="inverse" src="loop-frame-b.svg" alt="study b, dark surface, 128 pixels" style="--size:128px"></div></td></tr>
+        <tr><th scope="row">high contrast</th><td><div class="surface hc-light"><img src="loop-frame-b.svg" alt="study b, high-contrast light surface, 16 pixels" style="--size:16px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="loop-frame-b.svg" alt="study b, high-contrast dark surface, 24 pixels" style="--size:24px"></div></td><td><div class="surface hc-light"><img src="loop-frame-b.svg" alt="study b, high-contrast light surface, 32 pixels" style="--size:32px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="loop-frame-b.svg" alt="study b, high-contrast dark surface, 128 pixels" style="--size:128px"></div></td></tr>
+      </tbody></table>
+      <p class="choice"><strong>tradeoff:</strong> strongest compact silhouette; the denser center could read as a knot instead of two arcs.</p>
+    </article>
+    <article aria-labelledby="c-title">
+      <h2 id="c-title">study c · vertical loop</h2>
+      <p>vertically opposed arcs favor a stable centered silhouette over a directional spin.</p>
+      <table><caption>mark size by surface</caption><thead><tr><th scope="col">surface</th><th scope="col">16 px</th><th scope="col">24 px</th><th scope="col">32 px</th><th scope="col">128 px</th></tr></thead><tbody>
+        <tr><th scope="row">light</th><td><div class="surface light"><img src="loop-frame-c.svg" alt="study c, light surface, 16 pixels" style="--size:16px"></div></td><td><div class="surface light"><img src="loop-frame-c.svg" alt="study c, light surface, 24 pixels" style="--size:24px"></div></td><td><div class="surface light"><img src="loop-frame-c.svg" alt="study c, light surface, 32 pixels" style="--size:32px"></div></td><td><div class="surface light"><img src="loop-frame-c.svg" alt="study c, light surface, 128 pixels" style="--size:128px"></div></td></tr>
+        <tr><th scope="row">dark</th><td><div class="surface dark"><img class="inverse" src="loop-frame-c.svg" alt="study c, dark surface, 16 pixels" style="--size:16px"></div></td><td><div class="surface dark"><img class="inverse" src="loop-frame-c.svg" alt="study c, dark surface, 24 pixels" style="--size:24px"></div></td><td><div class="surface dark"><img class="inverse" src="loop-frame-c.svg" alt="study c, dark surface, 32 pixels" style="--size:32px"></div></td><td><div class="surface dark"><img class="inverse" src="loop-frame-c.svg" alt="study c, dark surface, 128 pixels" style="--size:128px"></div></td></tr>
+        <tr><th scope="row">high contrast</th><td><div class="surface hc-light"><img src="loop-frame-c.svg" alt="study c, high-contrast light surface, 16 pixels" style="--size:16px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="loop-frame-c.svg" alt="study c, high-contrast dark surface, 24 pixels" style="--size:24px"></div></td><td><div class="surface hc-light"><img src="loop-frame-c.svg" alt="study c, high-contrast light surface, 32 pixels" style="--size:32px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="loop-frame-c.svg" alt="study c, high-contrast dark surface, 128 pixels" style="--size:128px"></div></td></tr>
+      </tbody></table>
+      <p class="choice"><strong>tradeoff:</strong> quiet and balanced; the vertical rhythm may feel less like a loop in motion.</p>
+    </article>
+  </section>
+  <section aria-labelledby="open-title">
+    <h2 id="open-title">open choices for architect review</h2>
+    <ul>
+      <li>which silhouette, if any, best expresses the product?</li>
+      <li>should frame corners stay separate or become more continuous?</li>
+      <li>do the arrowheads survive at 16 px, or should motion rely on arc shape alone?</li>
+      <li>after a monochrome direction is approved, what warm orange values and usage rules should be explored?</li>
+      <li>what motion and optional sound direction should accompany the mark?</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

@@ -20,7 +20,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-CANDIDATES = ("gifski", "magick", "magick-unoptimized", "imageio", "imageio-app", "imageio-gifsicle")
+PRIMARY_MATRIX_CANDIDATES = ("gifski", "magick", "magick-unoptimized", "imageio", "imageio-gifsicle")
+CANDIDATES = (*PRIMARY_MATRIX_CANDIDATES, "imageio-app")
 RSS_PATTERN = re.compile(r"(\d+)\s+maximum resident set size")
 CPU_PATTERN = re.compile(r"([\d.]+)\s+real\s+([\d.]+)\s+user\s+([\d.]+)\s+sys")
 
@@ -151,6 +152,51 @@ def gif_metadata(path):
 def percentile(values, fraction):
     ordered = sorted(values)
     return ordered[max(0, math.ceil(fraction * len(ordered)) - 1)]
+
+
+def candidate_order(candidates, round_index):
+    """Alternate path order between successive cold and warm rounds."""
+    ordered = list(candidates)
+    return ordered if round_index % 2 == 0 else list(reversed(ordered))
+
+
+def summary_sample(sample):
+    """Keep comparable per-run metrics in the compact report."""
+    gif = sample.get("gif", {})
+    return {
+        "run": sample["run"],
+        "round": sample.get("round"),
+        "run_state": "cold_first_invocation" if sample["run"] == "cold" else "warm",
+        "status": sample["status"],
+        "elapsed_seconds": sample["elapsed_seconds"],
+        "component_elapsed_seconds": sample.get("component_elapsed_seconds"),
+        "cpu_user_seconds": sample["cpu_user_seconds"],
+        "cpu_system_seconds": sample["cpu_system_seconds"],
+        "bytes": sample.get("output_bytes"),
+        "output_sha256": sample.get("output_sha256"),
+        "retained_output": sample.get("retained_output", False),
+        "retained_output_path": sample.get("retained_output_path"),
+        "width": gif.get("width"),
+        "height": gif.get("height"),
+        "frame_count": gif.get("frame_count"),
+        "duration_seconds": gif.get("duration_seconds"),
+        "frame_delays_centiseconds": gif.get("frame_delays_centiseconds"),
+        "loop_count": gif.get("loop_count"),
+        "peak_resident_bytes_reported": sample["peak_resident_bytes_reported"],
+        "memory_measurement": sample.get("memory_measurement", "unavailable"),
+        "peak_workspace_bytes_sampled": sample["peak_workspace_bytes_sampled"],
+        "stages": [
+            {
+                "stage": stage.get("stage"),
+                "elapsed_seconds": stage.get("elapsed_seconds"),
+                "cpu_user_seconds": stage.get("cpu_user_seconds"),
+                "cpu_system_seconds": stage.get("cpu_system_seconds"),
+                "peak_resident_bytes_reported": stage.get("peak_resident_bytes_reported"),
+                "peak_workspace_bytes_sampled": stage.get("peak_workspace_bytes_sampled"),
+            }
+            for stage in sample.get("stage_results", [])
+        ],
+    }
 
 
 def expected_frame_delays(fps, frame_count):
@@ -475,7 +521,13 @@ def main():
     parser.add_argument("--runs", type=int, default=7, help="warm runs per candidate after one cold run")
     parser.add_argument("--imageio-app-binary", type=Path, help="reuse a previously compiled app candidate helper")
     parser.add_argument("--timeout", type=float, default=180, help="total seconds allowed per benchmark path")
-    parser.add_argument("--candidates", nargs="+", choices=CANDIDATES, default=CANDIDATES)
+    parser.add_argument(
+        "--candidates",
+        nargs="+",
+        choices=CANDIDATES,
+        default=PRIMARY_MATRIX_CANDIDATES,
+        help="paths to run (default: the documented five-path primary matrix; imageio-app is an optional additional comparison)",
+    )
     parser.add_argument("--magick-diffusion-amount", type=diffusion_amount, default=100, metavar="0..100", help="ImageMagick Floyd-Steinberg diffusion amount as a percentage (default: 100)")
     args = parser.parse_args()
     if args.runs < 1 or args.timeout <= 0:
@@ -515,11 +567,11 @@ def main():
     retained_hashes = {name: set() for name in selected}
     (args.output / "raw.json").write_text("[]\n")
     for round_index in range(args.runs + 1):
-        order = selected if round_index % 2 == 0 else list(reversed(selected))
+        order = candidate_order(selected, round_index)
         for name in order:
             if not availability[name]["available"]:
                 continue
-            label = "first-invocation" if round_index == 0 else f"warm-{round_index:02d}"
+            label = "cold" if round_index == 0 else f"warm-{round_index:02d}"
             print(f"running {name} {label}", flush=True)
             try:
                 result = run_one(name, tools, manifest, frames, args.output, label, args.timeout, use_system_time, args.magick_diffusion_amount, retained_hashes[name])
@@ -534,10 +586,21 @@ def main():
     summary = {}
     for name in selected:
         samples = [sample for sample in records if sample["candidate"] == name]
-        warm = [sample["elapsed_seconds"] for sample in samples if sample["run"] != "first-invocation" and sample["status"] == "ok"]
+        warm = [sample["elapsed_seconds"] for sample in samples if sample["run"].startswith("warm-") and sample["status"] == "ok"]
         path = availability[name]
-        summary[name] = {"available": path["available"], "required_tools": path["required_tools"], "missing_tools": path["missing_tools"], "reason": path["reason"], "magick_diffusion_amount_percent": args.magick_diffusion_amount if name in ("magick", "magick-unoptimized") else None, "status": "unavailable" if not path["available"] else "ok" if len(warm) == args.runs else "incomplete", "successful_warm_runs": len(warm), "median_warm_seconds": statistics.median(warm) if warm else None, "p90_warm_seconds": percentile(warm, 0.9) if warm else None, "samples": [{"run": sample["run"], "status": sample["status"], "elapsed_seconds": sample["elapsed_seconds"], "cpu_user_seconds": sample["cpu_user_seconds"], "cpu_system_seconds": sample["cpu_system_seconds"], "bytes": sample.get("output_bytes"), "output_sha256": sample.get("output_sha256"), "retained_output": sample.get("retained_output", False), "retained_output_path": sample.get("retained_output_path"), "frame_count": sample.get("gif", {}).get("frame_count"), "duration_seconds": sample.get("gif", {}).get("duration_seconds"), "frame_delays_centiseconds": sample.get("gif", {}).get("frame_delays_centiseconds"), "peak_resident_bytes_reported": sample["peak_resident_bytes_reported"], "peak_workspace_bytes_sampled": sample["peak_workspace_bytes_sampled"]} for sample in samples]}
-    report = {"environment": environment(), "fixture": {"path": str(fixture), "manifest": manifest, "manifest_sha256": digest(manifest_path), "frames_sha256": fixture_digest(frames)}, "tools": tools, "path_availability": availability, "system_time_probe": time_probe, "runs_requested": args.runs, "magick_diffusion_amount_percent": args.magick_diffusion_amount, "timeout_seconds": args.timeout, "summary": summary, "limits": ["this measures offline PNG-to-GIF encoding, not capture or stop-to-preview latency", "per-frame centisecond delays and infinite-loop metadata must match the fixture/output contract", "peak workspace bytes are polled every 20 ms and can miss short-lived files", "memory uses macOS /usr/bin/time -l when available, otherwise sampled ps; either may include helper processes or miss short peaks", "GIF parsing checks structure and metadata, not visual fidelity or playback in another app"]}
+        summary[name] = {
+            "available": path["available"],
+            "required_tools": path["required_tools"],
+            "missing_tools": path["missing_tools"],
+            "reason": path["reason"],
+            "magick_diffusion_amount_percent": args.magick_diffusion_amount if name in ("magick", "magick-unoptimized") else None,
+            "status": "unavailable" if not path["available"] else "ok" if len(warm) == args.runs else "incomplete",
+            "successful_warm_runs": len(warm),
+            "median_warm_seconds": statistics.median(warm) if warm else None,
+            "p90_warm_seconds": percentile(warm, 0.9) if warm else None,
+            "samples": [summary_sample(sample) for sample in samples],
+        }
+    report = {"environment": environment(), "fixture": {"path": str(fixture), "manifest": manifest, "manifest_sha256": digest(manifest_path), "frames_sha256": fixture_digest(frames)}, "tools": tools, "path_availability": availability, "system_time_probe": time_probe, "runs_requested": args.runs, "cold_run_definition": "the first invocation of each path in this series; operating-system caches are not flushed", "magick_diffusion_amount_percent": args.magick_diffusion_amount, "timeout_seconds": args.timeout, "summary": summary, "limits": ["this measures offline PNG-to-GIF encoding, not capture or stop-to-preview latency", "per-frame centisecond delays and infinite-loop metadata must match the fixture/output contract", "peak workspace bytes are polled every 20 ms and can miss short-lived files", "memory uses macOS /usr/bin/time -l when available, otherwise sampled ps; either may include helper processes or miss short peaks", "GIF parsing checks structure and metadata, not visual fidelity or playback in another app"]}
     (args.output / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
     print(f"raw results: {args.output / 'raw.json'}")

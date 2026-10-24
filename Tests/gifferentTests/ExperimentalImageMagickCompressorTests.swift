@@ -14,14 +14,14 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
     let argumentsURL = fixture.directory.appendingPathComponent("arguments.txt")
     let executable = try fakeExecutable(
       in: fixture.directory,
-      body: "printf '%s\\n' \"$@\" > '\(argumentsURL.path)'\ncat \"${13}\""
+      body: "printf '%s\\n' \"$@\" > '\(argumentsURL.path)'\ncat \"${15}\""
     )
     let destination = fixture.directory.appendingPathComponent("compressed.gif")
     let result = try await ExperimentalImageMagickCompressor().compress(
       fixture.source,
       executableURL: executable,
       scale: .seventyFivePercent,
-      to: CompressedPreviewOutputReservation(url: destination, maximumBytes: 100_000)
+      to: try makeReservation(fixture, destination: destination, maximumBytes: 100_000)
     )
 
     XCTAssertEqual(
@@ -30,8 +30,10 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
       [
         "-limit", "memory", "256MiB",
         "-limit", "map", "512MiB",
-        "-limit", "disk", "1GiB",
+        "-limit", "disk", "4096",
         "-limit", "thread", "2",
+        "-define",
+        "registry:temporary-path=\(fixture.directory.appendingPathComponent("cache").path)",
         fixture.source.path,
         "-coalesce",
         "-resize",
@@ -59,13 +61,16 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
       ExperimentalImageMagickCompressor.arguments(
         sourceURL: URL(fileURLWithPath: "/tmp/source with spaces.gif"),
         scale: .original,
-        diffusionAmount: 0
+        diffusionAmount: 0,
+        cacheDirectory: URL(fileURLWithPath: "/tmp/cache"),
+        maximumCacheBytes: 12_345
       ),
       [
         "-limit", "memory", "256MiB",
         "-limit", "map", "512MiB",
-        "-limit", "disk", "1GiB",
+        "-limit", "disk", "12345",
         "-limit", "thread", "2",
+        "-define", "registry:temporary-path=/tmp/cache",
         "/tmp/source with spaces.gif",
         "-coalesce",
         "-dither", "FloydSteinberg",
@@ -92,13 +97,38 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
         executableURL: executable,
         scale: .original,
         diffusionAmount: 34,
-        to: CompressedPreviewOutputReservation(url: destination, maximumBytes: 100_000)
+        to: try makeReservation(fixture, destination: destination, maximumBytes: 100_000)
       )
       XCTFail("expected invalid diffusion amount")
     } catch let error as ExperimentalImageMagickCompressionError {
       XCTAssertEqual(error, .invalidDiffusionAmount)
     }
     XCTAssertFalse(FileManager.default.fileExists(atPath: marker.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+  }
+
+  func testReservationCannotBeUsedWithAnUnaccountedSource() async throws {
+    let fixture = try await makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.directory) }
+    let destination = fixture.directory.appendingPathComponent("compressed.gif")
+    let reservation = try makeReservation(
+      fixture,
+      destination: destination,
+      maximumBytes: 100_000
+    )
+    let externalSource = fixture.directory.appendingPathComponent("external.gif")
+
+    do {
+      _ = try await ExperimentalImageMagickCompressor().compress(
+        externalSource,
+        executableURL: URL(fileURLWithPath: "/usr/bin/false"),
+        scale: .original,
+        to: reservation
+      )
+      XCTFail("expected source mismatch")
+    } catch let error as ExperimentalImageMagickCompressionError {
+      XCTAssertEqual(error, .invalidSource)
+    }
     XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
   }
 
@@ -114,7 +144,7 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
         fixture.source,
         executableURL: executable,
         scale: .original,
-        to: CompressedPreviewOutputReservation(url: destination, maximumBytes: 100_000)
+        to: try makeReservation(fixture, destination: destination, maximumBytes: 100_000)
       )
       XCTFail("expected child failure")
     } catch let error as ExperimentalImageMagickCompressionError {
@@ -142,7 +172,7 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
         fixture.source,
         executableURL: executable,
         scale: .original,
-        to: CompressedPreviewOutputReservation(url: destination, maximumBytes: 128)
+        to: try makeReservation(fixture, destination: destination, maximumBytes: 128)
       )
       XCTFail("expected output cap")
     } catch let error as ExperimentalImageMagickCompressionError {
@@ -161,12 +191,15 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
       body: ": > '\(marker.path)'\nwhile :; do :; done"
     )
     let destination = fixture.directory.appendingPathComponent("compressed.gif")
+    let reservation = try makeReservation(
+      fixture, destination: destination, maximumBytes: 100_000
+    )
     let task = Task {
       try await ExperimentalImageMagickCompressor().compress(
         fixture.source,
         executableURL: executable,
         scale: .original,
-        to: CompressedPreviewOutputReservation(url: destination, maximumBytes: 100_000)
+        to: reservation
       )
     }
     for _ in 0..<200 where !FileManager.default.fileExists(atPath: marker.path) {
@@ -198,7 +231,7 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
         fixture.source,
         executableURL: executable,
         scale: .original,
-        to: CompressedPreviewOutputReservation(url: destination, maximumBytes: 100_000)
+        to: try makeReservation(fixture, destination: destination, maximumBytes: 100_000)
       )
       XCTFail("expected metadata mismatch")
     } catch let error as ExperimentalImageMagickCompressionError {
@@ -219,13 +252,22 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: directory) }
 
     let source = try await makeDeltaGIF(directory: directory)
-    let sourceMetadata = try GIFMetadataInspector().inspect(source)
+    let encodedSource = try GIFMetadataInspector().inspect(source)
+    let sourceMetadata = GIFAnimationMetadataSnapshot(
+      frameCount: encodedSource.frameCount,
+      delaysCentiseconds: encodedSource.delaysCentiseconds,
+      loopCount: encodedSource.loopsForever ? 0 : nil
+    )
     let destination = directory.appendingPathComponent("compressed.gif")
     let result = try await ExperimentalImageMagickCompressor().compress(
       source,
       executableURL: executable,
       scale: .original,
-      to: CompressedPreviewOutputReservation(url: destination, maximumBytes: 10_000_000)
+      to: try makeReservation(
+        Fixture(directory: directory, source: source, metadata: sourceMetadata),
+        destination: destination,
+        maximumBytes: 10_000_000
+      )
     )
     let frames = try GIFFrameDescriptorInspector.inspect(destination)
 
@@ -250,6 +292,26 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
     let directory: URL
     let source: URL
     let metadata: GIFAnimationMetadataSnapshot
+  }
+
+  private func makeReservation(
+    _ fixture: Fixture,
+    destination: URL,
+    maximumBytes: Int64
+  ) throws -> CompressedPreviewOutputReservation {
+    let cacheDirectory = fixture.directory.appendingPathComponent("cache", isDirectory: true)
+    try FileManager.default.createDirectory(
+      at: cacheDirectory,
+      withIntermediateDirectories: false,
+      attributes: [.posixPermissions: 0o700]
+    )
+    return CompressedPreviewOutputReservation(
+      url: destination,
+      maximumBytes: maximumBytes,
+      sourceURL: fixture.source,
+      cacheDirectory: cacheDirectory,
+      maximumCacheBytes: 4_096
+    )
   }
 
   private struct GIFAnimationMetadataSnapshot {
