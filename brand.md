@@ -23,6 +23,8 @@ the architect selected study c, the vertical loop, for a second round of refinem
 
 the architect selected variant b, with directional ends, to proceed to final-art exploration. the second-round [accessible comparison sheet](Brand/Studies/round-two/index.html) records all three monochrome refinements. this selection does not approve final artwork, orange values, motion, or sound.
 
+round-three [final-art explorations](Brand/Studies/round-three/index.html) refine variant b into three silhouettes, each shown in monochrome and with a provisional warm-orange accent. all artwork, color, motion, and sound choices remain open for architect review.
+
 ## interface rules
 
 - use native macOS hierarchy, materials, typography, focus rings, menus, dialogs, and keyboard behavior as the base. custom chrome stays around capture selection, preview progress, and small brand moments.

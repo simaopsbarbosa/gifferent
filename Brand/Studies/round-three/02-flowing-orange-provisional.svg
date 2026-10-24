@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">flowing return · provisional warm orange</title>
+  <desc id="desc">directional vertical-loop arcs with longer flowing turns inside a crop frame with provisional warm-orange directional tips</desc>
+  <g fill="none" stroke="#111111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 22V10h12M44 10h12v12M56 42v12H44M20 54H8V42"/>
+    <path d="M21 28c0-8 8-13 15-9 5 2 7 7 6 12M43 36c0 8-8 13-15 9-5-2-7-7-6-12"/>
+  </g>
+  <g fill="none" stroke="#ed6a2c" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M36 19l6 4-4 4M27 45l-5-4 4-4"/>
+  </g>
+</svg>
