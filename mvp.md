@@ -9,7 +9,7 @@
 - if a selected window moves to another display, keep following it. if it is minimized or closed, stop recording with a clear message and keep usable captured frames as a partial result. if there are no usable frames, show an error and clean up.
 - if a selected display disconnects during recording, stop with a clear message and keep usable captured frames as a partial result. if there are no usable frames, show an error and clean up.
 - stop with the same hotkey. show a floating, animated preview with file size, duration, dimensions, and clear processing status. offer copy, save, discard, and compress. `⌘C` copies and confirms success; `⌘S` opens the save dialog. closing an unexported preview asks before discarding.
-- trim the beginning and end before export. choose playback speed, which changes exported duration. choose loop forever or once. preview and export must agree.
+- trim the beginning and end before export with two timeline handles. choose playback speed from a 0.5×–2× slider in 0.1× steps, centered at 1×. choose loop forever or once. preview and export must agree.
 - compression uses bundled local command-line tooling. preserve the original; show compressed output with a back action. offer dithering-strength slider, original/75%/50%/25% resolution choices, and goal buttons for Discord and GitHub. each button shows the destination logo and current published maximum. aim below the limit with a safety margin. automatically search resolution, frame rate, palette, and dithering settings for the smallest file under the target. report the best attempt and a warning if the goal cannot be met acceptably.
 - guided screen-recording permission setup; clear failures for missing permissions, hotkey conflict, unavailable display/window, full disk, encoder failure, and failed clipboard or save operations.
 - retain temporary completed media while its preview is active. remove it when the preview closes after export or after confirmed discard; remove orphaned preview media on the next launch after a crash without touching exported files.
@@ -23,8 +23,8 @@
 | region capture | user selects, moves, and resizes a region; corner magnifier assists the drag; only the selected pixels are encoded. |
 | display and window capture | one display or one window is selected; moving or resizing the window keeps the recording attached to it. |
 | background use | other apps receive normal mouse and keyboard input while recording; the record hotkey still stops capture. |
-| preview and export | stop opens an animated preview; metadata matches exported GIF; copy and `⌘C` paste animation into the tested destination; save and `⌘S` produce the same valid file. |
-| editing | trim, speed, and loop changes are visible in preview and persist in copied and saved GIFs. |
+| preview and export | stop opens an animated preview; metadata matches exported GIF; copy and `⌘C` paste animation into GitHub on a real Mac; save and `⌘S` produce the same valid file. |
+| editing | two timeline handles trim the beginning and end; the 0.5×–2× speed slider starts at 1×; speed and loop changes are visible in preview and persist in copied and saved GIFs. |
 | compression | original is recoverable with back; resolution and dithering controls alter the result; preset reports actual size against its target, including failure to meet it. |
 | failure recovery | permission loss, disappearing target, low disk space, encoder failure, and hotkey conflict produce actionable states and clean up temporary files. after a crash, unfinished recordings are deleted on next launch rather than restored. |
 

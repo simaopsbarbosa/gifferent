@@ -39,5 +39,5 @@ gifferent turns something happening on a Mac into a shareable GIF with minimal i
 
 - a new user can grant permission, capture, record, and paste a GIF without reading a manual.
 - the required hotkey-to-ready and stop-to-preview targets are met on a named reference Mac and fixture set.
-- exported GIFs play and paste correctly in the tested destinations, and size goals report truthful outcomes.
+- exported GIFs play and paste correctly in the tested destination, and size goals report truthful outcomes.
 - routine recording never blocks normal computer use, leaves a capture overlay in the file, or leaks temporary media after discard or a crash. unfinished recordings are cleared on the next launch after a crash.

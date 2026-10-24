@@ -2,7 +2,7 @@
 
 a fast, native GIF maker for macOS. summon capture, record while using your Mac, then copy, save, or compress locally.
 
-the app and its test suite are being built in tested iterations. capture selection has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. the current recording slice can capture to a private temporary workspace, encode a playable GIF candidate, and show an animated preview with metadata. copy and save actions are implemented behind testable adapters; clipboard compatibility with GitHub, Discord, and other destinations remains unverified. compression and the release encoder are not available yet.
+the app and its test suite are being built in tested iterations. capture selection has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. the current recording slice can capture to a private temporary workspace, encode a playable GIF candidate, and show an animated preview with metadata. copy and save actions are implemented behind testable adapters; animated paste into GitHub still needs real-Mac acceptance. compression and the release encoder are not available yet.
 
 the source license is [AGPL-3.0-or-later](LICENSE). [third-party notices](THIRD-PARTY-NOTICES.md) track bundled dependencies and tools.
 

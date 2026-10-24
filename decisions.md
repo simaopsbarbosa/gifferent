@@ -20,6 +20,12 @@
 
 - when `⌃⌥R` opens target selection because no selection exists, confirming the target starts recording immediately. the menu's separate `select capture…` action only stores a selection.
 
+## editing and clipboard acceptance confirmed on 2026-10-24
+
+- trim uses two timeline handles to set the beginning and end of a recording.
+- playback speed uses a continuous slider from 0.5× to 2× in 0.1× steps, centered at 1×.
+- the real-Mac animated clipboard paste acceptance test covers GitHub only. other destinations are outside this first-release clipboard compatibility gate.
+
 ## confirmed by the architect on 2026-10-20
 
 - macOS 14+, direct notarized download, menu bar only, background hotkeys, native SwiftUI UI.
@@ -38,7 +44,7 @@
 1. **brand asset:** develop loop-frame sketches with a warm orange accent. the exact artwork, orange values, motion signature, and sound palette still need architect review.
 2. **bundled tool license:** verify which candidate CLIs can be distributed with an AGPL-3.0-or-later app and document their notices and source obligations before packaging.
 3. **minimum visual quality:** define how much text blur, temporal noise, and dither pattern are acceptable for automatic size-goal search. collect architect-reviewed comparison samples.
-4. **clipboard contract:** test actual animated GIF paste into GitHub and other destinations. choose pasteboard representations from observed compatibility; do not claim success based only on reading pasteboard bytes back.
+4. **clipboard representation:** verify the chosen pasteboard representations by pasting an animated GIF into GitHub on a real Mac. a successful local pasteboard write alone does not establish destination compatibility.
 
 ## research notes, not product decisions
 
