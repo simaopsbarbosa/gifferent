@@ -242,8 +242,7 @@ private struct GIFCompressionDestinationButton: View {
   private var buttonLabel: some View {
     HStack(spacing: 6) {
       Image(systemName: destination.systemImage)
-        .accessibilityIdentifier(
-          "compression-destination-symbol-\(destination.accessibilityID)")
+        .accessibilityHidden(true)
       Text(destination.buttonTitle)
     }
   }
