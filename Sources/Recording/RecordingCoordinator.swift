@@ -197,6 +197,7 @@ final class RecordingCoordinator: ObservableObject {
   private var originalSequence: CapturedPNGSequence?
   private var currentPreviewParameters: GIFEditParameters?
   private var previewExported = false
+  private var originalPreviewExportedBeforeCompression: Bool?
   private var recordingRequestedAt: Duration?
   private var stopRequestedAt: Duration?
 
@@ -295,6 +296,7 @@ final class RecordingCoordinator: ObservableObject {
       try await workspace.discard(id)
       sessionID = nil
       previewExported = false
+      originalPreviewExportedBeforeCompression = nil
       compressedPreview = nil
       compressionAction = isCompressionAvailable ? .idle : .unavailable
       editParameters = nil
@@ -382,7 +384,7 @@ final class RecordingCoordinator: ObservableObject {
     let request = UUID()
     compressionRequest = request
     compressionAction = .compressing
-    previewExported = false
+    originalPreviewExportedBeforeCompression = previewExported
     let settings = compressionSettings
     compressionTask = Task { @MainActor [weak self] in
       guard let self else { return }
@@ -407,7 +409,8 @@ final class RecordingCoordinator: ObservableObject {
         try await workspace.removeCompressedPreviewOutput(for: id, at: compressedPreview.url)
       }
       self.compressedPreview = nil
-      previewExported = false
+      previewExported = originalPreviewExportedBeforeCompression ?? false
+      originalPreviewExportedBeforeCompression = nil
       let snapshot = try await workspace.snapshot(for: id)
       compressionAction = isCompressionAvailable ? .idle : .unavailable
       state = .previewReady(id, snapshot, original)
@@ -468,6 +471,7 @@ final class RecordingCoordinator: ObservableObject {
       }
       sessionID = nil
       previewExported = false
+      originalPreviewExportedBeforeCompression = nil
       compressedPreview = nil
       compressionAction = isCompressionAvailable ? .idle : .unavailable
       editParameters = nil
@@ -611,6 +615,7 @@ final class RecordingCoordinator: ObservableObject {
     state = .preparingPreview(sessionID, snapshot)
     previewAction = .idle
     previewExported = false
+    originalPreviewExportedBeforeCompression = nil
     compressedPreview = nil
     compressionAction = isCompressionAvailable ? .idle : .unavailable
     var reservation: PreviewOutputReservation?
@@ -704,6 +709,7 @@ final class RecordingCoordinator: ObservableObject {
         return
       }
       compressedPreview = compressed
+      previewExported = false
       state = .previewReady(sessionID, snapshot, original)
       compressionAction = .compressed
       compressionTask = nil
@@ -723,6 +729,9 @@ final class RecordingCoordinator: ObservableObject {
   private func finishCompression(_ request: UUID, action: GIFCompressionAction) {
     guard compressionRequest == request else { return }
     compressionAction = action
+    if action == .failed || action == .cancelled {
+      originalPreviewExportedBeforeCompression = nil
+    }
     compressionTask = nil
     compressionRequest = nil
   }

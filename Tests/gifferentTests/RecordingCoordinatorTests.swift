@@ -94,6 +94,56 @@ final class RecordingCoordinatorTests: XCTestCase {
     assertNoCompressedOutputs(for: sessionID, in: fixture.root)
   }
 
+  func testCompressionFailurePreservesOriginalExportStatus() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let clipboard = RecordingTestClipboard()
+    let compressor = FakeGIFCompressor(outcome: .failure)
+    let (coordinator, _, original, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace,
+      compressor: compressor,
+      clipboard: clipboard
+    )
+
+    await coordinator.copyPreview()
+    XCTAssertEqual(clipboard.urls, [original.url])
+    coordinator.startCompression()
+    await waitForCompression(coordinator)
+
+    XCTAssertEqual(coordinator.compressionAction, .failed)
+    let closed = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertTrue(closed)
+    XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fixture.root.path), [])
+  }
+
+  func testBackToOriginalRestoresOriginalExportStatusAfterCompressedExport() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let clipboard = RecordingTestClipboard()
+    let compressor = FakeGIFCompressor()
+    let (coordinator, _, original, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace,
+      compressor: compressor,
+      clipboard: clipboard
+    )
+
+    await coordinator.copyPreview()
+    XCTAssertEqual(clipboard.urls, [original.url])
+    coordinator.startCompression()
+    await waitForCompression(coordinator)
+    let compressed = try XCTUnwrap(coordinator.displayedPreviewGIF)
+    XCTAssertNotEqual(compressed.url, original.url)
+    await coordinator.copyPreview()
+    XCTAssertEqual(clipboard.urls, [original.url, compressed.url])
+
+    await coordinator.backToOriginalPreview()
+
+    XCTAssertEqual(coordinator.displayedPreviewGIF, original)
+    let closed = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertTrue(closed)
+    XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fixture.root.path), [])
+  }
+
   func testCompressionCancellationKeepsOriginalAndCleansReservation() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
