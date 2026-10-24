@@ -49,6 +49,36 @@ all runs exited 1 with ImageMagick's `cache resources exhausted` error. no compl
 | 488 MiB | 1 | 510,182,400 B (486.45 MiB) | 653,131,776 B (622.88 MiB) | 0.3327 s | 0.2123 s |
 | 500 MiB | 1 | 519,993,600 B (495.94 MiB) | 477,167,616 B (455.06 MiB) | 0.3408 s | 0.2857 s |
 
+## dated follow-up: larger memory/map limits
+
+four additional runs used the same fixture, transform, private cache setup, 5 ms scratch sampling, and `getrusage` method. all output and cache files were under `/private/tmp`. each run reserved a 19 MiB output cap and a 480 MiB disk-cache cap while enforcing the output cap during stdout streaming. with the 13,253,526 bytes of known existing session media, the combined accounted maximum was 536,492,950 bytes (512 MiB quota: 536,870,912 bytes), leaving 377,962 bytes of quota headroom. the output cap and cache cap therefore fit the workspace arithmetic; the experiment did not rely on unreserved output growth.
+
+only the `-limit memory` and, in the last run, `-limit map` values changed. all runs still failed before writing any output bytes:
+
+```text
+/opt/homebrew/bin/magick \
+  -limit memory <512MiB|768MiB|1024MiB> \
+  -limit map <512MiB|1024MiB> \
+  -limit disk 503316480 \
+  -limit thread 2 \
+  -define registry:temporary-path=<private-/private/tmp-cache-directory> \
+  /Users/simaob/dev/gifferent/Benchmarks/outputs/imageio-app-high-motion-gradient-cursor-20261024/gifs/imageio-app/warm-01.gif \
+  -coalesce -dither FloydSteinberg \
+  -define dither:diffusion-amount=35% \
+  -colors 256 -layers Optimize gif:-
+```
+
+the harness streamed stdout into a private temporary output file, terminated the process if it exceeded 19 MiB, and polled total scratch-file bytes every 5 ms. it sampled process usage with `resource.getrusage(resource.RUSAGE_CHILDREN)` after each child exited.
+
+| memory | map | disk | exit | error | output bytes | sampled scratch high-water | peak RSS | user CPU | system CPU |
+| ---: | ---: | ---: | ---: | --- | ---: | ---: | ---: | ---: | ---: |
+| 512 MiB | 512 MiB | 480 MiB | 1 | `cache resources exhausted` | 0 | 502,496,000 B (479.22 MiB) | 671,006,720 B (639.92 MiB) | 0.4878 s | 0.2595 s |
+| 768 MiB | 512 MiB | 480 MiB | 1 | `cache resources exhausted` | 0 | 501,350,400 B (478.13 MiB) | 628,916,224 B (599.78 MiB) | 0.6553 s | 0.2806 s |
+| 1,024 MiB | 512 MiB | 480 MiB | 1 | `cache resources exhausted` | 0 | 501,350,400 B (478.13 MiB) | 725,942,272 B (692.31 MiB) | 0.8020 s | 0.3834 s |
+| 1,024 MiB | 1,024 MiB | 480 MiB | 1 | `cache resources exhausted` | 0 | 501,350,400 B (478.13 MiB) | 844,120,064 B (805.02 MiB) | 0.7656 s | 0.3478 s |
+
+raising memory to 1 GiB and map to 1 GiB did not make the high-motion fixture fit the 480 MiB disk-cache allowance. no successful output means this follow-up provides no visual-quality evidence. peak process RSS remained below the 8 GiB reference machine's physical memory in these CLI-only runs; it does not measure concurrent app/capture use. the result remains: no successful fit under the current session reservation was observed.
+
 ## what the code accounts for
 
 `SessionWorkspaceStore.reserveCompressedPreviewOutput` subtracts already-accounted session bytes and outstanding reservations from both the 512 MiB session cap and available volume space (while preserving the 64 MiB free-space floor). it reserves `maximumCacheBytes` and `maximumBytes` together. `ExperimentalImageMagickCompressor` passes the cache reservation to ImageMagick's `-limit disk`, writes stdout through an output-size cap, uses the reserved private cache directory, and validates the result. commit measures and removes the cache, verifies its configured cap and checks the GIF size again.
