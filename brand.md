@@ -25,6 +25,8 @@ the architect selected variant b, with directional ends, to proceed to final-art
 
 round-three [final-art explorations](Brand/Studies/round-three/index.html) refine variant b into three silhouettes, each shown in monochrome and with a provisional warm-orange accent. all artwork, color, motion, and sound choices remain open for architect review.
 
+the architect selected 03, compact orbit, to move into detailed final-art review. this is a refinement direction only; do not treat its silhouette or provisional orange sample as approved artwork or color.
+
 ## interface rules
 
 - use native macOS hierarchy, materials, typography, focus rings, menus, dialogs, and keyboard behavior as the base. custom chrome stays around capture selection, preview progress, and small brand moments.
