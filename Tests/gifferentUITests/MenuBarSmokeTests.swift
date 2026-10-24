@@ -153,20 +153,22 @@ final class MenuBarSmokeTests: XCTestCase {
 
     confirmButton.click()
     XCTAssertTrue(testWindow.staticTexts["selection-status"].waitForExistence(timeout: 5))
-    XCTAssertEqual(testWindow.staticTexts["selection-status"].label, "region selected")
+    let status = testWindow.staticTexts["selection-status"]
+    XCTAssertEqual(status.value as? String, "region selected")
 
     testWindow.buttons["select-capture-button"].click()
     let restoredSelectionWindow = app.windows["capture selection"]
     XCTAssertTrue(restoredSelectionWindow.waitForExistence(timeout: 10))
-    let restoredTargetDescription = app.descendants(matching: .any)
-      .matching(NSPredicate(format: "label == %@", "capture target: region selected")).firstMatch
+    let restoredTargetDescription = restoredSelectionWindow.descendants(matching: .any)
+      .matching(identifier: "capture-target-description").firstMatch
     XCTAssertTrue(restoredTargetDescription.waitForExistence(timeout: 5))
+    XCTAssertEqual(restoredTargetDescription.value as? String, "region selected")
     XCTAssertTrue(restoredSelectionWindow.buttons["confirm-selection-button"].isEnabled)
 
     restoredSelectionWindow.buttons["cancel-selection-button"].click()
     XCTAssertFalse(restoredSelectionWindow.waitForExistence(timeout: 5))
     waitForStatus("selection ready", in: testWindow)
-    XCTAssertEqual(testWindow.staticTexts["selection-status"].label, "region selected")
+    XCTAssertEqual(status.value as? String, "region selected")
   }
 
   func testFixtureWindowSelectionCanBeConfirmed() {
@@ -180,23 +182,23 @@ final class MenuBarSmokeTests: XCTestCase {
 
     let selectionWindow = app.windows["capture selection"]
     XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
-    selectionWindow.popUpButtons["select a window"].click()
+    let windowPicker = selectionWindow.descendants(matching: .any)["select-window-picker"]
+    XCTAssertTrue(windowPicker.waitForExistence(timeout: 5))
+    windowPicker.click()
     let fixtureWindow = app.menuItems["gifferent fixture · fixture window"]
     XCTAssertTrue(fixtureWindow.waitForExistence(timeout: 5))
     fixtureWindow.click()
 
-    let targetDescription = app.descendants(matching: .any)
-      .matching(
-        NSPredicate(
-          format: "label == %@", "capture target: gifferent fixture · fixture window selected")
-      )
-      .firstMatch
+    let targetDescription = selectionWindow.descendants(matching: .any)
+      .matching(identifier: "capture-target-description").firstMatch
     XCTAssertTrue(targetDescription.waitForExistence(timeout: 5))
+    XCTAssertEqual(
+      targetDescription.value as? String, "gifferent fixture · fixture window selected")
     selectionWindow.buttons["confirm-selection-button"].click()
 
     let selectionStatus = testWindow.staticTexts["selection-status"]
     XCTAssertTrue(selectionStatus.waitForExistence(timeout: 5))
-    XCTAssertEqual(selectionStatus.label, "window selected")
+    XCTAssertEqual(selectionStatus.value as? String, "window selected")
   }
 
   func testRecordingActionOpensPreviewAndKeepsExportAfterClose() {

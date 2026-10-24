@@ -59,15 +59,14 @@ struct CaptureSelectionOverlayView: View {
         .accessibilityLabel("select this display")
         .accessibilityIdentifier("select-display-button")
 
-      Menu("window") {
-        if coordinator.inventory.windows.isEmpty {
-          Text("no windows available")
-        }
+      Picker("select a window", selection: selectedWindowBinding) {
+        Text("choose a window").tag(nil as CGWindowID?)
         ForEach(coordinator.inventory.windows, id: \.id) { window in
-          Button(windowLabel(window)) { coordinator.selectWindow(window.id) }
+          Text(windowLabel(window)).tag(Optional(window.id))
         }
       }
-      .accessibilityLabel("select a window")
+      .pickerStyle(.menu)
+      .accessibilityIdentifier("select-window-picker")
 
       Button("region") {
         draftRegion = nil
@@ -80,7 +79,9 @@ struct CaptureSelectionOverlayView: View {
         .lineLimit(1)
         .truncationMode(.middle)
         .frame(maxWidth: 220)
-        .accessibilityLabel("capture target: \(selectionDescription)")
+        .accessibilityLabel("capture target")
+        .accessibilityValue(selectionDescription)
+        .accessibilityIdentifier("capture-target-description")
 
       Divider().frame(height: 18)
 
@@ -104,6 +105,19 @@ struct CaptureSelectionOverlayView: View {
     let application = window.applicationName ?? "window"
     guard let title = window.title, !title.isEmpty else { return application }
     return "\(application) · \(title)"
+  }
+
+  private var selectedWindowBinding: Binding<CGWindowID?> {
+    Binding(
+      get: {
+        guard case .window(let id) = coordinator.selection else { return nil }
+        return id
+      },
+      set: { id in
+        guard let id else { return }
+        coordinator.selectWindow(id)
+      }
+    )
   }
 
   private var selectionDescription: String {

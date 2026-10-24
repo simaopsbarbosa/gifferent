@@ -83,7 +83,8 @@ private struct GifferentMenuContent: View {
     if let selectionDescription = runtime.selectionDescription {
       Text(selectionDescription)
         .accessibilityIdentifier("selection-status")
-        .accessibilityLabel(selectionDescription)
+        .accessibilityLabel("selection status")
+        .accessibilityValue(selectionDescription)
     }
 
     #if DEBUG
