@@ -83,8 +83,8 @@ the build exited 0; the complete output is `/private/tmp/gifski-build-1.34.0.log
 - [x] run the pinned release build and retain the full build log and exact command.
 - [x] record binary SHA-256, `file`/`lipo`, `otool -L`, `gifski --version`, and complete `gifski --help` output; no FFmpeg-linked library is present.
 - [ ] inspect and archive required license texts/notices for all active crates, particularly `gif-dispose`, plus publisher-specific pngquant notices; resolve any missing source or attribution text before distribution review.
-- [x] run a focused two-profile comparison at the approved 35% ImageMagick diffusion amount; see the [comparison report](gifski-magick-35-2026-10-24.md).
-- [ ] complete the full four-profile encoder matrix and visual-quality gate. these measurements do not establish visual quality or select an encoder.
+- [x] run the two-candidate comparison across all four profiles at the approved 35% ImageMagick diffusion amount; see the [comparison report](gifski-magick-35-2026-10-24.md).
+- [ ] complete the full multi-path encoder matrix and visual-quality gate. these measurements do not establish visual quality or select an encoder.
 
 ## upstream sources
 
