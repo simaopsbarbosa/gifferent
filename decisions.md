@@ -47,6 +47,7 @@
 - the dithering slider controls ImageMagick's documented `dither:diffusion-amount` from 0% to 100% in 5% steps, with a default of 35%. this product choice does not select ImageMagick as the release encoder; the pinned build must prove the setting changes output, and candidate, quality, performance, and distribution gates remain open.
 - size goals target 90% of each published cap using decimal megabytes: 9 MB for GitHub image/GIF uploads and 18 MB for Discord's non-Nitro attachment cap. these are optimization targets, not guarantees; show the current cap and account caveat.
 - use destination names with native symbols on the optimizer buttons. do not bundle third-party destination marks unless written permission is obtained.
+- after reviewing the native-size animated examples for mostly-static UI and high-motion content in [the encoder review](Benchmarks/reviews/gifski-magick-35-2026-10-24/index.html), the architect confirmed that both samples hold against the approved quality floor. this is a visual-quality judgment for these samples, not an encoder selection or a claim that the full search matrix passes.
 
 ## confirmed by the architect on 2026-10-20
 
@@ -65,7 +66,7 @@
 
 1. **brand asset:** develop loop-frame sketches with a warm orange accent. the exact artwork, orange values, motion signature, and sound palette still need architect review.
 2. **bundled tool license:** the candidate-level engineering screen is recorded in [the encoder license audit](Benchmarks/encoder-license-audit.md). exact source, dependency, and binary audits remain required before packaging; Gifsicle's distribution terms remain unresolved for this app bundle.
-3. **quality review evidence:** collect and review representative comparison samples against the approved minimum quality floor before selecting size-goal search settings.
+3. **encoder selection and search evidence:** finish quality, performance, resource, and distribution evidence for the full candidate matrix before selecting an encoder or size-goal search settings. the initial representative animations hold against the quality floor; broader candidate evidence remains open.
 4. **clipboard representation:** verify the chosen pasteboard representations by pasting an animated GIF into GitHub on a real Mac. a successful local pasteboard write alone does not establish destination compatibility.
 
 ## research notes, not product decisions

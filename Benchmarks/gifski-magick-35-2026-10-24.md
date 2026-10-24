@@ -2,7 +2,7 @@
 
 ## scope and result
 
-this is a four-profile comparison of the pinned [Gifski 1.34.0 source build](gifski-1.34.0-build-audit-2026-10-24.md) and the installed ImageMagick CLI at the architect-approved 35% diffusion setting. it covers two encoder paths across all four fixture profiles, not the full multi-path encoder matrix; it is not a quality assessment or encoder selection. all paths received 640×360, 240-frame, 24 fps synthetic fixtures. mostly-static-ui and high-motion-gradient-cursor each had one cold invocation and seven warm invocations; mixed and fast-scrolling each had one cold invocation and four warm invocations. all 52 outputs passed shared per-frame metadata inspection and fixture-contract validation: 640×360, 240 frames, 10.0 seconds, expected centisecond schedule, and infinite looping.
+this is a four-profile comparison of the pinned [Gifski 1.34.0 source build](gifski-1.34.0-build-audit-2026-10-24.md) and the installed ImageMagick CLI at the architect-approved 35% diffusion setting. it covers two encoder paths across all four fixture profiles, not the full multi-path encoder matrix or a candidate selection. all paths received 640×360, 240-frame, 24 fps synthetic fixtures. mostly-static-ui and high-motion-gradient-cursor each had one cold invocation and seven warm invocations; mixed and fast-scrolling each had one cold invocation and four warm invocations. all 52 outputs passed shared per-frame metadata inspection and fixture-contract validation: 640×360, 240 frames, 10.0 seconds, expected centisecond schedule, and infinite looping.
 
 | profile | path | cold | warm median | warm p90 | output bytes |
 | --- | --- | ---: | ---: | ---: | ---: |
@@ -15,7 +15,7 @@ this is a four-profile comparison of the pinned [Gifski 1.34.0 source build](gif
 | fast-scrolling | `gifski` 1.34.0 | 0.9029 s | 0.6787 s | 0.7445 s | 909,046 |
 | fast-scrolling | `magick` optimized, 35% | 14.3579 s | 14.1965 s | 14.4812 s | 1,207,910 |
 
-all outputs per path/profile had the same checksum. median and nearest-rank p90 use the available warm samples (seven for the first two profiles, four for the latter two). the benchmark records timing and byte size; it does not show that one output is visually better. the approved quality floor still requires visual review at native and 2× scale, especially for static text, gradients, temporal noise, and cursor edges. no frame-by-frame visual review was performed here.
+all outputs per path/profile had the same checksum. median and nearest-rank p90 use the available warm samples (seven for the first two profiles, four for the latter two). the benchmark records timing and byte size; it does not show that one output is visually better. the architect reviewed native-size animated samples from the mostly-static UI and high-motion profiles and confirmed that those samples hold against the approved floor. this limited review did not compare every profile or both native and 2× views; the candidates' quality controls also differ. see the [visual review page](reviews/gifski-magick-35-2026-10-24/index.html) and its [provenance notes](reviews/gifski-magick-35-2026-10-24/README.md). no encoder is selected.
 
 ## provenance and environment
 
@@ -44,7 +44,8 @@ the focused benchmark uses the existing harness implementation and did not modif
 
 ## remaining evidence
 
-- visually inspect representative and matching frames at 1× and 2× against the approved floor; this report makes no quality claim.
+- [x] obtain the architect's review of native-size mostly-static and high-motion animations against the approved floor; both samples hold. the 2× view and other profiles remain unreviewed.
+- [ ] review additional profiles and 2× samples if needed before selecting an encoder or search policy; the current sample review does not cover every output or establish a comparative quality ranking.
 - rerun on a verified baseline Mac when model, memory, and thermal probes are available if those environmental fields are required for the published baseline.
 - complete the full multi-path matrix before comparing release candidates. include memory and CPU measurements if the host permits them.
 - resolve complete license and notice texts for the 47 active Gifski dependencies, including the missing standalone `gif-dispose` license/notice text, before any packaging decision. no encoder is selected.

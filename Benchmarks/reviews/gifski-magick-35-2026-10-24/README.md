@@ -2,9 +2,13 @@
 
 these are representative cold-run outputs from the synthetic benchmark. the four looping gifs are 640×360 and displayed at their native size. compare each pair at 1× playback.
 
-## review request
+## review outcome
 
-please judge whether each candidate meets the approved quality floor:
+the architect reviewed these native-size samples and confirmed that the approved quality floor holds for both reviewed profiles. this is limited to the mostly-static and high-motion samples shown here; it does not establish a comparative quality ranking, review 2× scale, assess the other two profiles, or select an encoder.
+
+## quality floor
+
+the approved floor is:
 
 - text remains legible at native size.
 - cursor edges stay clear.

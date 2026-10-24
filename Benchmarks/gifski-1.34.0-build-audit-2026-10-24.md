@@ -110,7 +110,7 @@ the build exited 0; the complete output is `/private/tmp/gifski-build-1.34.0.log
 - [x] record binary SHA-256, `file`/`lipo`, `otool -L`, `gifski --version`, and complete `gifski --help` output; no FFmpeg-linked library is present.
 - [ ] obtain and archive the exact `gif-dispose` license/copyright text and resolve publisher pngquant notice presentation as recorded in the [dependency notice follow-up](#follow-up-gif-dispose-and-pngquant-notices-2026-10-24); complete the remaining active-crate license and notice review before distribution.
 - [x] run the two-candidate comparison across all four profiles at the approved 35% ImageMagick diffusion amount; see the [comparison report](gifski-magick-35-2026-10-24.md).
-- [ ] complete the full multi-path encoder matrix and visual-quality gate. these measurements do not establish visual quality or select an encoder.
+- [x] record the architect's native-size review of mostly-static and high-motion samples; both reviewed samples hold against the floor. the full multi-path encoder matrix, broader 2× review, distribution review, and candidate selection remain open; these findings do not select an encoder.
 
 ## upstream sources
 
