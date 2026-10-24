@@ -31,6 +31,14 @@ the accessible [detail-round comparison](Brand/Studies/detail-round/index.html) 
 
 the architect selected detail-round 02, breathing room, to proceed toward final-art approval. the 16 px break and provisional orange treatment still need review; this selection does not approve final artwork, color, motion, or sound.
 
+the [final-art review](Brand/Studies/final-art-review/index.html) compares three provisional orange accents on the selected geometry. the architect requested an adjustment to the gap at 16 px and selected warm orange `#D45D21` to continue into palette review. both remain provisional: the gap needs another comparison, and the orange is not an approved palette value. final artwork, palette, usage rules, motion, and optional sound remain subject to architect approval.
+
+the accessible [gap review](Brand/Studies/gap-review/index.html) compares 0.7 px, 1.0 px, and 1.36 px gaps at 16 px, with proportional examples through 256 px and light, dark, and high-contrast contexts. it carries `#D45D21` forward only as the provisional palette-review starting point. no gap, final artwork, or palette value is approved.
+
+the architect selected the 0.7 px gap at 16 px to continue into palette and final-art exploration. this chooses the next study direction; it does not approve the production mark or exact palette.
+
+the accessible [palette review](Brand/Studies/palette-review/index.html) holds that gap constant across a monochrome reference and three provisional warm oranges. its [review notes](Brand/Studies/palette-review/review-notes.md) document contrast tradeoffs and why flat black/white ratios do not establish appearance over translucent macOS materials. no palette, final artwork, or usage rules are approved.
+
 ## interface rules
 
 - use native macOS hierarchy, materials, typography, focus rings, menus, dialogs, and keyboard behavior as the base. custom chrome stays around capture selection, preview progress, and small brand moments.

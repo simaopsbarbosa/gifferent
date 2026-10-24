@@ -556,7 +556,7 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
         frameGIF?[kCGImagePropertyGIFUnclampedDelayTime] as? Double
         ?? frameGIF?[kCGImagePropertyGIFDelayTime] as? Double
       guard width == expectedDimensions.width, height == expectedDimensions.height,
-        let frameGIF, let delay, delay.isFinite
+        let delay, delay.isFinite
       else {
         throw OriginalGIFEncodingError.invalidOutput
       }

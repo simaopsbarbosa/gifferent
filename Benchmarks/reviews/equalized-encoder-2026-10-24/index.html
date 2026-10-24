@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>equal-work encoder frame review</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #17191c;
+        color: #e8e8e4;
+      }
+      body { max-width: 100%; margin: 0; padding: 24px; }
+      h1, h2, h3 { line-height: 1.2; }
+      h1 { margin-top: 0; }
+      p, li { max-width: 86ch; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+      .notice { border-left: 3px solid #e78248; padding: 8px 14px; background: #24272b; }
+      .profile { margin: 36px 0; }
+      .frame { margin: 24px 0; }
+      .scroll { overflow-x: auto; border: 1px solid #41454b; padding: 12px; }
+      .grid { display: grid; grid-template-columns: repeat(4, 640px); gap: 12px; width: max-content; }
+      figure { margin: 0; width: 640px; }
+      figcaption { min-height: 2.5em; color: #b9bec3; }
+      img { display: block; width: 640px; height: 360px; background: #111316; }
+      details { margin-top: 12px; }
+      details img { width: 1280px; height: 720px; image-rendering: pixelated; }
+      details figure { width: 1280px; }
+      details figcaption { min-height: auto; }
+      table { border-collapse: collapse; margin: 12px 0; }
+      th, td { padding: 6px 10px; border: 1px solid #41454b; text-align: left; vertical-align: top; }
+      .small { color: #b9bec3; font-size: .9rem; }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>equal-work encoder frame review</h1>
+      <p class="notice"><strong>spot check only:</strong> these are representative still frames at 0, 120, and 239. they do not show full animation, temporal noise, flashing, or flicker. this review does not select a release encoder.</p>
+      <p>each panel compares one synthetic source frame with the matching decoded GIF frame. open “2× views” for a nearest-neighbor enlargement of the same 640×360 PNG. the source samples were copied to RGB PNG; GIF frames were coalesced to the logical canvas before export. metadata was stripped; pixel content was not resampled.</p>
+      <h2>provenance and settings</h2>
+      <ul>
+        <li>machine: reference MacBook Air M2, 8 GB, arm64; macOS 27.0.1 build 26A434; Xcode 27.1 build 27A9275; AC power; Low Power Mode off. the benchmark sandbox denied model, chip, and memory probes, and thermal telemetry was unavailable.</li>
+        <li>ImageMagick: 7.1.2-34 Q16-HDRI arm64; SHA-256 <code>324c185d0dead1cf7326e7f87743da28086dde0a00538b96d5cd320ed7543466</code>. optimized path uses <code>-layers Optimize</code>; unoptimized path omits it. both use Floyd–Steinberg, 100% diffusion, 256 colors, identical input ordering and centisecond schedule.</li>
+        <li>ImageIO: legacy helper SHA-256 <code>609a4ba115d69a19db3b23dcd9f3d636196e16bdd53a75201e3e77b6d8e9ac7d</code>. this is not the app's <code>imageio-app</code> encoder.</li>
+        <li>the original GIF paths and benchmark outputs are under ignored <code>Benchmarks/outputs/</code> directories on the benchmark machine. only these small synthetic PNG frame samples are included here.</li>
+      </ul>
+    </header>
+
+    <main>
+      <section class="profile" aria-labelledby="static-title">
+        <h2 id="static-title">mostly-static UI and text</h2>
+        <p>fixture: 640×360, 240 frames, 24 fps, seed 7. manifest SHA-256 <code>6e2f785f8c29a9ca43cd1bbf91dd636e0405822c01438cb8a27ef1a7a35a28fa</code>; combined frame SHA-256 <code>d42ed02d552de0db283b9a2d720ac782b7b62dc8dd7c41817da0837b3ce71fc2</code>. output GIF SHA-256: ImageIO <code>79cbf85089cb8b64530472b91b715dd51e90690b00203935a0a07777ef3f4970</code>; ImageMagick optimized <code>04486d8e9bed37a41e7c5427b40edc7187bb55fbfd63e50c0926a50c8dbe4f3f</code>; ImageMagick unoptimized <code>827fa40e6eb707f4da991e3a94c52ae0516d390acc807b3cd74ef8691c2eee8d</code>.</p>
+
+        <div class="frame">
+          <h3>frame 0</h3>
+          <div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 0</figcaption><img src="frames/mostly-static-ui-source-000.png" alt="synthetic source frame 0, showing a dark capture-session panel with readable labels and controls"></figure>
+            <figure><figcaption>ImageIO, frame 0</figcaption><img src="frames/mostly-static-ui-imageio-000.png" alt="ImageIO GIF frame 0, matched to the source frame"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 0</figcaption><img src="frames/mostly-static-ui-magick-000.png" alt="optimized ImageMagick GIF frame 0, matched to the source frame"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 0</figcaption><img src="frames/mostly-static-ui-magick-unoptimized-000.png" alt="unoptimized ImageMagick GIF frame 0, matched to the source frame"></figure>
+          </div></div>
+          <details><summary>2× views</summary><div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 0, 2×</figcaption><img src="frames/mostly-static-ui-source-000.png" alt="2× nearest-neighbor view of synthetic source frame 0"></figure>
+            <figure><figcaption>ImageIO, frame 0, 2×</figcaption><img src="frames/mostly-static-ui-imageio-000.png" alt="2× nearest-neighbor view of ImageIO GIF frame 0"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 0, 2×</figcaption><img src="frames/mostly-static-ui-magick-000.png" alt="2× nearest-neighbor view of optimized ImageMagick GIF frame 0"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 0, 2×</figcaption><img src="frames/mostly-static-ui-magick-unoptimized-000.png" alt="2× nearest-neighbor view of unoptimized ImageMagick GIF frame 0"></figure>
+          </div></div></details>
+        </div>
+
+        <div class="frame">
+          <h3>frame 120</h3>
+          <div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 120</figcaption><img src="frames/mostly-static-ui-source-120.png" alt="synthetic source frame 120, showing the same capture-session panel and a one-pixel caret"></figure>
+            <figure><figcaption>ImageIO, frame 120</figcaption><img src="frames/mostly-static-ui-imageio-120.png" alt="ImageIO GIF frame 120, matched to the source frame"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 120</figcaption><img src="frames/mostly-static-ui-magick-120.png" alt="optimized ImageMagick GIF frame 120, matched to the source frame"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 120</figcaption><img src="frames/mostly-static-ui-magick-unoptimized-120.png" alt="unoptimized ImageMagick GIF frame 120, matched to the source frame"></figure>
+          </div></div>
+          <details><summary>2× views</summary><div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 120, 2×</figcaption><img src="frames/mostly-static-ui-source-120.png" alt="2× nearest-neighbor view of synthetic source frame 120"></figure>
+            <figure><figcaption>ImageIO, frame 120, 2×</figcaption><img src="frames/mostly-static-ui-imageio-120.png" alt="2× nearest-neighbor view of ImageIO GIF frame 120"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 120, 2×</figcaption><img src="frames/mostly-static-ui-magick-120.png" alt="2× nearest-neighbor view of optimized ImageMagick GIF frame 120"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 120, 2×</figcaption><img src="frames/mostly-static-ui-magick-unoptimized-120.png" alt="2× nearest-neighbor view of unoptimized ImageMagick GIF frame 120"></figure>
+          </div></div></details>
+        </div>
+
+        <div class="frame">
+          <h3>frame 239</h3>
+          <div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 239</figcaption><img src="frames/mostly-static-ui-source-239.png" alt="synthetic source frame 239, showing the capture-session text and controls"></figure>
+            <figure><figcaption>ImageIO, frame 239</figcaption><img src="frames/mostly-static-ui-imageio-239.png" alt="ImageIO GIF frame 239, matched to the source frame"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 239</figcaption><img src="frames/mostly-static-ui-magick-239.png" alt="optimized ImageMagick GIF frame 239, matched to the source frame"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 239</figcaption><img src="frames/mostly-static-ui-magick-unoptimized-239.png" alt="unoptimized ImageMagick GIF frame 239, matched to the source frame"></figure>
+          </div></div>
+          <details><summary>2× views</summary><div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 239, 2×</figcaption><img src="frames/mostly-static-ui-source-239.png" alt="2× nearest-neighbor view of synthetic source frame 239"></figure>
+            <figure><figcaption>ImageIO, frame 239, 2×</figcaption><img src="frames/mostly-static-ui-imageio-239.png" alt="2× nearest-neighbor view of ImageIO GIF frame 239"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 239, 2×</figcaption><img src="frames/mostly-static-ui-magick-239.png" alt="2× nearest-neighbor view of optimized ImageMagick GIF frame 239"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 239, 2×</figcaption><img src="frames/mostly-static-ui-magick-unoptimized-239.png" alt="2× nearest-neighbor view of unoptimized ImageMagick GIF frame 239"></figure>
+          </div></div></details>
+        </div>
+      </section>
+
+      <section class="profile" aria-labelledby="motion-title">
+        <h2 id="motion-title">high-motion gradient and cursor</h2>
+        <p>fixture: 640×360, 240 frames, 24 fps, seed 7. manifest SHA-256 <code>8a90e5f8d09fe44045642bc1fb744d3865494ad8ede21e36b95ab06759f71c64</code>; combined frame SHA-256 <code>8436939cbc8b536dcc3ea3423669f4f0ccdda1dc14a75a3e5eee4b652b4c0c01</code>. output GIF SHA-256: ImageIO <code>48ed3ac05798146230ddfb80964d504819afdb0f3fb705f017fae88f3d642784</code>; ImageMagick optimized <code>920469b091028088a456aaa67b6160f2a5bc16f529452455eb9c341756dcd321</code>; ImageMagick unoptimized <code>a516ee69d64c432c319b1abe59a163fc1574b5fceda42c1bd6e410495eabf5be</code>.</p>
+
+        <div class="frame">
+          <h3>frame 0</h3>
+          <div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 0</figcaption><img src="frames/high-motion-gradient-cursor-source-000.png" alt="synthetic source frame 0 with a diagonal color gradient and cursor near the upper left"></figure>
+            <figure><figcaption>ImageIO, frame 0</figcaption><img src="frames/high-motion-gradient-cursor-imageio-000.png" alt="ImageIO GIF frame 0, matched to the source gradient and cursor"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 0</figcaption><img src="frames/high-motion-gradient-cursor-magick-000.png" alt="optimized ImageMagick GIF frame 0, matched to the source gradient and cursor"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 0</figcaption><img src="frames/high-motion-gradient-cursor-magick-unoptimized-000.png" alt="unoptimized ImageMagick GIF frame 0, matched to the source gradient and cursor"></figure>
+          </div></div>
+          <details><summary>2× views</summary><div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 0, 2×</figcaption><img src="frames/high-motion-gradient-cursor-source-000.png" alt="2× nearest-neighbor view of synthetic source frame 0"></figure>
+            <figure><figcaption>ImageIO, frame 0, 2×</figcaption><img src="frames/high-motion-gradient-cursor-imageio-000.png" alt="2× nearest-neighbor view of ImageIO GIF frame 0"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 0, 2×</figcaption><img src="frames/high-motion-gradient-cursor-magick-000.png" alt="2× nearest-neighbor view of optimized ImageMagick GIF frame 0"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 0, 2×</figcaption><img src="frames/high-motion-gradient-cursor-magick-unoptimized-000.png" alt="2× nearest-neighbor view of unoptimized ImageMagick GIF frame 0"></figure>
+          </div></div></details>
+        </div>
+
+        <div class="frame">
+          <h3>frame 120</h3>
+          <div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 120</figcaption><img src="frames/high-motion-gradient-cursor-source-120.png" alt="synthetic source frame 120 with diagonal gradient bands and a cursor near the right side"></figure>
+            <figure><figcaption>ImageIO, frame 120</figcaption><img src="frames/high-motion-gradient-cursor-imageio-120.png" alt="ImageIO GIF frame 120, matched to the source gradient and cursor"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 120</figcaption><img src="frames/high-motion-gradient-cursor-magick-120.png" alt="optimized ImageMagick GIF frame 120, matched to the source gradient and cursor"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 120</figcaption><img src="frames/high-motion-gradient-cursor-magick-unoptimized-120.png" alt="unoptimized ImageMagick GIF frame 120, matched to the source gradient and cursor"></figure>
+          </div></div>
+          <details><summary>2× views</summary><div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 120, 2×</figcaption><img src="frames/high-motion-gradient-cursor-source-120.png" alt="2× nearest-neighbor view of synthetic source frame 120"></figure>
+            <figure><figcaption>ImageIO, frame 120, 2×</figcaption><img src="frames/high-motion-gradient-cursor-imageio-120.png" alt="2× nearest-neighbor view of ImageIO GIF frame 120"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 120, 2×</figcaption><img src="frames/high-motion-gradient-cursor-magick-120.png" alt="2× nearest-neighbor view of optimized ImageMagick GIF frame 120"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 120, 2×</figcaption><img src="frames/high-motion-gradient-cursor-magick-unoptimized-120.png" alt="2× nearest-neighbor view of unoptimized ImageMagick GIF frame 120"></figure>
+          </div></div></details>
+        </div>
+
+        <div class="frame">
+          <h3>frame 239</h3>
+          <div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 239</figcaption><img src="frames/high-motion-gradient-cursor-source-239.png" alt="synthetic source frame 239 with diagonal gradient bands and a cursor in the lower right half"></figure>
+            <figure><figcaption>ImageIO, frame 239</figcaption><img src="frames/high-motion-gradient-cursor-imageio-239.png" alt="ImageIO GIF frame 239, matched to the source gradient and cursor"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 239</figcaption><img src="frames/high-motion-gradient-cursor-magick-239.png" alt="optimized ImageMagick GIF frame 239, matched to the source gradient and cursor"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 239</figcaption><img src="frames/high-motion-gradient-cursor-magick-unoptimized-239.png" alt="unoptimized ImageMagick GIF frame 239, matched to the source gradient and cursor"></figure>
+          </div></div>
+          <details><summary>2× views</summary><div class="scroll"><div class="grid">
+            <figure><figcaption>source, frame 239, 2×</figcaption><img src="frames/high-motion-gradient-cursor-source-239.png" alt="2× nearest-neighbor view of synthetic source frame 239"></figure>
+            <figure><figcaption>ImageIO, frame 239, 2×</figcaption><img src="frames/high-motion-gradient-cursor-imageio-239.png" alt="2× nearest-neighbor view of ImageIO GIF frame 239"></figure>
+            <figure><figcaption>ImageMagick optimized, frame 239, 2×</figcaption><img src="frames/high-motion-gradient-cursor-magick-239.png" alt="2× nearest-neighbor view of optimized ImageMagick GIF frame 239"></figure>
+            <figure><figcaption>ImageMagick unoptimized, frame 239, 2×</figcaption><img src="frames/high-motion-gradient-cursor-magick-unoptimized-239.png" alt="2× nearest-neighbor view of unoptimized ImageMagick GIF frame 239"></figure>
+          </div></div></details>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

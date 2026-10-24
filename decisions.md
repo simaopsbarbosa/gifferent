@@ -32,6 +32,8 @@
 - after reviewing the second round, proceed with variant b, the vertical loop with directional ends, for final-art exploration. do not treat it as approved final artwork or infer orange, motion, or sound choices.
 - after reviewing round three, move study 03, compact orbit, into detailed final-art review. this chooses a refinement direction only; final silhouette, exact orange values, motion, and sound remain unapproved.
 - after reviewing the detail round, proceed with treatment 02, breathing room, toward final-art approval. the architect flagged its possible 16 px break for review; this does not approve final artwork, color, motion, or sound.
+- after reviewing the final-art sheet, adjust the 16 px gap and continue palette exploration with warm orange `#D45D21`. this does not approve the exact gap, final mark, or palette; both remain provisional pending another accessible comparison and architect review.
+- after reviewing the measured gap comparison, carry the 0.7 px gap at 16 px into palette and final-art exploration. this selects a study direction only; the final mark and exact palette remain unapproved.
 
 ## compression behavior confirmed on 2026-10-24
 
@@ -54,7 +56,7 @@
 ## questions to resolve before affected implementation
 
 1. **brand asset:** develop loop-frame sketches with a warm orange accent. the exact artwork, orange values, motion signature, and sound palette still need architect review.
-2. **bundled tool license:** verify which candidate CLIs can be distributed with an AGPL-3.0-or-later app and document their notices and source obligations before packaging.
+2. **bundled tool license:** the candidate-level engineering screen is recorded in [the encoder license audit](Benchmarks/encoder-license-audit.md). exact source, dependency, and binary audits remain required before packaging; Gifsicle's distribution terms remain unresolved for this app bundle.
 3. **quality review evidence:** collect and review representative comparison samples against the approved minimum quality floor before selecting size-goal search settings.
 4. **clipboard representation:** verify the chosen pasteboard representations by pasting an animated GIF into GitHub on a real Mac. a successful local pasteboard write alone does not establish destination compatibility.
 
@@ -63,4 +65,6 @@
 - [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit/capturing-screen-content-in-macos) supports display, app, and window filters. selected-window capture fits the architect's answer.
 - [gifski](https://github.com/ImageOptim/gifski/blob/main/README.md) uses temporal dithering and has a C API, but the architect asked for a bundled CLI. [gifsicle](https://github.com/kohler/gifsicle/blob/master/gifsicle.1) exposes dither methods including Floyd–Steinberg, Atkinson, and ordered variants. performance and visual quality must be benchmarked before selecting one or both.
 - the installed exploratory ImageMagick build changed encoded pixels and output size at 0%, 35%, and 70% diffusion on sparse samples from two synthetic fixtures; see the [prototype report](Benchmarks/imagemagick-dither-control-prototype-2026-10-24.md). this confirms only that the slider mapping has an observable effect in that build.
+- the candidate encoder license screen is an engineering risk review, not legal advice or an encoder choice. exact release builds still require locked dependency, runtime, notice, corresponding-source, signature, and notarization review.
+- the limited equal-work still-frame review found faint native-size speckling in optimized ImageMagick output at 100% diffusion. the architect must classify it against the approved floor before the setting or candidate can be treated as acceptable; the review does not assess temporal quality or select an encoder.
 - destination file limits can change. the limits quoted in [mvp.md](mvp.md) are a 2026-10-20 research snapshot and need verification before release.
