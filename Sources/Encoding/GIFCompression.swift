@@ -205,6 +205,52 @@ enum GIFFrameSampler {
   }
 }
 
+enum GIFFrameScheduleValidator {
+  static func finalFrameDelay(
+    emittedDelaysCentiseconds: [Int], expectedDelaysCentiseconds: [Int]
+  ) -> Int? {
+    guard !emittedDelaysCentiseconds.isEmpty,
+      emittedDelaysCentiseconds.allSatisfy({ $0 > 0 }),
+      !expectedDelaysCentiseconds.isEmpty,
+      expectedDelaysCentiseconds.allSatisfy({ $0 > 0 })
+    else { return nil }
+
+    var expectedIndex = 0
+    for emittedDelay in emittedDelaysCentiseconds.dropLast() {
+      var mergedDelay = 0
+      while expectedIndex < expectedDelaysCentiseconds.count, mergedDelay < emittedDelay {
+        mergedDelay += expectedDelaysCentiseconds[expectedIndex]
+        expectedIndex += 1
+      }
+      guard mergedDelay == emittedDelay else { return nil }
+    }
+    guard expectedIndex < expectedDelaysCentiseconds.count else { return nil }
+    let remainingDelay = expectedDelaysCentiseconds[expectedIndex...].reduce(0, +)
+    return remainingDelay > 0 ? remainingDelay : nil
+  }
+
+  static func matches(
+    emittedDelaysCentiseconds: [Int], expectedDelaysCentiseconds: [Int]
+  ) -> Bool {
+    guard !emittedDelaysCentiseconds.isEmpty,
+      !expectedDelaysCentiseconds.isEmpty,
+      emittedDelaysCentiseconds.allSatisfy({ $0 > 0 }),
+      expectedDelaysCentiseconds.allSatisfy({ $0 > 0 })
+    else { return false }
+
+    var expectedIndex = 0
+    for emittedDelay in emittedDelaysCentiseconds {
+      var mergedDelay = 0
+      while expectedIndex < expectedDelaysCentiseconds.count, mergedDelay < emittedDelay {
+        mergedDelay += expectedDelaysCentiseconds[expectedIndex]
+        expectedIndex += 1
+      }
+      guard mergedDelay == emittedDelay else { return false }
+    }
+    return expectedIndex == expectedDelaysCentiseconds.count
+  }
+}
+
 struct GIFSizeSearchResult: Sendable {
   let gif: EncodedGIF
   let settings: GIFCompressionSettings
@@ -305,7 +351,11 @@ func validateCompressedGIFOutput(
     compressed.url == reservation.url,
     compressed.frameCount > 0,
     compressed.delaysCentiseconds.count == compressed.frameCount,
-    compressed.delaysCentiseconds.allSatisfy({ $0 > 0 }),
+    let sample = try? GIFFrameSampler.sample(
+      delaysCentiseconds: source.delaysCentiseconds, frameRate: settings.frameRate),
+    GIFFrameScheduleValidator.matches(
+      emittedDelaysCentiseconds: compressed.delaysCentiseconds,
+      expectedDelaysCentiseconds: sample.expectedDelaysCentiseconds),
     abs(compressed.width - settings.scale.expectedDimension(source.width)) <= 1,
     abs(compressed.height - settings.scale.expectedDimension(source.height)) <= 1,
     compressed.durationCentiseconds == source.durationCentiseconds,

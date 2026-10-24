@@ -99,6 +99,22 @@ final class GifskiCLICompressorTests: XCTestCase {
     XCTAssertEqual(eighteenFPS.expectedDelaysCentiseconds.reduce(0, +), 18)
   }
 
+  func testFrameScheduleValidatorAcceptsOnlyContiguousCoalescing() {
+    let expected = [4, 4, 5, 4, 4]
+    XCTAssertTrue(
+      GIFFrameScheduleValidator.matches(
+        emittedDelaysCentiseconds: [8, 13], expectedDelaysCentiseconds: expected))
+    XCTAssertTrue(
+      GIFFrameScheduleValidator.matches(
+        emittedDelaysCentiseconds: expected, expectedDelaysCentiseconds: expected))
+    XCTAssertFalse(
+      GIFFrameScheduleValidator.matches(
+        emittedDelaysCentiseconds: [9, 12], expectedDelaysCentiseconds: expected))
+    XCTAssertNil(
+      GIFFrameScheduleValidator.finalFrameDelay(
+        emittedDelaysCentiseconds: [9, 12], expectedDelaysCentiseconds: expected))
+  }
+
   func testSamplerRejectsInvalidTimingAndImpossibleDuration() {
     XCTAssertThrowsError(try GIFFrameSampler.sample(delaysCentiseconds: [], frameRate: .fps24))
     XCTAssertThrowsError(try GIFFrameSampler.sample(delaysCentiseconds: [0], frameRate: .fps24))
@@ -398,6 +414,12 @@ final class GifskiCLICompressorTests: XCTestCase {
       XCTAssertGreaterThan(result.frameCount, 0)
       XCTAssertEqual(result.durationCentiseconds, fixture.metadata.durationCentiseconds)
       XCTAssertEqual(result.delaysCentiseconds.reduce(0, +), fixture.metadata.durationCentiseconds)
+      let sample = try GIFFrameSampler.sample(
+        delaysCentiseconds: fixture.metadata.delaysCentiseconds, frameRate: .fps24)
+      XCTAssertTrue(
+        GIFFrameScheduleValidator.matches(
+          emittedDelaysCentiseconds: result.delaysCentiseconds,
+          expectedDelaysCentiseconds: sample.expectedDelaysCentiseconds))
       XCTAssertEqual(result.loopsForever, loopsForever)
     }
   }
@@ -422,6 +444,11 @@ final class GifskiCLICompressorTests: XCTestCase {
     XCTAssertGreaterThan(result.frameCount, 0)
     XCTAssertEqual(result.durationCentiseconds, expectedDelays.reduce(0, +))
     XCTAssertEqual(result.delaysCentiseconds.reduce(0, +), expectedDelays.reduce(0, +))
+    let sample = try GIFFrameSampler.sample(delaysCentiseconds: expectedDelays, frameRate: .fps24)
+    XCTAssertTrue(
+      GIFFrameScheduleValidator.matches(
+        emittedDelaysCentiseconds: result.delaysCentiseconds,
+        expectedDelaysCentiseconds: sample.expectedDelaysCentiseconds))
     XCTAssertTrue(result.loopsForever)
   }
 
