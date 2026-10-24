@@ -31,6 +31,11 @@ final class OriginalGIFEncoderTests: XCTestCase {
     XCTAssertEqual(result.durationCentiseconds, 4)
     XCTAssertTrue(result.loopsForever)
     XCTAssertGreaterThan(result.fileBytes, 0)
+    XCTAssertTrue(
+      try GIFLoopExtensionParser.containsLoopingApplicationExtension(
+        in: Data(contentsOf: output)
+      )
+    )
   }
 
   func testOnceModeOmitsLoopExtensionAndMetadataReportsFinitePlayback() async throws {
@@ -52,7 +57,49 @@ final class OriginalGIFEncoderTests: XCTestCase {
     let properties = try XCTUnwrap(
       CGImageSourceCopyProperties(source, nil) as? [CFString: Any])
     let gifProperties = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any] ?? [:]
-    XCTAssertNil(gifProperties[kCGImagePropertyGIFLoopCount])
+    let loopCount = gifProperties[kCGImagePropertyGIFLoopCount] as? Int
+    XCTAssertTrue(loopCount == nil || loopCount == 1)
+    XCTAssertFalse(
+      try GIFLoopExtensionParser.containsLoopingApplicationExtension(
+        in: Data(contentsOf: output)
+      )
+    )
+  }
+
+  func testGIFLoopExtensionParserMatchesIdentifiersOnlyInApplicationExtensions() throws {
+    let netscapeGIF = minimalGIF(
+      extension: applicationExtension(identifier: "NETSCAPE2.0", data: [0x01, 0x00, 0x00])
+    )
+    let animationExtensionsGIF = minimalGIF(
+      extension: applicationExtension(identifier: "ANIMEXTS1.0", data: [0x01, 0x00, 0x00])
+    )
+    let commentWithIdentifier = minimalGIF(
+      extension: Data([0x21, 0xFE, 0x0B]) + Data("NETSCAPE2.0".utf8) + Data([0x00])
+    )
+
+    XCTAssertTrue(try GIFLoopExtensionParser.containsLoopingApplicationExtension(in: netscapeGIF))
+    XCTAssertTrue(
+      try GIFLoopExtensionParser.containsLoopingApplicationExtension(in: animationExtensionsGIF)
+    )
+    XCTAssertFalse(
+      try GIFLoopExtensionParser.containsLoopingApplicationExtension(in: commentWithIdentifier)
+    )
+  }
+
+  func testGIFLoopExtensionParserRejectsTruncatedBlocks() {
+    let truncatedApplicationExtension = minimalGIF(
+      extension: Data([0x21, 0xFF, 0x0B]) + Data("NETS".utf8)
+    )
+    let truncatedImageData = minimalGIF(extension: nil).dropLast(2)
+
+    XCTAssertThrowsError(
+      try GIFLoopExtensionParser.containsLoopingApplicationExtension(
+        in: truncatedApplicationExtension
+      )
+    )
+    XCTAssertThrowsError(
+      try GIFLoopExtensionParser.containsLoopingApplicationExtension(in: Data(truncatedImageData))
+    )
   }
 
   func testCumulativeRoundingPreservesDurationForRegularAndIrregularTimestamps() throws {
@@ -162,6 +209,22 @@ final class OriginalGIFEncoderTests: XCTestCase {
       bgra: Data([color[2], color[1], color[0], color[3]])
     )
     return try PNGFrameEncoder().encode(frame)
+  }
+
+  private func applicationExtension(identifier: String, data: [UInt8]) -> Data {
+    Data([0x21, 0xFF, 0x0B]) + Data(identifier.utf8) + Data([UInt8(data.count)]) + Data(data)
+      + Data([0x00])
+  }
+
+  private func minimalGIF(extension extensionData: Data?) -> Data {
+    var bytes = Data("GIF89a".utf8)
+    bytes.append(contentsOf: [0x01, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00])
+    if let extensionData { bytes.append(extensionData) }
+    bytes.append(contentsOf: [
+      0x2C, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x01, 0x00, 0x00,
+      0x02, 0x01, 0x4C, 0x00, 0x3B,
+    ])
+    return bytes
   }
 
   private func uniqueTemporaryDirectory() -> URL {

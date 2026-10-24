@@ -28,6 +28,118 @@ struct EncodedGIF: Sendable, Equatable {
   let fileBytes: Int64
 }
 
+enum GIFLoopExtensionParserError: Error, Equatable {
+  case malformedGIF
+}
+
+enum GIFLoopExtensionParser {
+  private static let netscapeIdentifier = Array("NETSCAPE2.0".utf8)
+  private static let animationExtensionsIdentifier = Array("ANIMEXTS1.0".utf8)
+
+  static func containsLoopingApplicationExtension(in data: Data) throws -> Bool {
+    try data.withUnsafeBytes { bytes in
+      try containsLoopingApplicationExtension(in: bytes)
+    }
+  }
+
+  static func containsLoopingApplicationExtension(in data: UnsafeRawBufferPointer) throws -> Bool {
+    guard data.count >= 13, let baseAddress = data.baseAddress else {
+      throw GIFLoopExtensionParserError.malformedGIF
+    }
+    let bytes = UnsafeBufferPointer(
+      start: baseAddress.assumingMemoryBound(to: UInt8.self), count: data.count)
+    guard
+      bytes[0..<6].elementsEqual("GIF87a".utf8)
+        || bytes[0..<6].elementsEqual("GIF89a".utf8)
+    else { throw GIFLoopExtensionParserError.malformedGIF }
+
+    var reader = GIFByteReader(bytes: bytes, offset: 13)
+    var containsLoopingExtension = false
+    let screenPackedFields = bytes[10]
+    if screenPackedFields & 0x80 != 0 {
+      let colorTableEntries = 1 << (Int(screenPackedFields & 0x07) + 1)
+      try reader.skip(colorTableEntries * 3)
+    }
+
+    while let introducer = try reader.readByte() {
+      switch introducer {
+      case 0x3B:
+        guard reader.isAtEnd else { throw GIFLoopExtensionParserError.malformedGIF }
+        return containsLoopingExtension
+      case 0x21:
+        guard let label = try reader.readByte() else {
+          throw GIFLoopExtensionParserError.malformedGIF
+        }
+        if label == 0xFF {
+          guard let identifierLength = try reader.readByte() else {
+            throw GIFLoopExtensionParserError.malformedGIF
+          }
+          let identifier = try reader.readBytes(Int(identifierLength))
+          let isLoopingIdentifier =
+            identifier == netscapeIdentifier
+            || identifier == animationExtensionsIdentifier
+          try reader.skipSubBlocks()
+          containsLoopingExtension = containsLoopingExtension || isLoopingIdentifier
+        } else {
+          try reader.skipSubBlocks()
+        }
+      case 0x2C:
+        let imageDescriptor = try reader.readBytes(9)
+        let imagePackedFields = imageDescriptor[8]
+        if imagePackedFields & 0x80 != 0 {
+          let colorTableEntries = 1 << (Int(imagePackedFields & 0x07) + 1)
+          try reader.skip(colorTableEntries * 3)
+        }
+        guard try reader.readByte() != nil else {
+          throw GIFLoopExtensionParserError.malformedGIF
+        }
+        try reader.skipSubBlocks()
+      default:
+        throw GIFLoopExtensionParserError.malformedGIF
+      }
+    }
+    throw GIFLoopExtensionParserError.malformedGIF
+  }
+}
+
+private struct GIFByteReader {
+  let bytes: UnsafeBufferPointer<UInt8>
+  private(set) var offset: Int
+
+  var isAtEnd: Bool { offset == bytes.count }
+
+  mutating func readByte() throws -> UInt8? {
+    guard offset < bytes.count else { return nil }
+    defer { offset += 1 }
+    return bytes[offset]
+  }
+
+  mutating func readBytes(_ count: Int) throws -> [UInt8] {
+    guard count >= 0, count <= bytes.count - offset else {
+      throw GIFLoopExtensionParserError.malformedGIF
+    }
+    defer { offset += count }
+    return Array(bytes[offset..<(offset + count)])
+  }
+
+  mutating func skip(_ count: Int) throws {
+    guard count >= 0, count <= bytes.count - offset else {
+      throw GIFLoopExtensionParserError.malformedGIF
+    }
+    offset += count
+  }
+
+  mutating func skipSubBlocks() throws {
+    while true {
+      guard let count = try readByte() else {
+        throw GIFLoopExtensionParserError.malformedGIF
+      }
+      if count == 0 { return }
+      try skip(Int(count))
+    }
+  }
+}
+
 struct GIFMetadataInspector {
   func inspect(_ url: URL) throws -> EncodedGIF {
     var fileInfo = stat()
@@ -353,6 +465,42 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
     }
   }
 
+  private func containsLoopingApplicationExtension(
+    at url: URL,
+    maximumBytes: Int64
+  ) throws -> Bool {
+    let descriptor = open(url.path, O_RDONLY | O_NOFOLLOW | O_CLOEXEC)
+    guard descriptor >= 0 else { throw OriginalGIFEncodingError.invalidOutput }
+    defer { _ = close(descriptor) }
+
+    var initialInfo = stat()
+    guard fstat(descriptor, &initialInfo) == 0,
+      initialInfo.st_mode & S_IFMT == S_IFREG,
+      initialInfo.st_size > 0
+    else { throw OriginalGIFEncodingError.invalidOutput }
+    guard initialInfo.st_size <= maximumBytes,
+      let byteCount = Int(exactly: initialInfo.st_size)
+    else { throw OriginalGIFEncodingError.outputSizeExceeded }
+    let mapping = mmap(nil, byteCount, PROT_READ, MAP_PRIVATE, descriptor, 0)
+    guard mapping != MAP_FAILED else { throw OriginalGIFEncodingError.invalidOutput }
+    defer { _ = munmap(mapping, byteCount) }
+
+    let data = UnsafeRawBufferPointer(start: mapping, count: byteCount)
+    let containsLoopingExtension: Bool
+    do {
+      containsLoopingExtension =
+        try GIFLoopExtensionParser
+        .containsLoopingApplicationExtension(in: data)
+    } catch {
+      throw OriginalGIFEncodingError.invalidOutput
+    }
+    var finalInfo = stat()
+    guard fstat(descriptor, &finalInfo) == 0,
+      finalInfo.st_size == initialInfo.st_size
+    else { throw OriginalGIFEncodingError.invalidOutput }
+    return containsLoopingExtension
+  }
+
   private func validateOutput(
     at url: URL,
     dimensions expectedDimensions: (width: Int, height: Int)?,
@@ -360,44 +508,36 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
     loopMode: GIFLoopMode,
     maximumBytes: Int64
   ) throws -> EncodedGIF {
+    try checkOutputSize(at: url, maximumBytes: maximumBytes)
     guard let expectedDimensions else {
-      print("gif output validation failed at header: expected dimensions are missing")
       throw OriginalGIFEncodingError.invalidOutput
     }
     guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
-      print("gif output validation failed at header: image source could not be opened")
       throw OriginalGIFEncodingError.invalidOutput
     }
     let sourceFrameCount = CGImageSourceGetCount(source)
     guard sourceFrameCount == expectedDelays.count else {
-      print(
-        "gif output validation failed at header: expected \(expectedDelays.count) frames, got \(sourceFrameCount)"
-      )
       throw OriginalGIFEncodingError.invalidOutput
     }
     guard let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any]
     else {
-      print("gif output validation failed at header: global properties could not be read")
       throw OriginalGIFEncodingError.invalidOutput
     }
     let gifProperties =
       globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any] ?? [:]
     let loopCount = gifProperties[kCGImagePropertyGIFLoopCount] as? Int
-    guard
-      (loopMode == .forever && loopCount == 0)
-        || (loopMode == .once && loopCount == nil)
-    else {
-      let outputData = try? Data(contentsOf: url)
-      let netscapeLoopExtension = Data("NETSCAPE2.0".utf8)
-      let animationExtensionsLoopExtension = Data("ANIMEXTS1.0".utf8)
-      let containsLoopExtension =
-        outputData.map {
-          $0.range(of: netscapeLoopExtension) != nil
-            || $0.range(of: animationExtensionsLoopExtension) != nil
-        } ?? false
-      print(
-        "gif output validation failed at loop metadata: mode=\(loopMode), loopCount=\(String(describing: loopCount)), containsLoopExtension=\(containsLoopExtension), gifProperties=\(gifProperties)"
-      )
+    let containsLoopingExtension = try containsLoopingApplicationExtension(
+      at: url,
+      maximumBytes: maximumBytes
+    )
+    let hasValidLoopMetadata: Bool
+    switch loopMode {
+    case .forever:
+      hasValidLoopMetadata = loopCount == 0 && containsLoopingExtension
+    case .once:
+      hasValidLoopMetadata = (loopCount == nil || loopCount == 1) && !containsLoopingExtension
+    }
+    guard hasValidLoopMetadata else {
       throw OriginalGIFEncodingError.invalidOutput
     }
 
@@ -407,9 +547,6 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
         let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil)
           as? [CFString: Any]
       else {
-        print(
-          "gif output validation failed at frame metadata: frame=\(index), properties are missing"
-        )
         throw OriginalGIFEncodingError.invalidOutput
       }
       let width = properties[kCGImagePropertyPixelWidth] as? Int
@@ -421,26 +558,17 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
       guard width == expectedDimensions.width, height == expectedDimensions.height,
         let frameGIF, let delay, delay.isFinite
       else {
-        print(
-          "gif output validation failed at frame metadata: frame=\(index), expected=\(expectedDimensions.width)x\(expectedDimensions.height), width=\(String(describing: width)), height=\(String(describing: height)), gifProperties=\(String(describing: frameGIF)), delay=\(String(describing: delay))"
-        )
         throw OriginalGIFEncodingError.invalidOutput
       }
       actualDelays.append(Int((delay * 100).rounded(.toNearestOrAwayFromZero)))
     }
     guard actualDelays == expectedDelays else {
-      print(
-        "gif output validation failed at frame delays: expected=\(expectedDelays), actual=\(actualDelays)"
-      )
       throw OriginalGIFEncodingError.invalidOutput
     }
     try checkOutputSize(at: url, maximumBytes: maximumBytes)
     var info = stat()
     let fileStatus = lstat(url.path, &info)
     guard fileStatus == 0, info.st_size > 0 else {
-      print(
-        "gif output validation failed at file metadata: lstat=\(fileStatus), errno=\(errno), size=\(info.st_size)"
-      )
       throw OriginalGIFEncodingError.invalidOutput
     }
     return EncodedGIF(
