@@ -360,41 +360,79 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
     loopMode: GIFLoopMode,
     maximumBytes: Int64
   ) throws -> EncodedGIF {
-    guard let expectedDimensions,
-      let source = CGImageSourceCreateWithURL(url as CFURL, nil),
-      CGImageSourceGetCount(source) == expectedDelays.count,
-      let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any]
-    else { throw OriginalGIFEncodingError.invalidOutput }
+    guard let expectedDimensions else {
+      print("gif output validation failed at header: expected dimensions are missing")
+      throw OriginalGIFEncodingError.invalidOutput
+    }
+    guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else {
+      print("gif output validation failed at header: image source could not be opened")
+      throw OriginalGIFEncodingError.invalidOutput
+    }
+    let sourceFrameCount = CGImageSourceGetCount(source)
+    guard sourceFrameCount == expectedDelays.count else {
+      print(
+        "gif output validation failed at header: expected \(expectedDelays.count) frames, got \(sourceFrameCount)"
+      )
+      throw OriginalGIFEncodingError.invalidOutput
+    }
+    guard let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any]
+    else {
+      print("gif output validation failed at header: global properties could not be read")
+      throw OriginalGIFEncodingError.invalidOutput
+    }
     let gifProperties =
       globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any] ?? [:]
     let loopCount = gifProperties[kCGImagePropertyGIFLoopCount] as? Int
     guard
       (loopMode == .forever && loopCount == 0)
         || (loopMode == .once && loopCount == nil)
-    else { throw OriginalGIFEncodingError.invalidOutput }
+    else {
+      print(
+        "gif output validation failed at loop metadata: mode=\(loopMode), loopCount=\(String(describing: loopCount)), gifProperties=\(gifProperties)"
+      )
+      throw OriginalGIFEncodingError.invalidOutput
+    }
 
     var actualDelays: [Int] = []
     for index in 0..<expectedDelays.count {
       guard
         let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil)
-          as? [CFString: Any],
-        let width = properties[kCGImagePropertyPixelWidth] as? Int,
-        let height = properties[kCGImagePropertyPixelHeight] as? Int,
-        width == expectedDimensions.width,
-        height == expectedDimensions.height,
-        let frameGIF = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any],
-        let delay = frameGIF[kCGImagePropertyGIFUnclampedDelayTime] as? Double
-          ?? frameGIF[kCGImagePropertyGIFDelayTime] as? Double,
-        delay.isFinite
-      else { throw OriginalGIFEncodingError.invalidOutput }
+          as? [CFString: Any]
+      else {
+        print(
+          "gif output validation failed at frame metadata: frame=\(index), properties are missing"
+        )
+        throw OriginalGIFEncodingError.invalidOutput
+      }
+      let width = properties[kCGImagePropertyPixelWidth] as? Int
+      let height = properties[kCGImagePropertyPixelHeight] as? Int
+      let frameGIF = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any]
+      let delay =
+        frameGIF?[kCGImagePropertyGIFUnclampedDelayTime] as? Double
+        ?? frameGIF?[kCGImagePropertyGIFDelayTime] as? Double
+      guard width == expectedDimensions.width, height == expectedDimensions.height,
+        let frameGIF, let delay, delay.isFinite
+      else {
+        print(
+          "gif output validation failed at frame metadata: frame=\(index), expected=\(expectedDimensions.width)x\(expectedDimensions.height), width=\(String(describing: width)), height=\(String(describing: height)), gifProperties=\(String(describing: frameGIF)), delay=\(String(describing: delay))"
+        )
+        throw OriginalGIFEncodingError.invalidOutput
+      }
       actualDelays.append(Int((delay * 100).rounded(.toNearestOrAwayFromZero)))
     }
     guard actualDelays == expectedDelays else {
+      print(
+        "gif output validation failed at frame delays: expected=\(expectedDelays), actual=\(actualDelays)"
+      )
       throw OriginalGIFEncodingError.invalidOutput
     }
     try checkOutputSize(at: url, maximumBytes: maximumBytes)
     var info = stat()
-    guard lstat(url.path, &info) == 0, info.st_size > 0 else {
+    let fileStatus = lstat(url.path, &info)
+    guard fileStatus == 0, info.st_size > 0 else {
+      print(
+        "gif output validation failed at file metadata: lstat=\(fileStatus), errno=\(errno), size=\(info.st_size)"
+      )
       throw OriginalGIFEncodingError.invalidOutput
     }
     return EncodedGIF(
