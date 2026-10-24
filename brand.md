@@ -19,6 +19,10 @@ the architect selected **loop frame** for the first candidate. the other concept
 
 first-round monochrome studies are available in the [accessible contact sheet](Brand/Studies/index.html), with tradeoffs in [review notes](Brand/Studies/review-notes.md). these are review material only; none is approved artwork.
 
+the architect selected study c, the vertical loop, for a second round of refinement. this selects a direction to explore, not final artwork; keep the original study and document any changes and tradeoffs.
+
+the architect selected variant b, with directional ends, to proceed to final-art exploration. the second-round [accessible comparison sheet](Brand/Studies/round-two/index.html) records all three monochrome refinements. this selection does not approve final artwork, orange values, motion, or sound.
+
 ## interface rules
 
 - use native macOS hierarchy, materials, typography, focus rings, menus, dialogs, and keyboard behavior as the base. custom chrome stays around capture selection, preview progress, and small brand moments.

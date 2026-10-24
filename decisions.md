@@ -26,6 +26,11 @@
 - playback speed uses a continuous slider from 0.5× to 2× in 0.1× steps, centered at 1×.
 - the real-Mac animated clipboard paste acceptance test covers GitHub only. other destinations are outside this first-release clipboard compatibility gate.
 
+## brand exploration confirmed on 2026-10-24
+
+- refine study c, the vertical loop, in a second round of monochrome mark studies. this does not approve final artwork, exact orange values, motion, or sound.
+- after reviewing the second round, proceed with variant b, the vertical loop with directional ends, for final-art exploration. do not treat it as approved final artwork or infer orange, motion, or sound choices.
+
 ## compression behavior confirmed on 2026-10-24
 
 - the minimum acceptable compression quality keeps text legible at native scale, keeps cursor edges clear, and has no distracting banding or flicker in gradients. minor differences visible only at 2× are acceptable.

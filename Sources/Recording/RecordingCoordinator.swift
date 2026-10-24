@@ -4,8 +4,15 @@ import Foundation
 @MainActor
 protocol RecordingCaptureSession: AnyObject {
   var frames: AsyncStream<RecordingFrame> { get }
+  var frameStatistics: RecordingFrameStatistics { get }
   func start() async throws
   func stop(reason: CaptureTerminationReason) async
+}
+
+extension RecordingCaptureSession {
+  var frameStatistics: RecordingFrameStatistics {
+    RecordingFrameStatistics(accepted: 0, dropped: 0, rejectedTimestamps: 0)
+  }
 }
 
 @MainActor
@@ -120,6 +127,7 @@ actor RecordingFramePipeline {
 @MainActor
 final class RecordingCoordinator: ObservableObject {
   @Published private(set) var state: RecordingCoordinatorState = .idle
+  private(set) var diagnostics = RecordingDiagnostics()
   @Published private(set) var previewAction: PreviewAction = .idle
   @Published private(set) var editParameters: GIFEditParameters?
   @Published private(set) var isPreviewUpdateInProgress = false
@@ -131,6 +139,7 @@ final class RecordingCoordinator: ObservableObject {
   private let gifEncoder: any OriginalGIFEncoding
   private let clipboard: any GIFClipboardWriting
   private let fileSaver: any GIFSaving
+  private let diagnosticsClock: any RecordingDiagnosticsClock
 
   private var generation: UUID?
   private var startTask: Task<Void, Never>?
@@ -146,6 +155,8 @@ final class RecordingCoordinator: ObservableObject {
   private var originalSequence: CapturedPNGSequence?
   private var currentPreviewParameters: GIFEditParameters?
   private var previewExported = false
+  private var recordingRequestedAt: Duration?
+  private var stopRequestedAt: Duration?
 
   init(
     streamFactory: any RecordingStreamPreparing,
@@ -153,7 +164,8 @@ final class RecordingCoordinator: ObservableObject {
     encoder: PNGFrameEncoder = PNGFrameEncoder(),
     gifEncoder: any OriginalGIFEncoding = ImageIOOriginalGIFEncoder(),
     clipboard: any GIFClipboardWriting = NSPasteboardGIFWriter(),
-    fileSaver: any GIFSaving = SavePanelGIFSaver()
+    fileSaver: any GIFSaving = SavePanelGIFSaver(),
+    diagnosticsClock: any RecordingDiagnosticsClock = SystemRecordingDiagnosticsClock()
   ) {
     self.streamFactory = streamFactory
     self.workspace = workspace
@@ -161,6 +173,7 @@ final class RecordingCoordinator: ObservableObject {
     self.gifEncoder = gifEncoder
     self.clipboard = clipboard
     self.fileSaver = fileSaver
+    self.diagnosticsClock = diagnosticsClock
   }
 
   func cleanOrphanedSessions() async throws {
@@ -174,6 +187,9 @@ final class RecordingCoordinator: ObservableObject {
     }
     let token = UUID()
     generation = token
+    diagnostics = RecordingDiagnostics()
+    recordingRequestedAt = diagnosticsClock.now()
+    stopRequestedAt = nil
     stopReason = nil
     consumerFailure = nil
     state = .starting
@@ -199,6 +215,9 @@ final class RecordingCoordinator: ObservableObject {
     }
 
     stopReason = reason
+    if stopRequestedAt == nil {
+      stopRequestedAt = diagnosticsClock.now()
+    }
     state = .stopping
     let startup = startTask
     startup?.cancel()
@@ -383,11 +402,15 @@ final class RecordingCoordinator: ObservableObject {
       guard isCurrent(token), !Task.isCancelled else {
         return
       }
+      if let recordingRequestedAt {
+        diagnostics.startToRecording = diagnosticsClock.now() - recordingRequestedAt
+      }
       state = .recording
     } catch is CancellationError {
       if generation == token {
         if let stream { await stream.stop(reason: .userStopped) }
         await consumerTask?.value
+        captureFrameStatistics()
         await removeSessionIfPresent()
         clearActiveSession()
         state = .idle
@@ -403,6 +426,7 @@ final class RecordingCoordinator: ObservableObject {
     guard generation == token else { return }
     if let stream { await stream.stop(reason: .streamFailed) }
     await consumerTask?.value
+    captureFrameStatistics()
     await removeSessionIfPresent()
     clearActiveSession()
     state = .failed(failure)
@@ -411,6 +435,7 @@ final class RecordingCoordinator: ObservableObject {
   private func finish(reason: CaptureTerminationReason) async {
     if let stream { await stream.stop(reason: reason) }
     await consumerTask?.value
+    captureFrameStatistics()
     defer {
       clearActiveSession()
       generation = nil
@@ -435,6 +460,9 @@ final class RecordingCoordinator: ObservableObject {
     }
     do {
       let snapshot = try await workspace.stop(sessionID, reason: workspaceReason)
+      if let stopRequestedAt {
+        diagnostics.stopToCapturedSession = diagnosticsClock.now() - stopRequestedAt
+      }
       state = .captured(sessionID, snapshot)
       previewTask = Task { @MainActor [weak self] in
         await self?.preparePreview(sessionID: sessionID, snapshot: snapshot)
@@ -474,6 +502,9 @@ final class RecordingCoordinator: ObservableObject {
         edited.sequence, loopMode: edited.loopMode, to: output)
       try validate(encoded, sequence: edited.sequence, loopMode: edited.loopMode, output: output)
       let committed = try await workspace.commitPreviewOutput(for: sessionID, reservation: output)
+      if let stopRequestedAt {
+        diagnostics.stopToPreviewReady = diagnosticsClock.now() - stopRequestedAt
+      }
       state = .previewReady(sessionID, committed, encoded)
     } catch let error as OriginalGIFEncodingError where error == .cancelled {
       if let reservation {
@@ -641,6 +672,12 @@ final class RecordingCoordinator: ObservableObject {
     startTask = nil
     stopReason = nil
     consumerFailure = nil
+    recordingRequestedAt = nil
+  }
+
+  private func captureFrameStatistics() {
+    guard let stream else { return }
+    diagnostics.frameStatistics = stream.frameStatistics
   }
 
   private func isCurrent(_ token: UUID) -> Bool {

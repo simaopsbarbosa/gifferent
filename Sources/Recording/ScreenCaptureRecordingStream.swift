@@ -15,6 +15,7 @@ enum RecordingStreamError: Error, Equatable {
 final class ScreenCaptureRecordingStream: RecordingCaptureSession {
   let transport: RecordingFrameTransport
   var frames: AsyncStream<RecordingFrame> { transport.frames }
+  var frameStatistics: RecordingFrameStatistics { transport.statistics() }
 
   private let stream: SCStream
   private let output: ScreenFrameOutput

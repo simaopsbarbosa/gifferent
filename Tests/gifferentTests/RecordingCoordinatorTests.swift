@@ -24,6 +24,52 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertGreaterThan(snapshot.temporaryBytes, 0)
     XCTAssertEqual(gif.frameCount, 1)
     XCTAssertEqual(gif.width, 1)
+    XCTAssertEqual(
+      coordinator.diagnostics.frameStatistics,
+      RecordingFrameStatistics(accepted: 1, dropped: 0, rejectedTimestamps: 0)
+    )
+    XCTAssertGreaterThanOrEqual(coordinator.diagnostics.startToRecording ?? .zero, .zero)
+    XCTAssertGreaterThanOrEqual(coordinator.diagnostics.stopToPreviewReady ?? .zero, .zero)
+  }
+
+  func testDiagnosticsKeepBoundedTransportCountsAndMeasureThroughPreviewReady() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let clock = ManualRecordingDiagnosticsClock()
+    let stream = FakeRecordingStream(
+      framesOnStart: [
+        validFrame(at: 100_000_000), validFrame(at: 200_000_000),
+        validFrame(at: 300_000_000), validFrame(at: 400_000_000),
+        validFrame(at: 400_000_000), validFrame(at: -1),
+      ],
+      capacity: 2,
+      clock: clock,
+      startAdvance: .milliseconds(100),
+      stopAdvance: .milliseconds(25)
+    )
+    let coordinator = RecordingCoordinator(
+      streamFactory: FakeRecordingStreamFactory(stream: stream),
+      workspace: fixture.workspace,
+      gifEncoder: AdvancingGIFEncoder(clock: clock, duration: .milliseconds(200)),
+      diagnosticsClock: clock
+    )
+
+    await coordinator.start(target: .display(1), showsCursor: false)
+    XCTAssertEqual(coordinator.state, .recording)
+    await coordinator.stop()
+    await waitForPreview(coordinator)
+
+    guard case .previewReady = coordinator.state else {
+      return XCTFail("expected preview encoding to finish for valid retained timestamps")
+    }
+
+    XCTAssertEqual(
+      coordinator.diagnostics.frameStatistics,
+      RecordingFrameStatistics(accepted: 4, dropped: 2, rejectedTimestamps: 2)
+    )
+    XCTAssertEqual(coordinator.diagnostics.startToRecording, .milliseconds(100))
+    XCTAssertEqual(coordinator.diagnostics.stopToCapturedSession, .milliseconds(25))
+    XCTAssertEqual(coordinator.diagnostics.stopToPreviewReady, .milliseconds(225))
   }
 
   func testStartFailureCleansWorkspaceAndAllowsRetry() async throws {
@@ -38,6 +84,8 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(coordinator.state, .failed(.captureStartFailed))
     XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fixture.root.path), [])
     XCTAssertEqual(stream.stopCalls, 1)
+    XCTAssertNil(coordinator.diagnostics.startToRecording)
+    XCTAssertNil(coordinator.diagnostics.stopToPreviewReady)
 
     await coordinator.start(target: .display(1), showsCursor: true)
     XCTAssertEqual(coordinator.state, .recording)
@@ -252,6 +300,11 @@ final class RecordingCoordinatorTests: XCTestCase {
       }
       XCTAssertEqual(snapshot.stopReason, expected)
       XCTAssertTrue(snapshot.isPartialResult)
+      XCTAssertEqual(
+        coordinator.diagnostics.frameStatistics,
+        RecordingFrameStatistics(accepted: 1, dropped: 0, rejectedTimestamps: 0)
+      )
+      XCTAssertNotNil(coordinator.diagnostics.stopToPreviewReady)
       try? FileManager.default.removeItem(at: fixture.base)
     }
   }
@@ -506,6 +559,45 @@ final class RecordingCoordinatorTests: XCTestCase {
 private enum TestFailure: Error { case start }
 
 @MainActor
+private final class ManualRecordingDiagnosticsClock: RecordingDiagnosticsClock {
+  private var current: Duration = .zero
+
+  func now() -> Duration { current }
+
+  func advance(by duration: Duration) {
+    current += duration
+  }
+}
+
+private actor AdvancingGIFEncoder: OriginalGIFEncoding {
+  private let clock: ManualRecordingDiagnosticsClock
+  private let duration: Duration
+  private let encoder = ImageIOOriginalGIFEncoder()
+
+  init(clock: ManualRecordingDiagnosticsClock, duration: Duration) {
+    self.clock = clock
+    self.duration = duration
+  }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    try await encode(sequence, loopMode: .forever, to: reservation)
+  }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    loopMode: GIFLoopMode,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    let result = try await encoder.encode(sequence, loopMode: loopMode, to: reservation)
+    await clock.advance(by: duration)
+    return result
+  }
+}
+
+@MainActor
 private final class RecordingTestClipboard: GIFClipboardWriting {
   private(set) var urls: [URL] = []
 
@@ -573,11 +665,15 @@ private final class FakeRecordingStreamFactory: RecordingStreamPreparing {
 
 @MainActor
 private final class FakeRecordingStream: RecordingCaptureSession {
-  let transport = RecordingFrameTransport()
+  let transport: RecordingFrameTransport
   var frames: AsyncStream<RecordingFrame> { transport.frames }
+  var frameStatistics: RecordingFrameStatistics { transport.statistics() }
   var startError: Error?
   var startGate: Bool
   var stopDelay: Duration
+  private let clock: ManualRecordingDiagnosticsClock?
+  private let startAdvance: Duration
+  private let stopAdvance: Duration
   private(set) var stopCalls = 0
   private(set) var waitingForStart = false
   private var startContinuation: CheckedContinuation<Void, Never>?
@@ -586,11 +682,19 @@ private final class FakeRecordingStream: RecordingCaptureSession {
     framesOnStart: [RecordingFrame] = [],
     startError: Error? = nil,
     startGate: Bool = false,
-    stopDelay: Duration = .zero
+    stopDelay: Duration = .zero,
+    capacity: Int = 3,
+    clock: ManualRecordingDiagnosticsClock? = nil,
+    startAdvance: Duration = .zero,
+    stopAdvance: Duration = .zero
   ) {
     self.startError = startError
     self.startGate = startGate
     self.stopDelay = stopDelay
+    self.clock = clock
+    self.startAdvance = startAdvance
+    self.stopAdvance = stopAdvance
+    transport = RecordingFrameTransport(capacity: capacity)
     self.framesOnStart = framesOnStart
   }
 
@@ -603,12 +707,14 @@ private final class FakeRecordingStream: RecordingCaptureSession {
       waitingForStart = false
     }
     if let startError { throw startError }
+    if startAdvance > .zero { clock?.advance(by: startAdvance) }
     for frame in framesOnStart { transport.offer(frame) }
   }
 
   func stop(reason: CaptureTerminationReason) async {
     stopCalls += 1
     if stopDelay > .zero { try? await Task.sleep(for: stopDelay) }
+    if stopAdvance > .zero { clock?.advance(by: stopAdvance) }
     transport.finish()
   }
 

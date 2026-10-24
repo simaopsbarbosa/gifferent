@@ -9,9 +9,36 @@ struct RecordingFrame: Sendable, Equatable {
 }
 
 struct RecordingFrameStatistics: Sendable, Equatable {
+  /// valid, increasing frames offered to the bounded stream, including those later displaced.
   let accepted: Int
+  /// accepted frames displaced from the newest-frame buffer before consumption.
   let dropped: Int
+  /// frames rejected because their timestamp was negative, repeated, or moved backward.
   let rejectedTimestamps: Int
+}
+
+/// local, in-memory measurements for one recording; these values are not persisted or uploaded.
+struct RecordingDiagnostics: Sendable, Equatable {
+  var frameStatistics = RecordingFrameStatistics(accepted: 0, dropped: 0, rejectedTimestamps: 0)
+  var startToRecording: Duration?
+  var stopToCapturedSession: Duration?
+  var stopToPreviewReady: Duration?
+}
+
+@MainActor
+protocol RecordingDiagnosticsClock {
+  /// seconds on a monotonic timeline with an arbitrary origin.
+  func now() -> Duration
+}
+
+@MainActor
+struct SystemRecordingDiagnosticsClock: RecordingDiagnosticsClock {
+  private let clock = ContinuousClock()
+  private let origin = ContinuousClock().now
+
+  func now() -> Duration {
+    origin.duration(to: clock.now)
+  }
 }
 
 /// a bounded handoff from the screen callback to a frame consumer.
