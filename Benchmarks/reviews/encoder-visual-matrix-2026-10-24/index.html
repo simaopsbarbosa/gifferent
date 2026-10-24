@@ -1,0 +1,249 @@
+<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>encoder visual matrix · 2026-10-24</title>
+<style>
+:root { color-scheme: light dark; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; line-height: 1.5; }
+body { margin: 0 auto; max-width: 1360px; padding: 24px; }
+h1,h2,h3,p { margin-top: 0; }
+.note { border-left: 4px solid #d45d21; margin: 20px 0; padding: 12px 16px; }
+.controls { align-items: center; display: flex; flex-wrap: wrap; gap: 8px; margin: 20px 0; }
+button { font: inherit; padding: 6px 12px; }
+button[aria-pressed="true"] { outline: 2px solid #d45d21; outline-offset: 2px; }
+.muted,.scale-status { color: #777; font-size: .92rem; }
+.profile { border-top: 1px solid #8886; margin: 32px 0; padding-top: 20px; }
+.sample-time { border-top: 1px solid #8886; padding: 12px 0; }
+.sample-time > summary { cursor: pointer; font-size: 1.1rem; font-weight: 650; }
+.matrix-scroll { margin: 12px 0 28px; overflow: auto; }
+table { border-collapse: separate; border-spacing: 12px; width: max-content; }
+caption { text-align: left; }
+th { text-align: left; vertical-align: bottom; }
+td,th { min-width: 640px; padding: 4px; }
+figure { margin: 0; }
+img { display: block; height: auto; width: 640px; }
+.zoom-2x img { width: 1280px; }
+figcaption { font-weight: 600; margin-top: 6px; }
+a:focus-visible,button:focus-visible,summary:focus-visible,.matrix-scroll:focus-visible { outline: 3px solid #d45d21; outline-offset: 3px; }
+@media(max-width:700px) { body { padding: 16px; } }
+</style></head><body><main>
+<h1>encoder visual matrix · 2026-10-24</h1>
+<p>static frame comparisons from the existing four-profile benchmark. each output is decoded at 640 × 360; snapshots are shown at native size, with a 2× browser enlargement option.</p>
+<aside class="note"><strong>review scope:</strong> evidence collection against the approved quality floor, not an encoder ranking or selection. the paths use different controls: Gifski quality 90, ImageMagick Floyd–Steinberg diffusion at 35%, and the app's system ImageIO path.</aside>
+<div class="controls" role="group" aria-label="sample image scale"><span>image scale:</span>
+<button type="button" data-scale="1" aria-pressed="true">native 1×</button><button type="button" data-scale="2" aria-pressed="false">enlarged 2×</button>
+<span class="scale-status" id="scale-status" aria-live="polite">showing decoded frames at 640 × 360 pixels.</span></div>
+<p class="muted">compare matching frame numbers across the four columns. each image opens alone at its natural 640 × 360 resolution. the 2× option enlarges it in this page for close inspection.</p>
+
+<section class="profile" aria-labelledby="profile-mostly-static-ui"><h2 id="profile-mostly-static-ui">mostly static ui</h2>
+<details class="sample-time" open><summary>frame 60 · 2.500 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="mostly static ui frame 60 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/mostly-static-ui/gifski-0060.png"><img src="frames/mostly-static-ui/gifski-0060.png" alt="mostly static ui fixture, frame 60 at 2.500 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/magick-0060.png"><img src="frames/mostly-static-ui/magick-0060.png" alt="mostly static ui fixture, frame 60 at 2.500 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/magick-unoptimized-0060.png"><img src="frames/mostly-static-ui/magick-unoptimized-0060.png" alt="mostly static ui fixture, frame 60 at 2.500 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/imageio-app-0060.png"><img src="frames/mostly-static-ui/imageio-app-0060.png" alt="mostly static ui fixture, frame 60 at 2.500 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 120 · 5.000 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="mostly static ui frame 120 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/mostly-static-ui/gifski-0120.png"><img src="frames/mostly-static-ui/gifski-0120.png" alt="mostly static ui fixture, frame 120 at 5.000 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/magick-0120.png"><img src="frames/mostly-static-ui/magick-0120.png" alt="mostly static ui fixture, frame 120 at 5.000 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/magick-unoptimized-0120.png"><img src="frames/mostly-static-ui/magick-unoptimized-0120.png" alt="mostly static ui fixture, frame 120 at 5.000 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/imageio-app-0120.png"><img src="frames/mostly-static-ui/imageio-app-0120.png" alt="mostly static ui fixture, frame 120 at 5.000 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 180 · 7.500 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="mostly static ui frame 180 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/mostly-static-ui/gifski-0180.png"><img src="frames/mostly-static-ui/gifski-0180.png" alt="mostly static ui fixture, frame 180 at 7.500 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/magick-0180.png"><img src="frames/mostly-static-ui/magick-0180.png" alt="mostly static ui fixture, frame 180 at 7.500 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/magick-unoptimized-0180.png"><img src="frames/mostly-static-ui/magick-unoptimized-0180.png" alt="mostly static ui fixture, frame 180 at 7.500 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/imageio-app-0180.png"><img src="frames/mostly-static-ui/imageio-app-0180.png" alt="mostly static ui fixture, frame 180 at 7.500 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 239 · 9.958 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="mostly static ui frame 239 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/mostly-static-ui/gifski-0239.png"><img src="frames/mostly-static-ui/gifski-0239.png" alt="mostly static ui fixture, frame 239 at 9.958 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/magick-0239.png"><img src="frames/mostly-static-ui/magick-0239.png" alt="mostly static ui fixture, frame 239 at 9.958 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/magick-unoptimized-0239.png"><img src="frames/mostly-static-ui/magick-unoptimized-0239.png" alt="mostly static ui fixture, frame 239 at 9.958 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mostly-static-ui/imageio-app-0239.png"><img src="frames/mostly-static-ui/imageio-app-0239.png" alt="mostly static ui fixture, frame 239 at 9.958 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+</section>
+<section class="profile" aria-labelledby="profile-mixed"><h2 id="profile-mixed">mixed content</h2>
+<details class="sample-time" open><summary>frame 60 · 2.500 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="mixed content frame 60 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/mixed/gifski-0060.png"><img src="frames/mixed/gifski-0060.png" alt="mixed content fixture, frame 60 at 2.500 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/mixed/magick-0060.png"><img src="frames/mixed/magick-0060.png" alt="mixed content fixture, frame 60 at 2.500 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mixed/magick-unoptimized-0060.png"><img src="frames/mixed/magick-unoptimized-0060.png" alt="mixed content fixture, frame 60 at 2.500 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mixed/imageio-app-0060.png"><img src="frames/mixed/imageio-app-0060.png" alt="mixed content fixture, frame 60 at 2.500 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 120 · 5.000 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="mixed content frame 120 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/mixed/gifski-0120.png"><img src="frames/mixed/gifski-0120.png" alt="mixed content fixture, frame 120 at 5.000 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/mixed/magick-0120.png"><img src="frames/mixed/magick-0120.png" alt="mixed content fixture, frame 120 at 5.000 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mixed/magick-unoptimized-0120.png"><img src="frames/mixed/magick-unoptimized-0120.png" alt="mixed content fixture, frame 120 at 5.000 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mixed/imageio-app-0120.png"><img src="frames/mixed/imageio-app-0120.png" alt="mixed content fixture, frame 120 at 5.000 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 180 · 7.500 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="mixed content frame 180 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/mixed/gifski-0180.png"><img src="frames/mixed/gifski-0180.png" alt="mixed content fixture, frame 180 at 7.500 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/mixed/magick-0180.png"><img src="frames/mixed/magick-0180.png" alt="mixed content fixture, frame 180 at 7.500 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mixed/magick-unoptimized-0180.png"><img src="frames/mixed/magick-unoptimized-0180.png" alt="mixed content fixture, frame 180 at 7.500 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mixed/imageio-app-0180.png"><img src="frames/mixed/imageio-app-0180.png" alt="mixed content fixture, frame 180 at 7.500 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 239 · 9.958 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="mixed content frame 239 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/mixed/gifski-0239.png"><img src="frames/mixed/gifski-0239.png" alt="mixed content fixture, frame 239 at 9.958 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/mixed/magick-0239.png"><img src="frames/mixed/magick-0239.png" alt="mixed content fixture, frame 239 at 9.958 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mixed/magick-unoptimized-0239.png"><img src="frames/mixed/magick-unoptimized-0239.png" alt="mixed content fixture, frame 239 at 9.958 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/mixed/imageio-app-0239.png"><img src="frames/mixed/imageio-app-0239.png" alt="mixed content fixture, frame 239 at 9.958 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+</section>
+<section class="profile" aria-labelledby="profile-fast-scrolling"><h2 id="profile-fast-scrolling">fast scrolling</h2>
+<details class="sample-time" open><summary>frame 60 · 2.500 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="fast scrolling frame 60 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/fast-scrolling/gifski-0060.png"><img src="frames/fast-scrolling/gifski-0060.png" alt="fast scrolling fixture, frame 60 at 2.500 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/magick-0060.png"><img src="frames/fast-scrolling/magick-0060.png" alt="fast scrolling fixture, frame 60 at 2.500 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/magick-unoptimized-0060.png"><img src="frames/fast-scrolling/magick-unoptimized-0060.png" alt="fast scrolling fixture, frame 60 at 2.500 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/imageio-app-0060.png"><img src="frames/fast-scrolling/imageio-app-0060.png" alt="fast scrolling fixture, frame 60 at 2.500 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 120 · 5.000 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="fast scrolling frame 120 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/fast-scrolling/gifski-0120.png"><img src="frames/fast-scrolling/gifski-0120.png" alt="fast scrolling fixture, frame 120 at 5.000 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/magick-0120.png"><img src="frames/fast-scrolling/magick-0120.png" alt="fast scrolling fixture, frame 120 at 5.000 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/magick-unoptimized-0120.png"><img src="frames/fast-scrolling/magick-unoptimized-0120.png" alt="fast scrolling fixture, frame 120 at 5.000 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/imageio-app-0120.png"><img src="frames/fast-scrolling/imageio-app-0120.png" alt="fast scrolling fixture, frame 120 at 5.000 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 180 · 7.500 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="fast scrolling frame 180 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/fast-scrolling/gifski-0180.png"><img src="frames/fast-scrolling/gifski-0180.png" alt="fast scrolling fixture, frame 180 at 7.500 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/magick-0180.png"><img src="frames/fast-scrolling/magick-0180.png" alt="fast scrolling fixture, frame 180 at 7.500 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/magick-unoptimized-0180.png"><img src="frames/fast-scrolling/magick-unoptimized-0180.png" alt="fast scrolling fixture, frame 180 at 7.500 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/imageio-app-0180.png"><img src="frames/fast-scrolling/imageio-app-0180.png" alt="fast scrolling fixture, frame 180 at 7.500 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 239 · 9.958 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="fast scrolling frame 239 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/fast-scrolling/gifski-0239.png"><img src="frames/fast-scrolling/gifski-0239.png" alt="fast scrolling fixture, frame 239 at 9.958 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/magick-0239.png"><img src="frames/fast-scrolling/magick-0239.png" alt="fast scrolling fixture, frame 239 at 9.958 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/magick-unoptimized-0239.png"><img src="frames/fast-scrolling/magick-unoptimized-0239.png" alt="fast scrolling fixture, frame 239 at 9.958 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/fast-scrolling/imageio-app-0239.png"><img src="frames/fast-scrolling/imageio-app-0239.png" alt="fast scrolling fixture, frame 239 at 9.958 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+</section>
+<section class="profile" aria-labelledby="profile-high-motion-gradient-cursor"><h2 id="profile-high-motion-gradient-cursor">high motion, gradients, and cursor</h2>
+<details class="sample-time" open><summary>frame 60 · 2.500 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="high motion, gradients, and cursor frame 60 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/high-motion-gradient-cursor/gifski-0060.png"><img src="frames/high-motion-gradient-cursor/gifski-0060.png" alt="high motion, gradients, and cursor fixture, frame 60 at 2.500 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/magick-0060.png"><img src="frames/high-motion-gradient-cursor/magick-0060.png" alt="high motion, gradients, and cursor fixture, frame 60 at 2.500 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/magick-unoptimized-0060.png"><img src="frames/high-motion-gradient-cursor/magick-unoptimized-0060.png" alt="high motion, gradients, and cursor fixture, frame 60 at 2.500 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/imageio-app-0060.png"><img src="frames/high-motion-gradient-cursor/imageio-app-0060.png" alt="high motion, gradients, and cursor fixture, frame 60 at 2.500 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 120 · 5.000 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="high motion, gradients, and cursor frame 120 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/high-motion-gradient-cursor/gifski-0120.png"><img src="frames/high-motion-gradient-cursor/gifski-0120.png" alt="high motion, gradients, and cursor fixture, frame 120 at 5.000 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/magick-0120.png"><img src="frames/high-motion-gradient-cursor/magick-0120.png" alt="high motion, gradients, and cursor fixture, frame 120 at 5.000 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/magick-unoptimized-0120.png"><img src="frames/high-motion-gradient-cursor/magick-unoptimized-0120.png" alt="high motion, gradients, and cursor fixture, frame 120 at 5.000 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/imageio-app-0120.png"><img src="frames/high-motion-gradient-cursor/imageio-app-0120.png" alt="high motion, gradients, and cursor fixture, frame 120 at 5.000 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 180 · 7.500 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="high motion, gradients, and cursor frame 180 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/high-motion-gradient-cursor/gifski-0180.png"><img src="frames/high-motion-gradient-cursor/gifski-0180.png" alt="high motion, gradients, and cursor fixture, frame 180 at 7.500 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/magick-0180.png"><img src="frames/high-motion-gradient-cursor/magick-0180.png" alt="high motion, gradients, and cursor fixture, frame 180 at 7.500 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/magick-unoptimized-0180.png"><img src="frames/high-motion-gradient-cursor/magick-unoptimized-0180.png" alt="high motion, gradients, and cursor fixture, frame 180 at 7.500 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/imageio-app-0180.png"><img src="frames/high-motion-gradient-cursor/imageio-app-0180.png" alt="high motion, gradients, and cursor fixture, frame 180 at 7.500 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+<details class="sample-time" ><summary>frame 239 · 9.958 seconds</summary>
+<div class="matrix-scroll" role="region" tabindex="0" aria-label="high motion, gradients, and cursor frame 239 comparison; scroll horizontally to compare all four paths"><table><caption>decoded output at native 640 × 360 size</caption><thead><tr>
+<th scope="col">Gifski 1.34.0</th>
+<th scope="col">ImageMagick optimized · 35% diffusion</th>
+<th scope="col">ImageMagick unoptimized · 35% diffusion</th>
+<th scope="col">app ImageIO path</th>
+</tr></thead><tbody><tr>
+<td><figure><a href="frames/high-motion-gradient-cursor/gifski-0239.png"><img src="frames/high-motion-gradient-cursor/gifski-0239.png" alt="high motion, gradients, and cursor fixture, frame 239 at 9.958 seconds, encoded with Gifski 1.34.0" width="640" height="360" loading="lazy"></a><figcaption>Gifski 1.34.0</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/magick-0239.png"><img src="frames/high-motion-gradient-cursor/magick-0239.png" alt="high motion, gradients, and cursor fixture, frame 239 at 9.958 seconds, encoded with ImageMagick optimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick optimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/magick-unoptimized-0239.png"><img src="frames/high-motion-gradient-cursor/magick-unoptimized-0239.png" alt="high motion, gradients, and cursor fixture, frame 239 at 9.958 seconds, encoded with ImageMagick unoptimized · 35% diffusion" width="640" height="360" loading="lazy"></a><figcaption>ImageMagick unoptimized · 35% diffusion</figcaption></figure></td>
+<td><figure><a href="frames/high-motion-gradient-cursor/imageio-app-0239.png"><img src="frames/high-motion-gradient-cursor/imageio-app-0239.png" alt="high motion, gradients, and cursor fixture, frame 239 at 9.958 seconds, encoded with app ImageIO path" width="640" height="360" loading="lazy"></a><figcaption>app ImageIO path</figcaption></figure></td>
+</tr></tbody></table></div></details>
+</section>
+<section aria-labelledby="floor-title"><h2 id="floor-title">approved quality floor</h2>
+<ul><li>text remains legible at native size.</li><li>cursor edges stay clear.</li><li>gradients show no distracting banding or flicker.</li><li>minor differences visible only at 2× are acceptable.</li></ul>
+<p>static snapshots support checking text, cursor boundaries, and spatial gradient artifacts. they cannot establish temporal flicker or full-animation quality. see the README for inspection notes and provenance.</p></section>
+</main><script>
+const buttons = [...document.querySelectorAll('[data-scale]')];
+const status = document.getElementById('scale-status');
+for (const button of buttons) button.addEventListener('click', () => {
+  const double = button.dataset.scale === '2';
+  document.body.classList.toggle('zoom-2x', double);
+  for (const item of buttons) item.setAttribute('aria-pressed', String(item === button));
+  status.textContent = double ? 'showing decoded frames enlarged to 1280 × 720 pixels in this page.' : 'showing decoded frames at 640 × 360 pixels.';
+});
+</script></body></html>
