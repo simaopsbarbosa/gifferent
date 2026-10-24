@@ -440,8 +440,17 @@ final class GifferentRuntime: ObservableObject {
       status = "recording"
       beginRecordingWarningMonitoringIfNeeded()
       showRecordingFrame(for: lastSelection)
+      #if DEBUG
+        recordingFrameFixtureState = recordingFrameOverlay.fixtureStateDescription
+      #endif
     case .stopping:
       endRecordingWarningMonitoring()
+      // stopCapture drains queued samples. remove the indicator before that
+      // drain so a late frame cannot contain the overlay.
+      recordingFrameOverlay.hide()
+      #if DEBUG
+        recordingFrameFixtureState = recordingFrameOverlay.fixtureStateDescription
+      #endif
       status = "stopping recording"
     case .captured(_, let snapshot):
       endRecordingWarningMonitoring()

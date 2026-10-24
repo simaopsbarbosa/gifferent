@@ -36,7 +36,12 @@ enum SelectionPresentationError: Error, Equatable {
 struct SelectionScreen {
   let geometry: DisplayGeometry
   let frame: CGRect
+  let bottomSafeAreaInset: CGFloat
   let snapshot: CGImage
+
+  static func bottomSafeAreaInset(screenFrame: CGRect, visibleFrame: CGRect) -> CGFloat {
+    max(0, visibleFrame.minY - screenFrame.minY)
+  }
 }
 
 @MainActor
@@ -144,7 +149,13 @@ final class CaptureSelectionCoordinator: ObservableObject {
         fail(.screenshotUnavailable)
         return
       }
-      let fixtureScreen = SelectionScreen(geometry: geometry, frame: screen.frame, snapshot: image)
+      let fixtureScreen = SelectionScreen(
+        geometry: geometry,
+        frame: screen.frame,
+        bottomSafeAreaInset: SelectionScreen.bottomSafeAreaInset(
+          screenFrame: screen.frame, visibleFrame: screen.visibleFrame),
+        snapshot: image
+      )
       inventory = CaptureSourceInventory(
         displays: [
           CaptureDisplaySource(
@@ -238,7 +249,14 @@ final class CaptureSelectionCoordinator: ObservableObject {
         ),
         let snapshot = CGDisplayCreateImage(source.id)
       else { throw SelectionPresentationError.screenshotUnavailable }
-      result.append(SelectionScreen(geometry: geometry, frame: screen.frame, snapshot: snapshot))
+      result.append(
+        SelectionScreen(
+          geometry: geometry,
+          frame: screen.frame,
+          bottomSafeAreaInset: SelectionScreen.bottomSafeAreaInset(
+            screenFrame: screen.frame, visibleFrame: screen.visibleFrame),
+          snapshot: snapshot
+        ))
     }
     guard !result.isEmpty else {
       throw inventory.displays.isEmpty

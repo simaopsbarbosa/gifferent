@@ -27,8 +27,23 @@ final class RecordingFrameGeometryTests: XCTestCase {
         height: 180 + RecordingFrameGeometry.outsideInset * 2
           + RecordingFrameGeometry.labelHeight))
     XCTAssertEqual(targetRect.origin.x, RecordingFrameGeometry.outsideInset)
-    XCTAssertEqual(targetRect.origin.y, RecordingFrameGeometry.labelHeight)
+    XCTAssertEqual(
+      targetRect.origin.y,
+      RecordingFrameGeometry.labelHeight + RecordingFrameGeometry.outsideInset)
     XCTAssertEqual(targetRect.size, target.size)
+
+    // Convert the SwiftUI top-left rect back into AppKit screen coordinates.
+    // Its bounds must coincide with the capture target; the complete 4 pt
+    // outline stroke remains outside that target.
+    let targetInScreen = CGRect(
+      x: frame.minX + targetRect.minX,
+      y: frame.minY + frame.height - targetRect.maxY,
+      width: targetRect.width,
+      height: targetRect.height
+    )
+    XCTAssertEqual(targetInScreen, target)
+    XCTAssertEqual(targetInScreen.minX - RecordingFrameGeometry.outsideInset, frame.minX)
+    XCTAssertEqual(targetInScreen.minY - RecordingFrameGeometry.outsideInset, frame.minY)
   }
 
   func testInvalidGeometryDoesNotCreateAnOverlay() {

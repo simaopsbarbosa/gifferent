@@ -35,7 +35,9 @@ enum RecordingFrameGeometry {
     guard panelFrame(around: targetFrame) != nil else { return nil }
     return CGRect(
       x: outsideInset,
-      y: labelHeight,
+      // the hosting view uses a top-left origin. include the panel's outside
+      // inset as well as the label band so this rect maps back to the target.
+      y: labelHeight + outsideInset,
       width: targetFrame.width,
       height: targetFrame.height
     )

@@ -82,6 +82,7 @@ final class CaptureSelectionOverlayTests: XCTestCase {
     let image = try XCTUnwrap(context.makeImage())
     let screen = SelectionScreen(
       geometry: geometry, frame: geometry.frameInGlobalPoints,
+      bottomSafeAreaInset: 0,
       snapshot: image)
 
     let topLeft = try XCTUnwrap(screen.magnifierCrop(at: .zero))
@@ -91,5 +92,19 @@ final class CaptureSelectionOverlayTests: XCTestCase {
 
     let bottomRight = try XCTUnwrap(screen.magnifierCrop(at: CGPoint(x: 20, y: 20)))
     XCTAssertEqual(bottomRight.focus, CGPoint(x: 20, y: 20))
+  }
+
+  func testSelectionControlsReserveSpaceBelowVisibleFrame() {
+    let frame = CGRect(x: 0, y: 0, width: 1440, height: 900)
+    let visibleFrame = CGRect(x: 0, y: 70, width: 1440, height: 800)
+
+    XCTAssertEqual(
+      SelectionScreen.bottomSafeAreaInset(screenFrame: frame, visibleFrame: visibleFrame), 70)
+    XCTAssertEqual(
+      SelectionScreen.bottomSafeAreaInset(
+        screenFrame: frame,
+        visibleFrame: CGRect(x: 0, y: 0, width: 1440, height: 900)),
+      0
+    )
   }
 }

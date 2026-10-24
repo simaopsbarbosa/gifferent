@@ -44,11 +44,13 @@ struct CaptureSelectionOverlayView: View {
       if let magnifierPoint {
         cornerMagnifier(at: magnifierPoint)
       }
-
-      controls
-        .padding(16)
     }
     .frame(width: displaySize.width, height: displaySize.height)
+    .overlay(alignment: .bottomLeading) {
+      controls
+        .padding(16)
+        .padding(.bottom, screen.bottomSafeAreaInset)
+    }
     .clipped()
     .onExitCommand { coordinator.cancel() }
   }

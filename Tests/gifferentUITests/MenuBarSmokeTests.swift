@@ -236,16 +236,29 @@ final class MenuBarSmokeTests: XCTestCase {
 
     let selectionWindow = app.windows["capture selection"]
     XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
-    selectionWindow.buttons["select-display-button"].click()
+    selectionWindow.buttons["draw a region on this display"].click()
+    let regionStart = selectionWindow.coordinate(
+      withNormalizedOffset: CGVector(dx: 0.32, dy: 0.32))
+    let regionEnd = selectionWindow.coordinate(
+      withNormalizedOffset: CGVector(dx: 0.52, dy: 0.48))
+    regionStart.press(forDuration: 0.1, thenDragTo: regionEnd)
     selectionWindow.buttons["confirm-selection-button"].click()
 
     let status = testWindow.staticTexts["app-status"]
     XCTAssertTrue(status.waitForExistence(timeout: 5))
     waitForStatus("recording", in: testWindow)
+    let recordingFrameState = testWindow.staticTexts["recording-frame-fixture-state"]
+    XCTAssertTrue(recordingFrameState.waitForExistence(timeout: 5))
+    XCTAssertTrue(
+      waitForValue(containing: "visible=true", in: recordingFrameState),
+      "fixture state: \(recordingFrameState.value as? String ?? "<nil>")")
     testWindow.buttons["recording-action-button"].click()
 
     let previewWindow = app.windows["gif preview"]
     XCTAssertTrue(previewWindow.waitForExistence(timeout: 10))
+    XCTAssertTrue(
+      waitForValue(containing: "hidden", in: recordingFrameState),
+      "fixture state: \(recordingFrameState.value as? String ?? "<nil>")")
     XCTAssertTrue(waitForPreviewStatus("preview ready", in: previewWindow))
     XCTAssertTrue(previewWindow.staticTexts["preview-size"].exists)
     XCTAssertTrue(previewWindow.staticTexts["preview-duration"].exists)
@@ -275,6 +288,13 @@ final class MenuBarSmokeTests: XCTestCase {
       waitForValue(containing: "1.5×", in: previewWindow.staticTexts["playback-speed-value"])
     )
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
+    let previewScrollView = previewWindow.scrollViews.firstMatch
+    XCTAssertTrue(previewScrollView.exists)
+    previewScrollView.swipeUp()
+    XCTAssertTrue(previewWindow.buttons["copy-preview-button"].isHittable)
+    XCTAssertTrue(previewWindow.buttons["save-preview-button"].isHittable)
+    XCTAssertTrue(previewWindow.buttons["discard-preview-button"].isHittable)
+    XCTAssertTrue(previewWindow.buttons["close-preview-button"].isHittable)
 
     previewWindow.typeKey("c", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("copied", in: previewWindow))

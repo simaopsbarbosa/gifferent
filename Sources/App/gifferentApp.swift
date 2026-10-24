@@ -158,7 +158,7 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
   init(runtime: GifferentRuntime, coordinator: RecordingCoordinator) {
     self.runtime = runtime
     window = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 560, height: 470),
+      contentRect: NSRect(x: 0, y: 0, width: 760, height: 720),
       styleMask: [.titled, .closable, .miniaturizable],
       backing: .buffered,
       defer: false
@@ -172,11 +172,29 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
     window.contentView = NSHostingView(
       rootView: GIFPreviewView(runtime: runtime, coordinator: coordinator)
     )
+    positionWithinVisibleFrame()
   }
 
   func showWindow() {
+    positionWithinVisibleFrame()
     NSApp.activate(ignoringOtherApps: true)
     window.makeKeyAndOrderFront(nil)
+  }
+
+  private func positionWithinVisibleFrame() {
+    guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
+    let visibleFrame = screen.visibleFrame
+    let frame = window.frame
+    let width = min(frame.width, max(440, visibleFrame.width - 32))
+    let height = min(frame.height, max(360, visibleFrame.height - 32))
+    window.setContentSize(NSSize(width: width, height: height))
+    let resizedFrame = window.frame
+    window.setFrameOrigin(
+      NSPoint(
+        x: visibleFrame.midX - resizedFrame.width / 2,
+        y: visibleFrame.midY - resizedFrame.height / 2
+      )
+    )
   }
 
   func closeAfterCleanup() {
@@ -232,13 +250,15 @@ private struct GIFPreviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       case .previewReady(_, let snapshot, let gif):
-        GIFPreviewReadyView(
-          runtime: runtime,
-          coordinator: coordinator,
-          snapshot: snapshot,
-          gif: gif
-        )
-        .padding(18)
+        ScrollView(.vertical) {
+          GIFPreviewReadyView(
+            runtime: runtime,
+            coordinator: coordinator,
+            snapshot: snapshot,
+            gif: gif
+          )
+          .padding(18)
+        }
       case .failed(let failure):
         VStack(spacing: 12) {
           Text(failureMessage(failure))

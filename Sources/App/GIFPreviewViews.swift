@@ -18,8 +18,9 @@ struct GIFPreviewReadyView: View {
         .accessibilityIdentifier("preview-status")
         .accessibilityValue("preview ready")
       AnimatedGIFView(url: displayedGIF.url)
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .aspectRatio(CGFloat(displayedGIF.width) / CGFloat(displayedGIF.height), contentMode: .fit)
+        .frame(maxWidth: .infinity)
+        .frame(maxHeight: 280)
 
       if coordinator.compressedPreview == nil {
         GIFEditControls(coordinator: coordinator)
