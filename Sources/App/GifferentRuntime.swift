@@ -8,6 +8,7 @@ final class GifferentRuntime: ObservableObject {
   private static let recordingWorkspaceQuotaBytes: Int64 = 512 * 1_024 * 1_024
 
   @Published private(set) var status = "idle"
+  @Published private(set) var previewPresentationState: RecordingCoordinatorState = .idle
   @Published private(set) var selectionDescription: String?
   @Published private(set) var recordingWarning: RecordingWarningReason?
   @Published var isPreviewCloseConfirmationPresented = false
@@ -428,6 +429,7 @@ final class GifferentRuntime: ObservableObject {
   }
 
   private func updateStatus(for state: RecordingCoordinatorState) {
+    previewPresentationState = state
     switch state {
     case .idle:
       endRecordingWarningMonitoring()

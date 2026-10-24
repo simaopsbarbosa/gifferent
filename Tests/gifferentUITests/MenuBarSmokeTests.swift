@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 
 @MainActor
@@ -267,6 +268,13 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(animatedPreview.waitForExistence(timeout: 5))
     XCTAssertEqual(animatedPreview.elementType, .image)
     XCTAssertEqual(animatedPreview.label, "animated gif preview")
+    XCTAssertLessThanOrEqual(animatedPreview.frame.width, 560.5)
+    XCTAssertLessThanOrEqual(animatedPreview.frame.height, 280.5)
+    XCTAssertTrue(previewWindow.frame.contains(animatedPreview.frame))
+    XCTAssertTrue(
+      NSScreen.screens.contains { screen in
+        screen.visibleFrame.insetBy(dx: 15, dy: 15).contains(previewWindow.frame)
+      })
 
     let startHandle = previewWindow.descendants(matching: .any)
       .matching(identifier: "trim-start-handle").firstMatch

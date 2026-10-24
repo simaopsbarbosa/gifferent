@@ -7,6 +7,7 @@ struct GIFPreviewReadyView: View {
   @ObservedObject var coordinator: RecordingCoordinator
   let snapshot: RecordingSessionSnapshot
   let gif: EncodedGIF
+  let previewWidth: CGFloat
 
   private var displayedGIF: EncodedGIF {
     coordinator.displayedPreviewGIF ?? gif
@@ -18,9 +19,13 @@ struct GIFPreviewReadyView: View {
         .accessibilityIdentifier("preview-status")
         .accessibilityValue("preview ready")
       AnimatedGIFView(url: displayedGIF.url)
-        .aspectRatio(CGFloat(displayedGIF.width) / CGFloat(displayedGIF.height), contentMode: .fit)
-        .frame(maxWidth: .infinity)
-        .frame(maxHeight: 280)
+        .frame(
+          width: previewWidth,
+          height: min(
+            280,
+            previewWidth * CGFloat(displayedGIF.height) / CGFloat(max(1, displayedGIF.width))
+          )
+        )
 
       if coordinator.compressedPreview == nil {
         GIFEditControls(coordinator: coordinator)
@@ -527,8 +532,8 @@ private struct GIFTimelineHandle: View {
 private struct AnimatedGIFView: NSViewRepresentable {
   let url: URL
 
-  func makeNSView(context: Context) -> NSImageView {
-    let view = NSImageView()
+  func makeNSView(context: Context) -> BoundedGIFImageView {
+    let view = BoundedGIFImageView()
     view.imageScaling = .scaleProportionallyUpOrDown
     view.animates = true
     view.setAccessibilityElement(true)
@@ -540,7 +545,7 @@ private struct AnimatedGIFView: NSViewRepresentable {
     return view
   }
 
-  func updateNSView(_ view: NSImageView, context: Context) {
+  func updateNSView(_ view: BoundedGIFImageView, context: Context) {
     guard context.coordinator.url != url else { return }
     view.image = NSImage(contentsOf: url)
     view.animates = true
@@ -557,5 +562,11 @@ private struct AnimatedGIFView: NSViewRepresentable {
     init(url: URL) {
       self.url = url
     }
+  }
+}
+
+private final class BoundedGIFImageView: NSImageView {
+  override var intrinsicContentSize: NSSize {
+    NSSize(width: NSView.noIntrinsicMetric, height: NSView.noIntrinsicMetric)
   }
 }

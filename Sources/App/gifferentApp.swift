@@ -158,7 +158,7 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
   init(runtime: GifferentRuntime, coordinator: RecordingCoordinator) {
     self.runtime = runtime
     window = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 760, height: 720),
+      contentRect: NSRect(x: 0, y: 0, width: 700, height: 640),
       styleMask: [.titled, .closable, .miniaturizable],
       backing: .buffered,
       defer: false
@@ -169,9 +169,11 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
     window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     window.isReleasedWhenClosed = false
     window.delegate = self
-    window.contentView = NSHostingView(
+    let hostingView = NSHostingView(
       rootView: GIFPreviewView(runtime: runtime, coordinator: coordinator)
     )
+    hostingView.sizingOptions = []
+    window.contentView = hostingView
     positionWithinVisibleFrame()
   }
 
@@ -182,18 +184,18 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
   }
 
   private func positionWithinVisibleFrame() {
-    guard let screen = NSScreen.main ?? NSScreen.screens.first else { return }
-    let visibleFrame = screen.visibleFrame
-    let frame = window.frame
-    let width = min(frame.width, max(440, visibleFrame.width - 32))
-    let height = min(frame.height, max(360, visibleFrame.height - 32))
-    window.setContentSize(NSSize(width: width, height: height))
-    let resizedFrame = window.frame
-    window.setFrameOrigin(
-      NSPoint(
-        x: visibleFrame.midX - resizedFrame.width / 2,
-        y: visibleFrame.midY - resizedFrame.height / 2
-      )
+    guard let screen = window.screen ?? NSScreen.main ?? NSScreen.screens.first else { return }
+    let visibleFrame = screen.visibleFrame.insetBy(dx: 16, dy: 16)
+    let width = min(window.frame.width, visibleFrame.width)
+    let height = min(window.frame.height, visibleFrame.height)
+    window.setFrame(
+      NSRect(
+        x: visibleFrame.midX - width / 2,
+        y: visibleFrame.midY - height / 2,
+        width: width,
+        height: height
+      ),
+      display: true
     )
   }
 
@@ -220,7 +222,7 @@ private struct GIFPreviewView: View {
 
   var body: some View {
     Group {
-      switch coordinator.state {
+      switch runtime.previewPresentationState {
       case .preparingPreview:
         VStack(spacing: 14) {
           ProgressView()
@@ -250,14 +252,18 @@ private struct GIFPreviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       case .previewReady(_, let snapshot, let gif):
-        ScrollView(.vertical) {
-          GIFPreviewReadyView(
-            runtime: runtime,
-            coordinator: coordinator,
-            snapshot: snapshot,
-            gif: gif
-          )
-          .padding(18)
+        GeometryReader { geometry in
+          ScrollView(.vertical) {
+            GIFPreviewReadyView(
+              runtime: runtime,
+              coordinator: coordinator,
+              snapshot: snapshot,
+              gif: gif,
+              previewWidth: min(560, max(0, geometry.size.width - 36))
+            )
+            .frame(width: max(0, geometry.size.width - 36))
+            .padding(18)
+          }
         }
       case .failed(let failure):
         VStack(spacing: 12) {
@@ -275,7 +281,7 @@ private struct GIFPreviewView: View {
           .frame(maxWidth: .infinity, maxHeight: .infinity)
       }
     }
-    .frame(minWidth: 440, minHeight: 360)
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
     .confirmationDialog(
       "discard this preview?",
       isPresented: $runtime.isPreviewCloseConfirmationPresented,
