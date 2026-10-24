@@ -199,110 +199,12 @@ private struct GIFPreviewView: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
       case .previewReady(_, let snapshot, let gif):
-        VStack(spacing: 14) {
-          Text("preview ready")
-            .accessibilityIdentifier("preview-status")
-            .accessibilityValue("preview ready")
-          AnimatedGIFView(url: gif.url)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .aspectRatio(CGFloat(gif.width) / CGFloat(gif.height), contentMode: .fit)
-
-          if let parameters = coordinator.editParameters, coordinator.editFrameCount > 0 {
-            VStack(alignment: .leading, spacing: 10) {
-              Text("trim")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-              GIFTimelineControl(
-                frameCount: coordinator.editFrameCount,
-                startIndex: parameters.frameRange.startIndex,
-                endIndexExclusive: parameters.frameRange.endIndexExclusive,
-                onChange: { start, end in
-                  coordinator.updateTrim(startIndex: start, endIndexExclusive: end)
-                }
-              )
-
-              HStack {
-                Text("speed")
-                Slider(
-                  value: Binding(
-                    get: { coordinator.editParameters?.playbackSpeed ?? 1 },
-                    set: coordinator.updatePlaybackSpeed
-                  ),
-                  in: 0.5...2,
-                  step: 0.1
-                )
-                .accessibilityLabel("playback speed")
-                .accessibilityIdentifier("playback-speed-slider")
-                Text(String(format: "%.1f×", parameters.playbackSpeed))
-                  .accessibilityIdentifier("playback-speed-value")
-              }
-
-              HStack(spacing: 8) {
-                Text("loop")
-                Button("forever") { coordinator.updateLoopMode(.forever) }
-                  .buttonStyle(.bordered)
-                  .accessibilityIdentifier("loop-forever-button")
-                  .accessibilityAddTraits(parameters.loopMode == .forever ? .isSelected : [])
-                Button("once") { coordinator.updateLoopMode(.once) }
-                  .buttonStyle(.bordered)
-                  .accessibilityIdentifier("loop-once-button")
-                  .accessibilityAddTraits(parameters.loopMode == .once ? .isSelected : [])
-              }
-
-              if coordinator.isPreviewUpdateInProgress {
-                Text("updating gif")
-                  .accessibilityIdentifier("preview-update-status")
-                  .accessibilityValue("updating gif")
-              }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .disabled(coordinator.isPreviewActionInProgress)
-          }
-
-          HStack(spacing: 16) {
-            metadata(
-              "file size",
-              value: ByteCountFormatter.string(
-                fromByteCount: gif.fileBytes, countStyle: .file), id: "preview-size")
-            metadata("duration", value: duration(gif.durationCentiseconds), id: "preview-duration")
-            metadata("dimensions", value: "\(gif.width) by \(gif.height)", id: "preview-dimensions")
-          }
-
-          if snapshot.isPartialResult {
-            Text("partial recording")
-              .accessibilityIdentifier("preview-partial-status")
-          }
-
-          Text(actionMessage)
-            .accessibilityIdentifier("preview-action-status")
-            .accessibilityValue(actionMessage)
-            .accessibilityAddTraits(.updatesFrequently)
-
-          HStack {
-            Button("copy") { runtime.copyPreview() }
-              .keyboardShortcut("c", modifiers: .command)
-              .disabled(
-                coordinator.previewAction == .copying || coordinator.previewAction == .saving
-                  || coordinator.isPreviewUpdateInProgress
-              )
-              .accessibilityIdentifier("copy-preview-button")
-            Button("save…") { runtime.savePreview() }
-              .keyboardShortcut("s", modifiers: .command)
-              .disabled(
-                coordinator.previewAction == .copying || coordinator.previewAction == .saving
-                  || coordinator.isPreviewUpdateInProgress
-              )
-              .accessibilityIdentifier("save-preview-button")
-            Button("discard") { runtime.requestDiscardPreview() }
-              .disabled(
-                coordinator.previewAction == .copying || coordinator.previewAction == .saving
-                  || coordinator.isPreviewUpdateInProgress
-              )
-              .accessibilityIdentifier("discard-preview-button")
-            Button("close") { runtime.requestPreviewClose() }
-              .accessibilityIdentifier("close-preview-button")
-          }
-        }
+        GIFPreviewReadyView(
+          runtime: runtime,
+          coordinator: coordinator,
+          snapshot: snapshot,
+          gif: gif
+        )
         .padding(18)
       case .failed(let failure):
         VStack(spacing: 12) {
@@ -335,14 +237,76 @@ private struct GIFPreviewView: View {
     }
   }
 
-  private func metadata(_ label: String, value: String, id: String) -> some View {
-    VStack(alignment: .leading, spacing: 3) {
-      Text(label).font(.caption).foregroundStyle(.secondary)
-      Text(value).accessibilityIdentifier(id).accessibilityValue(value)
+  private func failureMessage(_ failure: RecordingCoordinatorFailure) -> String {
+    switch failure {
+    case .gifEncodingFailed: "could not create a valid gif; captured frames were retained"
+    case .workspaceFailed, .frameStorageFailed:
+      "could not store recording data; check available storage"
+    default: "recording could not be completed"
     }
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel(label)
-    .accessibilityValue(value)
+  }
+}
+
+@MainActor
+private struct GIFPreviewReadyView: View {
+  @ObservedObject var runtime: GifferentRuntime
+  @ObservedObject var coordinator: RecordingCoordinator
+  let snapshot: RecordingSessionSnapshot
+  let gif: EncodedGIF
+
+  var body: some View {
+    VStack(spacing: 14) {
+      Text("preview ready")
+        .accessibilityIdentifier("preview-status")
+        .accessibilityValue("preview ready")
+      AnimatedGIFView(url: gif.url)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .aspectRatio(CGFloat(gif.width) / CGFloat(gif.height), contentMode: .fit)
+
+      GIFEditControls(coordinator: coordinator)
+
+      HStack(spacing: 16) {
+        metadata(
+          "file size",
+          value: ByteCountFormatter.string(fromByteCount: gif.fileBytes, countStyle: .file),
+          id: "preview-size"
+        )
+        metadata("duration", value: duration(gif.durationCentiseconds), id: "preview-duration")
+        metadata(
+          "dimensions", value: "\(gif.width) by \(gif.height)", id: "preview-dimensions")
+      }
+
+      if snapshot.isPartialResult {
+        Text("partial recording")
+          .accessibilityIdentifier("preview-partial-status")
+      }
+
+      Text(actionMessage)
+        .accessibilityIdentifier("preview-action-status")
+        .accessibilityValue(actionMessage)
+        .accessibilityAddTraits(.updatesFrequently)
+
+      HStack {
+        Button("copy") { runtime.copyPreview() }
+          .keyboardShortcut("c", modifiers: .command)
+          .disabled(exportIsDisabled)
+          .accessibilityIdentifier("copy-preview-button")
+        Button("save…") { runtime.savePreview() }
+          .keyboardShortcut("s", modifiers: .command)
+          .disabled(exportIsDisabled)
+          .accessibilityIdentifier("save-preview-button")
+        Button("discard") { runtime.requestDiscardPreview() }
+          .disabled(exportIsDisabled)
+          .accessibilityIdentifier("discard-preview-button")
+        Button("close") { runtime.requestPreviewClose() }
+          .accessibilityIdentifier("close-preview-button")
+      }
+    }
+  }
+
+  private var exportIsDisabled: Bool {
+    coordinator.previewAction == .copying || coordinator.previewAction == .saving
+      || coordinator.isPreviewUpdateInProgress
   }
 
   private var actionMessage: String {
@@ -359,18 +323,94 @@ private struct GIFPreviewView: View {
     }
   }
 
+  private func metadata(_ label: String, value: String, id: String) -> some View {
+    VStack(alignment: .leading, spacing: 3) {
+      Text(label).font(.caption).foregroundStyle(.secondary)
+      Text(value).accessibilityIdentifier(id).accessibilityValue(value)
+    }
+    .accessibilityElement(children: .combine)
+    .accessibilityLabel(label)
+    .accessibilityValue(value)
+  }
+
   private func duration(_ centiseconds: Int) -> String {
     let seconds = Double(centiseconds) / 100
     return String(format: "%.2f seconds", seconds)
   }
+}
 
-  private func failureMessage(_ failure: RecordingCoordinatorFailure) -> String {
-    switch failure {
-    case .gifEncodingFailed: "could not create a valid gif; captured frames were retained"
-    case .workspaceFailed, .frameStorageFailed:
-      "could not store recording data; check available storage"
-    default: "recording could not be completed"
+@MainActor
+private struct GIFEditControls: View {
+  @ObservedObject var coordinator: RecordingCoordinator
+
+  var body: some View {
+    Group {
+      if let parameters = coordinator.editParameters, coordinator.editFrameCount > 0 {
+        VStack(alignment: .leading, spacing: 10) {
+          Text("trim")
+            .font(.caption)
+            .foregroundStyle(.secondary)
+          GIFTimelineControl(
+            frameCount: coordinator.editFrameCount,
+            startIndex: parameters.frameRange.startIndex,
+            endIndexExclusive: parameters.frameRange.endIndexExclusive,
+            onChange: updateTrim
+          )
+
+          HStack {
+            Text("speed")
+            Slider(
+              value: Binding(
+                get: { coordinator.editParameters?.playbackSpeed ?? 1 },
+                set: updateSpeed
+              ),
+              in: 0.5...2,
+              step: 0.1
+            )
+            .accessibilityLabel("playback speed")
+            .accessibilityIdentifier("playback-speed-slider")
+            Text(String(format: "%.1f×", parameters.playbackSpeed))
+              .accessibilityIdentifier("playback-speed-value")
+          }
+
+          HStack(spacing: 8) {
+            Text("loop")
+            Button("forever", action: selectForever)
+              .buttonStyle(.bordered)
+              .accessibilityIdentifier("loop-forever-button")
+              .accessibilityAddTraits(parameters.loopMode == .forever ? .isSelected : [])
+            Button("once", action: selectOnce)
+              .buttonStyle(.bordered)
+              .accessibilityIdentifier("loop-once-button")
+              .accessibilityAddTraits(parameters.loopMode == .once ? .isSelected : [])
+          }
+
+          if coordinator.isPreviewUpdateInProgress {
+            Text("updating gif")
+              .accessibilityIdentifier("preview-update-status")
+              .accessibilityValue("updating gif")
+          }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .disabled(coordinator.isPreviewActionInProgress)
+      }
     }
+  }
+
+  private func updateTrim(start: Int, end: Int) {
+    coordinator.updateTrim(startIndex: start, endIndexExclusive: end)
+  }
+
+  private func updateSpeed(_ value: Double) {
+    coordinator.updatePlaybackSpeed(value)
+  }
+
+  private func selectForever() {
+    coordinator.updateLoopMode(.forever)
+  }
+
+  private func selectOnce() {
+    coordinator.updateLoopMode(.once)
   }
 }
 
