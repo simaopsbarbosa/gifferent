@@ -43,6 +43,7 @@
 		A00000000000000000000067 /* OriginalGIFEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000069 /* OriginalGIFEncoderTests.swift */; };
 		A00000000000000000000070 /* GIFEditModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000071 /* GIFEditModel.swift */; };
 		A00000000000000000000072 /* GIFEditModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000073 /* GIFEditModelTests.swift */; };
+		A00000000000000000000075 /* GIFPreviewViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000076 /* GIFPreviewViews.swift */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -103,6 +104,7 @@
 		A00000000000000000000069 /* OriginalGIFEncoderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OriginalGIFEncoderTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000071 /* GIFEditModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFEditModel.swift; sourceTree = "<group>"; };
 		A00000000000000000000073 /* GIFEditModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFEditModelTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000076 /* GIFPreviewViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFPreviewViews.swift; sourceTree = "<group>"; };
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -209,6 +211,7 @@
 			isa = PBXGroup;
 			children = (
 				C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */,
+				A00000000000000000000076 /* GIFPreviewViews.swift */,
 				A0000000000000000000001F /* GifferentRuntime.swift */,
 			);
 			name = App;
@@ -460,6 +463,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				0E4EEAC639BB613FE8693F5B /* gifferentApp.swift in Sources */,
+				A00000000000000000000075 /* GIFPreviewViews.swift in Sources */,
 				A00000000000000000000001 /* CaptureSources.swift in Sources */,
 				A00000000000000000000002 /* CarbonHotkeyBackend.swift in Sources */,
 				A00000000000000000000003 /* GlobalHotkeyController.swift in Sources */,
