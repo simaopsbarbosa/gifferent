@@ -131,6 +131,11 @@ final class SessionWorkspaceStoreTests: XCTestCase {
     _ = try await store.stop(preview, reason: .user)
     let reservation = try await store.reservePreviewOutput(for: preview)
     try Data([71, 73, 70]).write(to: reservation.url)
+    await assertThrowsSessionError(.invalidState) {
+      try await store.discard(preview)
+    }
+    XCTAssertTrue(FileManager.default.fileExists(atPath: reservation.url.path))
+    try await store.abandonPreviewOutput(for: preview, reservation: reservation)
     try await store.discard(preview)
     XCTAssertFalse(FileManager.default.fileExists(atPath: reservation.url.path))
     XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), [])
@@ -373,6 +378,333 @@ final class SessionWorkspaceStoreTests: XCTestCase {
     XCTAssertFalse(FileManager.default.fileExists(atPath: edit.url.path))
     let snapshot = try await store.snapshot(for: id)
     XCTAssertEqual(snapshot.temporaryBytes, Int64(try pngFrame().count + 3))
+  }
+
+  func testDiscardWaitsForPreviewReservationToBeAbandoned() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 1_024,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    let frame = try await store.appendFrame(pngFrame(), timestamp: 0, to: id)
+    _ = try await store.stop(id, reason: .user)
+    let original = try await store.reservePreviewOutput(for: id)
+    try Data([71, 73, 70]).write(to: original.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: original)
+    let edit = try await store.reservePreviewOutput(for: id)
+    try Data([1, 2, 3]).write(to: edit.url)
+
+    await assertThrowsSessionError(.invalidState) {
+      try await store.discard(id)
+    }
+    XCTAssertTrue(FileManager.default.fileExists(atPath: frame.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: original.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: edit.url.path))
+    let snapshot = try await store.snapshot(for: id)
+    XCTAssertEqual(snapshot.temporaryBytes, Int64(try pngFrame().count + 3))
+
+    try await store.abandonPreviewOutput(for: id, reservation: edit)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: edit.url.path))
+    try await store.discard(id)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: frame.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: original.url.path))
+    await assertThrowsSessionError(.unknownSession) {
+      _ = try await store.snapshot(for: id)
+    }
+  }
+
+  func testCompressedReplacementKeepsBaseAndEditedPreviewOutputs() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 1_024,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    _ = try await store.appendFrame(pngFrame(), timestamp: 0, to: id)
+    _ = try await store.stop(id, reason: .user)
+
+    let original = try await store.reservePreviewOutput(for: id)
+    try Data([71, 73, 70, 56, 57, 97]).write(to: original.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: original)
+    let edit = try await store.reservePreviewOutput(for: id)
+    try Data([1, 2, 3, 4]).write(to: edit.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: edit)
+    try await store.keepEditedPreviewOutput(for: id, at: edit.url)
+
+    let firstCompressed = try await store.reserveCompressedPreviewOutput(for: id)
+    XCTAssertGreaterThan(firstCompressed.maximumBytes, 0)
+    try Data([10, 11, 12]).write(to: firstCompressed.url)
+    _ = try await store.commitCompressedPreviewOutput(for: id, reservation: firstCompressed)
+
+    let replacement = try await store.reserveCompressedPreviewOutput(for: id)
+    try Data([20, 21, 22, 23, 24]).write(to: replacement.url)
+    _ = try await store.commitCompressedPreviewOutput(for: id, reservation: replacement)
+    XCTAssertTrue(FileManager.default.fileExists(atPath: firstCompressed.url.path))
+    try await store.keepCompressedPreviewOutput(for: id, at: replacement.url)
+
+    XCTAssertTrue(FileManager.default.fileExists(atPath: original.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: edit.url.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: firstCompressed.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: replacement.url.path))
+    let snapshot = try await store.snapshot(for: id)
+    XCTAssertEqual(snapshot.temporaryBytes, Int64(try pngFrame().count + 6 + 4 + 5))
+  }
+
+  func testCompressedReservationEnforcesSessionCapacityAndCleansOversizeFile() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 10,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    _ = try await store.appendFrame(Data([1]), timestamp: 0, to: id)
+    _ = try await store.stop(id, reason: .user)
+    let preview = try await store.reservePreviewOutput(for: id)
+    try Data([71, 73, 70]).write(to: preview.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: preview)
+
+    let reservation = try await store.reserveCompressedPreviewOutput(for: id)
+    XCTAssertEqual(reservation.maximumBytes, 6)
+    try Data(repeating: 9, count: 7).write(to: reservation.url)
+    await assertThrowsSessionError(.sizeLimitExceeded) {
+      _ = try await store.commitCompressedPreviewOutput(for: id, reservation: reservation)
+    }
+    XCTAssertFalse(FileManager.default.fileExists(atPath: reservation.url.path))
+    let snapshot = try await store.snapshot(for: id)
+    XCTAssertEqual(snapshot.temporaryBytes, 4)
+  }
+
+  func testAbandonCompressedReservationRemovesOnlyItsFileAndDoesNotChangeAccounting() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 1_024,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    _ = try await store.appendFrame(pngFrame(), timestamp: 0, to: id)
+    _ = try await store.stop(id, reason: .user)
+    let preview = try await store.reservePreviewOutput(for: id)
+    try Data([71, 73, 70]).write(to: preview.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: preview)
+
+    let pending = try await store.reserveCompressedPreviewOutput(for: id)
+    try Data([1, 2, 3]).write(to: pending.url)
+    try await store.abandonCompressedPreviewOutput(for: id, reservation: pending)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: pending.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: preview.url.path))
+    let snapshot = try await store.snapshot(for: id)
+    XCTAssertEqual(snapshot.temporaryBytes, Int64(try pngFrame().count + 3))
+  }
+
+  func testPreviewAndCompressedReservationsAreSerializedPerSession() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 1_024,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    _ = try await store.appendFrame(pngFrame(), timestamp: 0, to: id)
+    _ = try await store.stop(id, reason: .user)
+    let original = try await store.reservePreviewOutput(for: id)
+    try Data([71, 73, 70]).write(to: original.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: original)
+    let committedSnapshot = try await store.snapshot(for: id)
+    let committedBytes = committedSnapshot.temporaryBytes
+
+    let edit = try await store.reservePreviewOutput(for: id)
+    await assertThrowsSessionError(.invalidState) {
+      _ = try await store.reserveCompressedPreviewOutput(for: id)
+    }
+    try Data([1, 2]).write(to: edit.url)
+    try await store.abandonPreviewOutput(for: id, reservation: edit)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: edit.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: original.url.path))
+    let afterEditAbandon = try await store.snapshot(for: id)
+    XCTAssertEqual(afterEditAbandon.temporaryBytes, committedBytes)
+
+    let compressed = try await store.reserveCompressedPreviewOutput(for: id)
+    await assertThrowsSessionError(.invalidState) {
+      _ = try await store.reservePreviewOutput(for: id)
+    }
+    try Data([3, 4]).write(to: compressed.url)
+    try await store.abandonCompressedPreviewOutput(for: id, reservation: compressed)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: compressed.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: original.url.path))
+    let afterCompressedAbandon = try await store.snapshot(for: id)
+    XCTAssertEqual(afterCompressedAbandon.temporaryBytes, committedBytes)
+  }
+
+  func testCompressedOutputRemovalAndExportCleanupPreserveExportedFile() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let root = base.appendingPathComponent("sessions", isDirectory: true)
+    let store = SessionWorkspaceStore(
+      rootDirectory: root,
+      maximumSessionBytes: 1_024,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    let frame = try await store.appendFrame(pngFrame(), timestamp: 0, to: id)
+    _ = try await store.stop(id, reason: .user)
+    let preview = try await store.reservePreviewOutput(for: id)
+    try Data([71, 73, 70]).write(to: preview.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: preview)
+    let compressed = try await store.reserveCompressedPreviewOutput(for: id)
+    try Data([1, 2, 3, 4]).write(to: compressed.url)
+    _ = try await store.commitCompressedPreviewOutput(for: id, reservation: compressed)
+
+    try await store.removeCompressedPreviewOutput(for: id, at: compressed.url)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: compressed.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: preview.url.path))
+    let retainedCompressed = try await store.reserveCompressedPreviewOutput(for: id)
+    try Data([5, 6, 7]).write(to: retainedCompressed.url)
+    _ = try await store.commitCompressedPreviewOutput(for: id, reservation: retainedCompressed)
+    let exported = base.appendingPathComponent("saved.gif")
+    try FileManager.default.copyItem(at: preview.url, to: exported)
+    try await store.closePreviewAfterExport(id)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: frame.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: preview.url.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: retainedCompressed.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: exported.path))
+    XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: root.path), [])
+  }
+
+  func testCompressedReservationBlocksCloseAndDiscardAndRetainsTokenCapUntilAbandoned() async throws
+  {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 1_024,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    _ = try await store.appendFrame(pngFrame(), timestamp: 0, to: id)
+    _ = try await store.stop(id, reason: .user)
+    let original = try await store.reservePreviewOutput(for: id)
+    try Data([71, 73, 70]).write(to: original.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: original)
+    let reservation = try await store.reserveCompressedPreviewOutput(for: id)
+
+    await assertThrowsSessionError(.invalidState) {
+      try await store.closePreviewAfterExport(id)
+    }
+    await assertThrowsSessionError(.invalidState) {
+      try await store.discard(id)
+    }
+    let forgedToken = CompressedPreviewOutputReservation(
+      url: reservation.url,
+      maximumBytes: reservation.maximumBytes,
+      token: UUID()
+    )
+    await assertThrowsSessionError(.invalidState) {
+      _ = try await store.commitCompressedPreviewOutput(for: id, reservation: forgedToken)
+    }
+    let forgedCap = CompressedPreviewOutputReservation(
+      url: reservation.url,
+      maximumBytes: reservation.maximumBytes - 1,
+      token: reservation.token
+    )
+    await assertThrowsSessionError(.invalidState) {
+      try await store.abandonCompressedPreviewOutput(for: id, reservation: forgedCap)
+    }
+
+    try FileManager.default.createDirectory(at: reservation.url, withIntermediateDirectories: false)
+    await assertThrowsSessionError(.outputCleanupFailed) {
+      try await store.abandonCompressedPreviewOutput(for: id, reservation: reservation)
+    }
+    await assertThrowsSessionError(.invalidState) {
+      _ = try await store.reserveCompressedPreviewOutput(for: id)
+    }
+    try FileManager.default.removeItem(at: reservation.url)
+    try Data([1, 2]).write(to: reservation.url)
+    try await store.abandonCompressedPreviewOutput(for: id, reservation: reservation)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: reservation.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: original.url.path))
+    try await store.closePreviewAfterExport(id)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: original.url.path))
+  }
+
+  func testCompressedReservationCapsAggregateInFlightDiskAcrossSessions() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 2_048,
+      minimumFreeBytes: 10,
+      availableDiskBytesProvider: { 100 }
+    )
+    var sessionIDs: [RecordingSessionID] = []
+    for timestamp in [0.0, 1.0] {
+      let id = try await store.start()
+      _ = try await store.appendFrame(Data([1]), timestamp: timestamp, to: id)
+      _ = try await store.stop(id, reason: .user)
+      let preview = try await store.reservePreviewOutput(for: id)
+      XCTAssertEqual(preview.maximumBytes, 90)
+      try Data([71, 73, 70]).write(to: preview.url)
+      _ = try await store.commitPreviewOutput(for: id, reservation: preview)
+      sessionIDs.append(id)
+    }
+
+    let first = try await store.reserveCompressedPreviewOutput(for: sessionIDs[0])
+    XCTAssertEqual(first.maximumBytes, 90)
+    await assertThrowsSessionError(.insufficientDiskSpace) {
+      _ = try await store.reserveCompressedPreviewOutput(for: sessionIDs[1])
+    }
+    try await store.abandonCompressedPreviewOutput(for: sessionIDs[0], reservation: first)
+    let second = try await store.reserveCompressedPreviewOutput(for: sessionIDs[1])
+    XCTAssertEqual(second.maximumBytes, 90)
+    try await store.abandonCompressedPreviewOutput(for: sessionIDs[1], reservation: second)
+
+    for id in sessionIDs {
+      let snapshot = try await store.snapshot(for: id)
+      XCTAssertEqual(snapshot.temporaryBytes, 4)
+      try await store.discard(id)
+    }
+  }
+
+  func testFrameWritesRespectDiskCapacityReservedByAnotherSession() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 2_048,
+      minimumFreeBytes: 10,
+      availableDiskBytesProvider: { 100 }
+    )
+    let previewSession = try await store.start()
+    _ = try await store.appendFrame(Data([1]), timestamp: 0, to: previewSession)
+    _ = try await store.stop(previewSession, reason: .user)
+    let preview = try await store.reservePreviewOutput(for: previewSession)
+    try Data([71, 73, 70]).write(to: preview.url)
+    _ = try await store.commitPreviewOutput(for: previewSession, reservation: preview)
+    let compressed = try await store.reserveCompressedPreviewOutput(for: previewSession)
+
+    let recordingSession = try await store.start()
+    await assertThrowsSessionError(.insufficientDiskSpace) {
+      _ = try await store.appendFrame(Data([2]), timestamp: 0, to: recordingSession)
+    }
+    let unchanged = try await store.snapshot(for: recordingSession)
+    XCTAssertEqual(unchanged.frameCount, 0)
+    XCTAssertEqual(unchanged.temporaryBytes, 0)
+
+    try await store.abandonCompressedPreviewOutput(for: previewSession, reservation: compressed)
+    let frame = try await store.appendFrame(Data([2]), timestamp: 0, to: recordingSession)
+    XCTAssertTrue(FileManager.default.fileExists(atPath: frame.path))
+    let appended = try await store.snapshot(for: recordingSession)
+    XCTAssertEqual(appended.frameCount, 1)
+    XCTAssertEqual(appended.temporaryBytes, 1)
   }
 
   func testCleanupKeepsActiveConcurrentSessionsAndUnlinksOrphanSymlink() async throws {

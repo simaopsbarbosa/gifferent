@@ -26,6 +26,7 @@ enum SessionWorkspaceError: Error, Equatable {
   case insufficientDiskSpace
   case unavailableDiskSpace
   case invalidPreviewFile
+  case outputCleanupFailed
   case missingFrame
   case corruptFrame
   case unsafeWorkspace
@@ -47,6 +48,19 @@ struct RecordingSessionSnapshot: Sendable, Equatable {
 struct PreviewOutputReservation: Sendable {
   let url: URL
   let maximumBytes: Int64
+}
+
+struct CompressedPreviewOutputReservation: Sendable, Equatable {
+  let url: URL
+  /// the output adapter must enforce this limit while writing; commit validates it again.
+  let maximumBytes: Int64
+  let token: UUID
+
+  init(url: URL, maximumBytes: Int64, token: UUID = UUID()) {
+    self.url = url
+    self.maximumBytes = maximumBytes
+    self.token = token
+  }
 }
 
 struct CapturedPNGFrame: Sendable, Equatable {
@@ -76,7 +90,10 @@ actor SessionWorkspaceStore {
     var stopReason: RecordingStopReason?
     var previewReady = false
     var previewReservedURL: URL?
+    var previewReservedMaximumBytes: Int64?
     var editedPreviewURLs: [URL: Int64] = [:]
+    var compressedPreviewReservation: CompressedPreviewOutputReservation?
+    var compressedPreviewURLs: [URL: Int64] = [:]
 
     var isRecording: Bool { stopReason == nil }
   }
@@ -85,6 +102,7 @@ actor SessionWorkspaceStore {
   private let maximumSessionBytes: Int64
   private let minimumFreeBytes: Int64
   private let fileManager: FileManager
+  private let availableDiskBytesProvider: (@Sendable () -> Int64?)?
   private var sessions: [RecordingSessionID: Session] = [:]
   private var rootIdentity: DirectoryIdentity?
 
@@ -92,7 +110,8 @@ actor SessionWorkspaceStore {
     rootDirectory: URL,
     maximumSessionBytes: Int64,
     minimumFreeBytes: Int64 = 64 * 1_024 * 1_024,
-    fileManager: FileManager = .default
+    fileManager: FileManager = .default,
+    availableDiskBytesProvider: (@Sendable () -> Int64?)? = nil
   ) {
     precondition(maximumSessionBytes > 0)
     precondition(minimumFreeBytes >= 0)
@@ -100,6 +119,7 @@ actor SessionWorkspaceStore {
     self.maximumSessionBytes = maximumSessionBytes
     self.minimumFreeBytes = minimumFreeBytes
     self.fileManager = fileManager
+    self.availableDiskBytesProvider = availableDiskBytesProvider
   }
 
   func start() throws -> RecordingSessionID {
@@ -164,26 +184,34 @@ actor SessionWorkspaceStore {
 
   func reservePreviewOutput(for id: RecordingSessionID) throws -> PreviewOutputReservation {
     guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard !session.isRecording, session.previewReservedURL == nil else {
+    guard !session.isRecording, session.previewReservedURL == nil,
+      session.compressedPreviewReservation == nil
+    else {
       throw SessionWorkspaceError.invalidState
     }
     try verify(session)
     let remaining = maximumSessionBytes - session.temporaryBytes
-    try checkCapacity(adding: 1, current: session.temporaryBytes)
+    guard remaining > 0 else { throw SessionWorkspaceError.sizeLimitExceeded }
+    let availableBytes = try availableReservationBytes()
+    let maximumBytes = min(remaining, availableBytes)
+    guard maximumBytes > 0 else { throw SessionWorkspaceError.insufficientDiskSpace }
     let fileName = session.previewReady ? "preview-edit-\(UUID().uuidString).gif" : "preview.gif"
     let previewURL = session.directory.appendingPathComponent(fileName, isDirectory: false)
     guard !entryExists(at: previewURL) else { throw SessionWorkspaceError.invalidPreviewFile }
     session.previewReservedURL = previewURL
+    session.previewReservedMaximumBytes = maximumBytes
     sessions[id] = session
     return PreviewOutputReservation(
       url: previewURL,
-      maximumBytes: remaining
+      maximumBytes: maximumBytes
     )
   }
 
   func pngSequence(for id: RecordingSessionID) throws -> CapturedPNGSequence {
     guard let session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard !session.isRecording, session.previewReservedURL == nil else {
+    guard !session.isRecording, session.previewReservedURL == nil,
+      session.compressedPreviewReservation == nil
+    else {
       throw SessionWorkspaceError.invalidState
     }
     try verify(session)
@@ -219,6 +247,7 @@ actor SessionWorkspaceStore {
   ) throws -> RecordingSessionSnapshot {
     guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
     guard !session.isRecording, let reservedURL = session.previewReservedURL,
+      let reservedMaximumBytes = session.previewReservedMaximumBytes,
       reservation?.url == nil || reservation?.url == reservedURL
     else {
       throw SessionWorkspaceError.invalidState
@@ -227,20 +256,24 @@ actor SessionWorkspaceStore {
     do {
       let fileSize = try sizeOfRegularFile(at: reservedURL)
       let bytes = Int64(fileSize)
-      guard bytes <= maximumSessionBytes - session.temporaryBytes else {
+      guard bytes <= reservedMaximumBytes,
+        bytes <= maximumSessionBytes - session.temporaryBytes
+      else {
         throw SessionWorkspaceError.sizeLimitExceeded
       }
       session.temporaryBytes += bytes
       session.previewReady = true
       session.previewReservedURL = nil
+      session.previewReservedMaximumBytes = nil
       if reservedURL.lastPathComponent != "preview.gif" {
         session.editedPreviewURLs[reservedURL] = bytes
       }
       sessions[id] = session
       return snapshot(of: session)
     } catch {
-      try? fileManager.removeItem(at: reservedURL)
+      try removeOutputEntry(at: reservedURL)
       session.previewReservedURL = nil
+      session.previewReservedMaximumBytes = nil
       sessions[id] = session
       throw error
     }
@@ -252,13 +285,118 @@ actor SessionWorkspaceStore {
   ) throws {
     guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
     guard let reservedURL = session.previewReservedURL,
+      session.previewReservedMaximumBytes != nil,
       reservation?.url == nil || reservation?.url == reservedURL
     else { throw SessionWorkspaceError.invalidState }
     try verify(session)
     if entryExists(at: reservedURL) {
-      try fileManager.removeItem(at: reservedURL)
+      try removeOutputEntry(at: reservedURL)
     }
     session.previewReservedURL = nil
+    session.previewReservedMaximumBytes = nil
+    sessions[id] = session
+  }
+
+  func reserveCompressedPreviewOutput(
+    for id: RecordingSessionID
+  ) throws -> CompressedPreviewOutputReservation {
+    guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
+    guard !session.isRecording, session.previewReady,
+      session.previewReservedURL == nil,
+      session.compressedPreviewReservation == nil
+    else { throw SessionWorkspaceError.invalidState }
+    try verify(session)
+
+    let sessionRemaining = maximumSessionBytes - session.temporaryBytes
+    guard sessionRemaining > 0 else { throw SessionWorkspaceError.sizeLimitExceeded }
+    let availableBytes = try availableReservationBytes()
+    let maximumBytes = min(sessionRemaining, availableBytes)
+    guard maximumBytes > 0 else { throw SessionWorkspaceError.insufficientDiskSpace }
+
+    let outputURL = session.directory.appendingPathComponent(
+      "compressed-\(UUID().uuidString).gif", isDirectory: false
+    )
+    guard !entryExists(at: outputURL) else { throw SessionWorkspaceError.invalidPreviewFile }
+    let reservation = CompressedPreviewOutputReservation(
+      url: outputURL,
+      maximumBytes: maximumBytes,
+      token: UUID()
+    )
+    session.compressedPreviewReservation = reservation
+    sessions[id] = session
+    return reservation
+  }
+
+  @discardableResult
+  func commitCompressedPreviewOutput(
+    for id: RecordingSessionID,
+    reservation: CompressedPreviewOutputReservation
+  ) throws -> RecordingSessionSnapshot {
+    guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
+    guard !session.isRecording,
+      session.compressedPreviewReservation == reservation,
+      !session.compressedPreviewURLs.keys.contains(reservation.url)
+    else { throw SessionWorkspaceError.invalidState }
+    try verify(session)
+    do {
+      let bytes = Int64(try sizeOfRegularFile(at: reservation.url))
+      guard bytes <= reservation.maximumBytes,
+        bytes <= maximumSessionBytes - session.temporaryBytes
+      else { throw SessionWorkspaceError.sizeLimitExceeded }
+      session.temporaryBytes += bytes
+      session.compressedPreviewURLs[reservation.url] = bytes
+      session.compressedPreviewReservation = nil
+      sessions[id] = session
+      return snapshot(of: session)
+    } catch {
+      do {
+        try removeOutputEntry(at: reservation.url)
+      } catch {
+        throw SessionWorkspaceError.outputCleanupFailed
+      }
+      session.compressedPreviewReservation = nil
+      sessions[id] = session
+      throw error
+    }
+  }
+
+  func abandonCompressedPreviewOutput(
+    for id: RecordingSessionID,
+    reservation: CompressedPreviewOutputReservation
+  ) throws {
+    guard var session = sessions[id],
+      session.compressedPreviewReservation == reservation
+    else { throw SessionWorkspaceError.invalidState }
+    try verify(session)
+    if entryExists(at: reservation.url) {
+      try removeOutputEntry(at: reservation.url)
+    }
+    session.compressedPreviewReservation = nil
+    sessions[id] = session
+  }
+
+  func keepCompressedPreviewOutput(for id: RecordingSessionID, at url: URL) throws {
+    guard var session = sessions[id], session.compressedPreviewURLs[url] != nil else {
+      throw SessionWorkspaceError.invalidState
+    }
+    try verify(session)
+    let obsoleteOutputs = session.compressedPreviewURLs.filter { $0.key != url }
+    for (obsoleteURL, bytes) in obsoleteOutputs {
+      try removeOutputEntry(at: obsoleteURL)
+      session.compressedPreviewURLs.removeValue(forKey: obsoleteURL)
+      session.temporaryBytes -= bytes
+      sessions[id] = session
+    }
+  }
+
+  func removeCompressedPreviewOutput(for id: RecordingSessionID, at url: URL) throws {
+    guard var session = sessions[id], let bytes = session.compressedPreviewURLs[url] else {
+      throw SessionWorkspaceError.invalidState
+    }
+    try verify(session)
+    try removeOutputEntry(at: url)
+    session.compressedPreviewURLs.removeValue(forKey: url)
+    session.temporaryBytes -= bytes
     sessions[id] = session
   }
 
@@ -302,7 +440,9 @@ actor SessionWorkspaceStore {
 
   func closePreviewAfterExport(_ id: RecordingSessionID) throws {
     guard let session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard session.previewReady, session.previewReservedURL == nil else {
+    guard session.previewReady, session.previewReservedURL == nil,
+      session.compressedPreviewReservation == nil
+    else {
       throw SessionWorkspaceError.invalidState
     }
     try remove(id)
@@ -324,6 +464,11 @@ actor SessionWorkspaceStore {
 
   private func remove(_ id: RecordingSessionID) throws {
     guard let session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
+    guard session.previewReservedURL == nil,
+      session.compressedPreviewReservation == nil
+    else {
+      throw SessionWorkspaceError.invalidState
+    }
     try verify(session)
     try fileManager.removeItem(at: session.directory)
     sessions.removeValue(forKey: id)
@@ -356,6 +501,42 @@ actor SessionWorkspaceStore {
     guard bytes <= maximumSessionBytes - current else {
       throw SessionWorkspaceError.sizeLimitExceeded
     }
+    let availableAfterReservations = try availableReservationBytes()
+    guard availableAfterReservations >= bytes else {
+      throw SessionWorkspaceError.insufficientDiskSpace
+    }
+  }
+
+  private func availableReservationBytes() throws -> Int64 {
+    let available = try availableDiskBytes()
+    guard available >= minimumFreeBytes else {
+      throw SessionWorkspaceError.insufficientDiskSpace
+    }
+    let usableBytes = available - minimumFreeBytes
+    var reservedBytes: Int64 = 0
+    for session in sessions.values {
+      let reservations = [
+        session.previewReservedMaximumBytes,
+        session.compressedPreviewReservation?.maximumBytes,
+      ].compactMap { $0 }
+      for bytes in reservations {
+        let (sum, overflow) = reservedBytes.addingReportingOverflow(bytes)
+        reservedBytes = overflow ? Int64.max : sum
+      }
+    }
+    guard reservedBytes <= usableBytes else {
+      throw SessionWorkspaceError.insufficientDiskSpace
+    }
+    return usableBytes - reservedBytes
+  }
+
+  private func availableDiskBytes() throws -> Int64 {
+    if let availableDiskBytesProvider {
+      guard let available = availableDiskBytesProvider() else {
+        throw SessionWorkspaceError.unavailableDiskSpace
+      }
+      return available
+    }
     let values = try rootDirectory.resourceValues(forKeys: [
       .volumeAvailableCapacityForImportantUsageKey, .volumeAvailableCapacityKey,
     ])
@@ -368,14 +549,8 @@ actor SessionWorkspaceStore {
       values.volumeAvailableCapacity.map(Int64.init),
       fileSystemFree?.int64Value,
     ].compactMap { $0 }.filter { $0 > 0 }.min()
-    guard let available else {
-      throw SessionWorkspaceError.unavailableDiskSpace
-    }
-    guard available >= minimumFreeBytes,
-      available - minimumFreeBytes >= bytes
-    else {
-      throw SessionWorkspaceError.insufficientDiskSpace
-    }
+    guard let available else { throw SessionWorkspaceError.unavailableDiskSpace }
+    return available
   }
 
   private func verifyRootDirectory() throws {
@@ -420,6 +595,22 @@ actor SessionWorkspaceStore {
       info.st_size > 0
     else { throw SessionWorkspaceError.invalidPreviewFile }
     return info.st_size
+  }
+
+  private func removeOutputEntry(at url: URL) throws {
+    var info = stat()
+    guard lstat(url.path, &info) == 0 else {
+      if errno == ENOENT { return }
+      throw SessionWorkspaceError.outputCleanupFailed
+    }
+    guard info.st_mode & S_IFMT == S_IFREG || info.st_mode & S_IFMT == S_IFLNK else {
+      throw SessionWorkspaceError.outputCleanupFailed
+    }
+    do {
+      try fileManager.removeItem(at: url)
+    } catch {
+      throw SessionWorkspaceError.outputCleanupFailed
+    }
   }
 
   private func entryExists(at url: URL) -> Bool {
