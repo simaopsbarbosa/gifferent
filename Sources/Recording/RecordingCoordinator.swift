@@ -1,6 +1,25 @@
 import Combine
 import Foundation
 
+struct RecordingWorkspaceByteUpdateThrottle {
+  private let minimumInterval: Duration
+  private(set) var lastUpdate: ContinuousClock.Instant?
+
+  init(minimumInterval: Duration = .milliseconds(250)) {
+    self.minimumInterval = minimumInterval
+  }
+
+  mutating func shouldPublish(at now: ContinuousClock.Instant) -> Bool {
+    guard let lastUpdate else {
+      self.lastUpdate = now
+      return true
+    }
+    guard now - lastUpdate >= minimumInterval else { return false }
+    self.lastUpdate = now
+    return true
+  }
+}
+
 @MainActor
 protocol RecordingCaptureSession: AnyObject {
   var frames: AsyncStream<RecordingFrame> { get }
@@ -113,12 +132,22 @@ actor RecordingFramePipeline {
     self.encoder = encoder
   }
 
-  func consume(_ frames: AsyncStream<RecordingFrame>) async throws {
+  func consume(
+    _ frames: AsyncStream<RecordingFrame>,
+    onStoredBytes: @MainActor (Int64) -> Void
+  ) async throws {
+    var storedBytes: Int64 = 0
+    let clock = ContinuousClock()
+    var byteUpdateThrottle = RecordingWorkspaceByteUpdateThrottle()
     for await frame in frames {
       try Task.checkCancellation()
       let png = try encoder.encode(frame)
       let timestamp = Double(frame.timestampNanoseconds) / 1_000_000_000
       _ = try await workspace.appendFrame(png, timestamp: timestamp, to: sessionID)
+      storedBytes += Int64(png.count)
+      if byteUpdateThrottle.shouldPublish(at: clock.now) {
+        await onStoredBytes(storedBytes)
+      }
     }
   }
 }
@@ -132,6 +161,13 @@ final class RecordingCoordinator: ObservableObject {
   @Published private(set) var editParameters: GIFEditParameters?
   @Published private(set) var isPreviewUpdateInProgress = false
   @Published private(set) var editFrameCount = 0
+  @Published private(set) var recordingWorkspaceBytes: Int64 = 0
+
+  #if DEBUG
+    func setRecordingWorkspaceBytesFixture(_ bytes: Int64) {
+      recordingWorkspaceBytes = max(0, bytes)
+    }
+  #endif
 
   private let streamFactory: any RecordingStreamPreparing
   private let workspace: SessionWorkspaceStore
@@ -188,6 +224,7 @@ final class RecordingCoordinator: ObservableObject {
     let token = UUID()
     generation = token
     diagnostics = RecordingDiagnostics()
+    recordingWorkspaceBytes = 0
     recordingRequestedAt = diagnosticsClock.now()
     stopRequestedAt = nil
     stopReason = nil
@@ -388,7 +425,10 @@ final class RecordingCoordinator: ObservableObject {
       // install the only consumer before starting ScreenCaptureKit.
       consumerTask = Task { @MainActor [weak self] in
         do {
-          try await pipeline.consume(prepared.frames)
+          try await pipeline.consume(prepared.frames) { [weak self] bytes in
+            guard let self, self.isCurrent(token) else { return }
+            self.recordingWorkspaceBytes = bytes
+          }
         } catch {
           guard let self, self.isCurrent(token) else { return }
           self.consumerFailure = Self.mapPipelineFailure(error)

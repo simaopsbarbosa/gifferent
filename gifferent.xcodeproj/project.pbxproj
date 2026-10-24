@@ -46,6 +46,8 @@
 		A00000000000000000000075 /* GIFPreviewViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000076 /* GIFPreviewViews.swift */; };
 		A00000000000000000000079 /* ExperimentalImageMagickCompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000077 /* ExperimentalImageMagickCompressor.swift */; };
 		A0000000000000000000007A /* ExperimentalImageMagickCompressorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000078 /* ExperimentalImageMagickCompressorTests.swift */; };
+		A00000000000000000000081 /* RecordingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000082 /* RecordingSettings.swift */; };
+		A00000000000000000000083 /* RecordingSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000084 /* RecordingSettingsTests.swift */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -109,6 +111,8 @@
 		A00000000000000000000076 /* GIFPreviewViews.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFPreviewViews.swift; sourceTree = "<group>"; };
 		A00000000000000000000077 /* ExperimentalImageMagickCompressor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExperimentalImageMagickCompressor.swift; sourceTree = "<group>"; };
 		A00000000000000000000078 /* ExperimentalImageMagickCompressorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ExperimentalImageMagickCompressorTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000082 /* RecordingSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingSettings.swift; sourceTree = "<group>"; };
+		A00000000000000000000084 /* RecordingSettingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingSettingsTests.swift; sourceTree = "<group>"; };
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -173,6 +177,7 @@
 		2D703F7BE264A0A08A3C6F63 /* gifferentTests */ = {
 			isa = PBXGroup;
 			children = (
+				A00000000000000000000084 /* RecordingSettingsTests.swift */,
 				65197CF250A3B835861EEADE /* FoundationTests.swift */,
 				A00000000000000000000015 /* CaptureSourceTests.swift */,
 				A00000000000000000000016 /* GlobalHotkeyTests.swift */,
@@ -215,6 +220,7 @@
 		88ACE777636DC5510DBDB558 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				A00000000000000000000082 /* RecordingSettings.swift */,
 				C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */,
 				A00000000000000000000076 /* GIFPreviewViews.swift */,
 				A0000000000000000000001F /* GifferentRuntime.swift */,
@@ -446,6 +452,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000083 /* RecordingSettingsTests.swift in Sources */,
 				791857B04814FECFF2C7738E /* FoundationTests.swift in Sources */,
 				A00000000000000000000005 /* CaptureSourceTests.swift in Sources */,
 				A00000000000000000000006 /* GlobalHotkeyTests.swift in Sources */,
@@ -469,6 +476,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000081 /* RecordingSettings.swift in Sources */,
 				0E4EEAC639BB613FE8693F5B /* gifferentApp.swift in Sources */,
 				A00000000000000000000075 /* GIFPreviewViews.swift in Sources */,
 				A00000000000000000000001 /* CaptureSources.swift in Sources */,

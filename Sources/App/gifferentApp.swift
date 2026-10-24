@@ -63,6 +63,15 @@ private struct GifferentMenuContent: View {
         displayedStatus = status
       }
 
+    if let warning = runtime.recordingWarning {
+      Text(warning.message)
+        .accessibilityIdentifier("recording-warning")
+        .accessibilityLabel(warning.message)
+        .accessibilityValue(warning.message)
+      Button("dismiss") { runtime.dismissRecordingWarning() }
+        .accessibilityIdentifier("dismiss-recording-warning-button")
+    }
+
     if let selectionDescription = runtime.selectionDescription {
       Text(selectionDescription)
         .accessibilityIdentifier("selection-status")
@@ -75,6 +84,14 @@ private struct GifferentMenuContent: View {
           .accessibilityIdentifier("recording-frame-fixture-state")
           .accessibilityLabel("recording frame fixture state")
           .accessibilityValue(runtime.recordingFrameFixtureState)
+        Text(runtime.recordingCursorFixtureState)
+          .accessibilityIdentifier("recording-cursor-fixture-state")
+          .accessibilityLabel("recording cursor fixture state")
+          .accessibilityValue(runtime.recordingCursorFixtureState)
+        Button("show recording warning fixture") { runtime.showRecordingWarningFixture() }
+          .accessibilityIdentifier("show-recording-warning-button")
+        Button("show workspace warning fixture") { runtime.showWorkspaceWarningFixture() }
+          .accessibilityIdentifier("show-workspace-warning-button")
       }
     #endif
 
@@ -95,6 +112,11 @@ private struct GifferentMenuContent: View {
       runtime.showHotkeySettings()
     }
     .accessibilityIdentifier("shortcuts-button")
+
+    Button("recording settings…") {
+      runtime.showRecordingSettings()
+    }
+    .accessibilityIdentifier("recording-settings-button")
 
     #if DEBUG
       if ProcessInfo.processInfo.arguments.contains("--ui-testing") {

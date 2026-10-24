@@ -5,15 +5,18 @@ import SwiftUI
 @MainActor
 final class GifferentRuntime: ObservableObject {
   static let shared = GifferentRuntime()
+  private static let recordingWorkspaceQuotaBytes: Int64 = 512 * 1_024 * 1_024
 
   @Published private(set) var status = "idle"
   @Published private(set) var selectionDescription: String?
+  @Published private(set) var recordingWarning: RecordingWarningReason?
   @Published var isPreviewCloseConfirmationPresented = false
   #if DEBUG
     @Published private(set) var recordingFrameFixtureState = "hidden"
   #endif
 
   let hotkeySettings: HotkeySettingsStore
+  let recordingSettings: RecordingSettingsStore
 
   private let sourceService: CaptureSourceService
   private let selectionCoordinator: CaptureSelectionCoordinator
@@ -21,26 +24,48 @@ final class GifferentRuntime: ObservableObject {
   let recordingCoordinator: RecordingCoordinator
   private var permissionWindow: NSWindow?
   private var settingsWindow: NSWindow?
+  private var recordingSettingsWindow: NSWindow?
   private var previewWindowController: GIFPreviewWindowController?
   private var lastSelection: CaptureSelection?
   private var recordAfterSelection = false
   private var hasStarted = false
   private var recordingStateObservation: AnyCancellable?
+  private var recordingWarningMonitorTask: Task<Void, Never>?
+  private var recordingStartedAt: TimeInterval?
+  private var recordingWarningPolicy = RecordingWarningPolicy()
+  #if DEBUG
+    @Published private(set) var recordingCursorFixtureState = "not started"
+    private var fixtureRecordingStreamFactory: FixtureRecordingStreamFactory?
+  #endif
 
   private init() {
     let service = CaptureSourceService()
     sourceService = service
     selectionCoordinator = CaptureSelectionCoordinator(sourceService: service)
     hotkeySettings = HotkeySettingsStore(controller: GlobalHotkeyController())
+    #if DEBUG
+      if ProcessInfo.processInfo.arguments.contains("--ui-testing"),
+        let defaults = UserDefaults(suiteName: "gifferent.ui-testing")
+      {
+        defaults.removePersistentDomain(forName: "gifferent.ui-testing")
+        recordingSettings = RecordingSettingsStore(defaults: defaults)
+      } else {
+        recordingSettings = RecordingSettingsStore()
+      }
+    #else
+      recordingSettings = RecordingSettingsStore()
+    #endif
     let workspace = SessionWorkspaceStore(
       rootDirectory: Self.recordingWorkspaceURL(),
-      maximumSessionBytes: 512 * 1_024 * 1_024,
+      maximumSessionBytes: Self.recordingWorkspaceQuotaBytes,
       minimumFreeBytes: 64 * 1_024 * 1_024
     )
     #if DEBUG
       if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+        let fixtureFactory = FixtureRecordingStreamFactory()
+        fixtureRecordingStreamFactory = fixtureFactory
         recordingCoordinator = RecordingCoordinator(
-          streamFactory: FixtureRecordingStreamFactory(),
+          streamFactory: fixtureFactory,
           workspace: workspace,
           clipboard: UITestGIFClipboardWriter(),
           fileSaver: UITestGIFSavePanelSaver()
@@ -60,6 +85,11 @@ final class GifferentRuntime: ObservableObject {
     recordingStateObservation = recordingCoordinator.$state.sink { [weak self] state in
       self?.updateStatus(for: state)
     }
+    #if DEBUG
+      fixtureRecordingStreamFactory?.onPrepare = { [weak self] showsCursor in
+        self?.recordingCursorFixtureState = showsCursor ? "cursor included" : "cursor hidden"
+      }
+    #endif
   }
 
   func start() {
@@ -176,6 +206,43 @@ final class GifferentRuntime: ObservableObject {
     window.makeKeyAndOrderFront(nil)
     NSApp.activate(ignoringOtherApps: true)
   }
+
+  func showRecordingSettings() {
+    if let recordingSettingsWindow {
+      recordingSettingsWindow.makeKeyAndOrderFront(nil)
+      NSApp.activate(ignoringOtherApps: true)
+      return
+    }
+    let window = makeWindow(title: "recording settings", size: NSSize(width: 360, height: 150))
+    window.contentView = NSHostingView(rootView: RecordingSettingsView(store: recordingSettings))
+    recordingSettingsWindow = window
+    window.makeKeyAndOrderFront(nil)
+    NSApp.activate(ignoringOtherApps: true)
+  }
+
+  func dismissRecordingWarning() {
+    recordingWarningPolicy.dismiss()
+    recordingWarning = nil
+  }
+
+  #if DEBUG
+    func showRecordingWarningFixture() {
+      guard recordingStartedAt != nil else { return }
+      recordingStartedAt =
+        ProcessInfo.processInfo.systemUptime - RecordingWarningPolicy.durationThreshold
+      refreshRecordingWarning()
+    }
+
+    func showWorkspaceWarningFixture() {
+      guard recordingStartedAt != nil else { return }
+      recordingCoordinator.setRecordingWorkspaceBytesFixture(
+        Int64(
+          (Double(Self.recordingWorkspaceQuotaBytes)
+            * RecordingWarningPolicy.workspaceQuotaFraction).rounded(.up))
+      )
+      refreshRecordingWarning()
+    }
+  #endif
 
   private func handle(_ action: GlobalHotkeyAction) {
     switch action {
@@ -346,22 +413,29 @@ final class GifferentRuntime: ObservableObject {
       return
     }
     let target = RecordingTarget(selection: selection)
-    Task { await recordingCoordinator.start(target: target, showsCursor: true) }
+    Task {
+      await recordingCoordinator.start(target: target, showsCursor: recordingSettings.showsCursor)
+    }
   }
 
   private func updateStatus(for state: RecordingCoordinatorState) {
     switch state {
     case .idle:
+      endRecordingWarningMonitoring()
       recordingFrameOverlay.hide()
       status = lastSelection == nil ? "idle" : "selection ready"
     case .starting:
+      endRecordingWarningMonitoring()
       status = "starting recording"
     case .recording:
       status = "recording"
+      beginRecordingWarningMonitoringIfNeeded()
       showRecordingFrame(for: lastSelection)
     case .stopping:
+      endRecordingWarningMonitoring()
       status = "stopping recording"
     case .captured(_, let snapshot):
+      endRecordingWarningMonitoring()
       recordingFrameOverlay.hide()
       switch snapshot.stopReason {
       case .windowUnavailable:
@@ -372,14 +446,17 @@ final class GifferentRuntime: ObservableObject {
         status = "preparing preview"
       }
     case .preparingPreview:
+      endRecordingWarningMonitoring()
       recordingFrameOverlay.hide()
       status = "preparing preview"
       showPreviewWindow()
     case .previewReady:
+      endRecordingWarningMonitoring()
       recordingFrameOverlay.hide()
       status = "preview ready"
       showPreviewWindow()
     case .failed(let failure):
+      endRecordingWarningMonitoring()
       recordingFrameOverlay.hide()
       switch failure {
       case .permissionRequired:
@@ -402,6 +479,37 @@ final class GifferentRuntime: ObservableObject {
         status = "could not create a valid gif; captured frames were retained"
       }
     }
+  }
+
+  private func beginRecordingWarningMonitoringIfNeeded() {
+    guard recordingWarningMonitorTask == nil else { return }
+    recordingWarningPolicy.beginRecording()
+    recordingWarning = nil
+    recordingStartedAt = ProcessInfo.processInfo.systemUptime
+    recordingWarningMonitorTask = Task { [weak self] in
+      while !Task.isCancelled {
+        guard let self else { return }
+        self.refreshRecordingWarning()
+        if self.recordingWarningPolicy.hasPresentedWarning { return }
+        try? await Task.sleep(for: .milliseconds(250))
+      }
+    }
+  }
+
+  private func refreshRecordingWarning() {
+    guard recordingWarning == nil, let recordingStartedAt else { return }
+    recordingWarning = recordingWarningPolicy.evaluate(
+      elapsed: ProcessInfo.processInfo.systemUptime - recordingStartedAt,
+      workspaceBytes: recordingCoordinator.recordingWorkspaceBytes,
+      workspaceQuotaBytes: Self.recordingWorkspaceQuotaBytes
+    )
+  }
+
+  private func endRecordingWarningMonitoring() {
+    recordingWarningMonitorTask?.cancel()
+    recordingWarningMonitorTask = nil
+    recordingStartedAt = nil
+    recordingWarning = nil
   }
 
   private func showPreviewWindow() {
@@ -522,13 +630,16 @@ struct SavePanelGIFSaver: GIFSaving {
   }
 
   @MainActor
-  private struct FixtureRecordingStreamFactory: RecordingStreamPreparing {
+  private final class FixtureRecordingStreamFactory: RecordingStreamPreparing {
+    var onPrepare: ((Bool) -> Void)?
+
     func prepare(
       target _: RecordingTarget,
-      showsCursor _: Bool,
+      showsCursor: Bool,
       onTermination _: @escaping @MainActor (CaptureTerminationReason) -> Void
     ) async throws -> any RecordingCaptureSession {
-      FixtureRecordingCaptureSession()
+      onPrepare?(showsCursor)
+      return FixtureRecordingCaptureSession()
     }
   }
 

@@ -33,6 +33,84 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(settingsWindow.buttons["hotkey-record-button"].exists)
   }
 
+  func testRecordingSettingsAndWarningDoNotStopCapture() {
+    let app = XCUIApplication()
+    app.launchArguments.append("--ui-testing")
+    app.launch()
+
+    let testWindow = app.windows["gifferent test menu"]
+    XCTAssertTrue(testWindow.waitForExistence(timeout: 10))
+    testWindow.buttons["recording-settings-button"].click()
+
+    let settingsWindow = app.windows["recording settings"]
+    XCTAssertTrue(settingsWindow.waitForExistence(timeout: 10))
+    let cursorToggle = settingsWindow.descendants(matching: .any)
+      .matching(identifier: "include-cursor-toggle").firstMatch
+    XCTAssertTrue(cursorToggle.exists)
+    XCTAssertEqual(cursorToggle.value as? String, "included")
+    cursorToggle.click()
+    XCTAssertEqual(cursorToggle.value as? String, "hidden")
+    settingsWindow.buttons["Close"].click()
+
+    testWindow.buttons["recording-action-button"].click()
+    let selectionWindow = app.windows["capture selection"]
+    XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
+    selectionWindow.buttons["select-display-button"].click()
+    selectionWindow.buttons["confirm-selection-button"].click()
+    waitForStatus("recording", in: testWindow)
+
+    let fixtureState = testWindow.staticTexts["recording-cursor-fixture-state"]
+    XCTAssertTrue(fixtureState.waitForExistence(timeout: 5))
+    XCTAssertEqual(fixtureState.value as? String, "cursor hidden")
+
+    testWindow.buttons["show-recording-warning-button"].click()
+    let warning = testWindow.staticTexts["recording-warning"]
+    XCTAssertTrue(warning.waitForExistence(timeout: 5))
+    XCTAssertEqual(warning.value as? String, "recording has reached 30 seconds")
+    waitForStatus("recording", in: testWindow)
+
+    testWindow.buttons["dismiss-recording-warning-button"].click()
+    XCTAssertFalse(warning.waitForExistence(timeout: 1))
+    waitForStatus("recording", in: testWindow)
+
+    testWindow.buttons["show-recording-warning-button"].click()
+    XCTAssertFalse(warning.waitForExistence(timeout: 1))
+    waitForStatus("recording", in: testWindow)
+    testWindow.buttons["recording-action-button"].click()
+    XCTAssertTrue(app.windows["gif preview"].waitForExistence(timeout: 10))
+  }
+
+  func testWorkspaceWarningDoesNotStopCapture() {
+    let app = XCUIApplication()
+    app.launchArguments.append("--ui-testing")
+    app.launch()
+
+    let testWindow = app.windows["gifferent test menu"]
+    XCTAssertTrue(testWindow.waitForExistence(timeout: 10))
+    testWindow.buttons["recording-action-button"].click()
+    let selectionWindow = app.windows["capture selection"]
+    XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
+    selectionWindow.buttons["select-display-button"].click()
+    selectionWindow.buttons["confirm-selection-button"].click()
+    waitForStatus("recording", in: testWindow)
+
+    testWindow.buttons["show-workspace-warning-button"].click()
+    let warning = testWindow.staticTexts["recording-warning"]
+    XCTAssertTrue(warning.waitForExistence(timeout: 5))
+    XCTAssertEqual(warning.value as? String, "recording has reached 75% of its temporary space")
+    waitForStatus("recording", in: testWindow)
+
+    testWindow.buttons["dismiss-recording-warning-button"].click()
+    XCTAssertFalse(warning.waitForExistence(timeout: 1))
+    waitForStatus("recording", in: testWindow)
+    testWindow.buttons["show-workspace-warning-button"].click()
+    XCTAssertFalse(warning.waitForExistence(timeout: 1))
+    waitForStatus("recording", in: testWindow)
+
+    testWindow.buttons["recording-action-button"].click()
+    XCTAssertTrue(app.windows["gif preview"].waitForExistence(timeout: 10))
+  }
+
   func testFixtureDisplaySelectionReturnsToMenu() {
     let app = XCUIApplication()
     app.launchArguments.append("--ui-testing")
