@@ -45,6 +45,8 @@
 
 - the minimum acceptable compression quality keeps text legible at native scale, keeps cursor edges clear, and has no distracting banding or flicker in gradients. minor differences visible only at 2× are acceptable.
 - the dithering slider controls ImageMagick's documented `dither:diffusion-amount` from 0% to 100% in 5% steps, with a default of 35%. this product choice does not select ImageMagick as the release encoder; the pinned build must prove the setting changes output, and candidate, quality, performance, and distribution gates remain open.
+- size goals target 90% of each published cap using decimal megabytes: 9 MB for GitHub image/GIF uploads and 18 MB for Discord's non-Nitro attachment cap. these are optimization targets, not guarantees; show the current cap and account caveat.
+- use destination names with native symbols on the optimizer buttons. do not bundle third-party destination marks unless written permission is obtained.
 
 ## confirmed by the architect on 2026-10-20
 
