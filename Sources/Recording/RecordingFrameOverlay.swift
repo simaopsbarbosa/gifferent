@@ -104,6 +104,12 @@ private final class RecordingFramePanel: NSPanel {
       defer: false
     )
     title = "recording frame"
+    setAccessibilityElement(true)
+    setAccessibilityEnabled(true)
+    setAccessibilityLabel("recording frame")
+    setAccessibilityTitle("recording frame")
+    setAccessibilityIdentifier("recording-frame-window")
+    setAccessibilityRole(.window)
     level = .statusBar
     collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary, .stationary]
     isFloatingPanel = true
@@ -113,6 +119,9 @@ private final class RecordingFramePanel: NSPanel {
     ignoresMouseEvents = true
     isReleasedWhenClosed = false
     contentView = NSHostingView(rootView: RecordingFrameView(targetRect: targetRect))
+    if let contentView {
+      setAccessibilityContents([contentView])
+    }
   }
 
   override var canBecomeKey: Bool { false }
