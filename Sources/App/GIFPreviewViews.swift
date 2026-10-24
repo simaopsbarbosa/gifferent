@@ -214,7 +214,7 @@ private struct GIFCompressionControls: View {
         .foregroundStyle(.secondary)
       GIFCompressionDestinationControl(coordinator: coordinator)
       GIFCompressionScaleControl(coordinator: coordinator)
-      GIFCompressionDiffusionControl(coordinator: coordinator)
+      GIFCompressionQualityControl(coordinator: coordinator)
       GIFCompressionActionControl(coordinator: coordinator)
     }
     .frame(maxWidth: .infinity, alignment: .leading)
@@ -303,24 +303,24 @@ private struct GIFCompressionScaleControl: View {
 }
 
 @MainActor
-private struct GIFCompressionDiffusionControl: View {
+private struct GIFCompressionQualityControl: View {
   @ObservedObject var coordinator: RecordingCoordinator
 
   var body: some View {
     HStack {
-      Text("dithering")
+      Text("quality")
       Slider(
         value: Binding(
-          get: { Double(coordinator.compressionSettings.diffusionPercent) },
-          set: { coordinator.setCompressionDiffusion(Int($0.rounded())) }
+          get: { Double(coordinator.compressionSettings.qualityPercent) },
+          set: { coordinator.setCompressionQuality(Int($0.rounded())) }
         ),
-        in: 0...100,
-        step: 5
+        in: 1...100,
+        step: 1
       )
-      .accessibilityLabel("dithering strength")
-      .accessibilityIdentifier("compression-diffusion-slider")
-      Text("\(coordinator.compressionSettings.diffusionPercent)%")
-        .accessibilityIdentifier("compression-diffusion-value")
+      .accessibilityLabel("gifski quality")
+      .accessibilityIdentifier("compression-quality-slider")
+      Text("\(coordinator.compressionSettings.qualityPercent)")
+        .accessibilityIdentifier("compression-quality-value")
     }
     .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
   }
