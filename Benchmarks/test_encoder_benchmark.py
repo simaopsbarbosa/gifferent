@@ -140,6 +140,93 @@ class CleanupTests(unittest.TestCase):
             self.assertTrue(Path(result["output"]).is_file())
             self.assertFalse((output / "work" / "imageio-valid").exists())
 
+    def test_shared_metadata_validation_runs_inside_timed_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            gif = output / "valid.gif"
+            gif.write_bytes(tiny_gif_with_delays([4]))
+            encoder = output / "fake-encoder"
+            encoder.write_text(
+                "#!/bin/sh\ncp " + shlex.quote(str(gif)) + " \"$2\"\nexit 0\n"
+            )
+            encoder.chmod(0o755)
+            validator = output / "fake-validator"
+            validator.write_text(
+                "#!/bin/sh\n[ \"$1\" = --validate ] && test -s \"$2\"\n"
+            )
+            validator.chmod(0o755)
+            frame = output / "frame.png"
+            frame.write_bytes(b"synthetic")
+
+            result = run_one(
+                "imageio",
+                {
+                    "imageio": {"path": str(encoder)},
+                    "imageio-app": {"path": str(validator)},
+                },
+                {**MANIFEST, "duration_seconds": 1 / 24},
+                [frame],
+                output,
+                "shared-validation",
+                2,
+                False,
+            )
+
+            self.assertEqual(result["status"], "ok")
+            self.assertEqual(
+                [stage["stage"] for stage in result["stage_results"]],
+                ["imageio", "imageio-metadata-validation"],
+            )
+            self.assertGreaterEqual(
+                result["elapsed_seconds"], result["component_elapsed_seconds"]
+            )
+            self.assertTrue(Path(result["output"]).is_file())
+
+    def test_failed_shared_metadata_validation_cleans_output_and_marks_path_failed(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            gif = output / "valid.gif"
+            gif.write_bytes(tiny_gif_with_delays([4]))
+            encoder = output / "fake-encoder"
+            encoder.write_text(
+                "#!/bin/sh\ncp " + shlex.quote(str(gif)) + " \"$2\"\nexit 0\n"
+            )
+            encoder.chmod(0o755)
+            validator = output / "rejecting-validator"
+            validator.write_text(
+                "#!/bin/sh\n[ \"$1\" = --validate ] || exit 2\n"
+                "test -s \"$2\" || exit 3\nexit 9\n"
+            )
+            validator.chmod(0o755)
+            frame = output / "frame.png"
+            frame.write_bytes(b"synthetic")
+
+            result = run_one(
+                "imageio",
+                {
+                    "imageio": {"path": str(encoder)},
+                    "imageio-app": {"path": str(validator)},
+                },
+                {**MANIFEST, "duration_seconds": 1 / 24},
+                [frame],
+                output,
+                "rejected-validation",
+                2,
+                False,
+            )
+
+            self.assertEqual(result["status"], "failed")
+            self.assertEqual(result["exit_code"], 9)
+            self.assertEqual(
+                [stage["stage"] for stage in result["stage_results"]],
+                ["imageio", "imageio-metadata-validation"],
+            )
+            self.assertEqual(result["stage_results"][-1]["exit_code"], 9)
+            self.assertFalse((output / "work" / "imageio-rejected-validation").exists())
+            self.assertFalse(
+                (output / "gifs" / "imageio" / "rejected-validation.gif").exists()
+            )
+
     def test_duplicate_success_is_hashed_but_not_retained_twice(self):
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory)
@@ -379,6 +466,40 @@ class CleanupTests(unittest.TestCase):
         self.assertFalse(availability["available"])
         self.assertEqual(availability["missing_tools"], ["imageio-app"])
 
+    def test_cli_candidates_require_the_shared_imageio_metadata_validator(self):
+        availability = path_availability(
+            "gifski",
+            {"gifski": {"available": True}, "imageio-app": {"available": False}},
+        )
+        self.assertFalse(availability["available"])
+        self.assertIn("imageio-app", availability["missing_tools"])
+
+    def test_command_sequences_use_the_shared_metadata_validator_after_encoding(self):
+        from run_encoder_benchmark import command_sequence_for
+
+        tools = {
+            "gifski": {"path": "/tools/gifski"},
+            "imageio-app": {"path": "/tools/imageio_app_encode"},
+        }
+        stages = command_sequence_for(
+            "gifski", tools, 24, [Path("frame.png")], Path("out.gif"), Path("work")
+        )
+        self.assertEqual(
+            [stage["stage"] for stage in stages],
+            ["gifski", "imageio-metadata-validation"],
+        )
+        self.assertEqual(stages[1]["command"], ["/tools/imageio_app_encode", "--validate", "out.gif"])
+
+        app_stages = command_sequence_for(
+            "imageio-app",
+            tools,
+            24,
+            [Path("frame.png")],
+            Path("app.gif"),
+            Path("work"),
+        )
+        self.assertEqual([stage["stage"] for stage in app_stages], ["imageio-app"])
+
     def test_gifski_command_pins_quality_and_preserves_frame_order(self):
         command = command_for(
             "gifski",
@@ -487,17 +608,28 @@ class CleanupTests(unittest.TestCase):
         work = Path("work")
         stages = command_sequence_for(
             "imageio-gifsicle",
-            {"imageio": {"path": "imageio_encode"}, "gifsicle": {"path": "gifsicle"}},
+            {
+                "imageio": {"path": "imageio_encode"},
+                "gifsicle": {"path": "gifsicle"},
+                "imageio-app": {"path": "imageio_app_encode"},
+            },
             24,
             [Path("frame-0.png"), Path("frame-1.png")],
             Path("output.gif"),
             work,
         )
-        self.assertEqual([stage["stage"] for stage in stages], ["imageio", "gifsicle"])
+        self.assertEqual(
+            [stage["stage"] for stage in stages],
+            ["imageio", "gifsicle", "imageio-metadata-validation"],
+        )
         self.assertEqual(stages[0]["command"][:3], ["imageio_encode", "24", "work/imageio-input.gif"])
         self.assertEqual(
             stages[1]["command"],
             ["gifsicle", "--optimize=3", "--loopcount=0", "--output", "output.gif", "work/imageio-input.gif"],
+        )
+        self.assertEqual(
+            stages[2]["command"],
+            ["imageio_app_encode", "--validate", "output.gif"],
         )
 
     def test_gifsicle_pipeline_runs_all_stages_and_validates_output(self):
@@ -594,7 +726,11 @@ class CleanupTests(unittest.TestCase):
             self.assertFalse((output / "gifs" / "imageio-gifsicle" / "second-stage-timeout.gif").exists())
 
     def test_candidate_path_reports_missing_gifsicle_as_unavailable(self):
-        tools = {"imageio": {"available": True, "path": "/usr/bin/imageio"}, "gifsicle": {"available": False}}
+        tools = {
+            "imageio": {"available": True, "path": "/usr/bin/imageio"},
+            "gifsicle": {"available": False},
+            "imageio-app": {"available": True, "path": "/tmp/imageio_app_encode"},
+        }
         availability = path_availability("imageio-gifsicle", tools)
         self.assertFalse(availability["available"])
         self.assertEqual(availability["missing_tools"], ["gifsicle"])

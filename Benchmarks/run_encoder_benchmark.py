@@ -257,6 +257,7 @@ def discover(output, imageio_app_binary=None):
         found["imageio"]["reason"] = "xcrun unavailable"
     app_sources = [
         ROOT / ".." / "Sources" / "Recording" / "SessionWorkspaceStore.swift",
+        ROOT / ".." / "Sources" / "Encoding" / "GIFEditModel.swift",
         ROOT / ".." / "Sources" / "Encoding" / "OriginalGIFEncoder.swift",
         ROOT / "imageio_app_encode.swift",
     ]
@@ -302,6 +303,7 @@ def path_availability(name, tools):
         "imageio-app": ("imageio-app",),
         "imageio-gifsicle": ("imageio", "gifsicle"),
     }[name]
+    required = tuple(required) if name == "imageio-app" else (*required, "imageio-app")
     missing = [tool for tool in required if not tools.get(tool, {}).get("available", "path" in tools.get(tool, {}))]
     return {"available": not missing, "required_tools": list(required), "missing_tools": missing, "reason": f"missing: {', '.join(missing)}" if missing else None}
 
@@ -324,25 +326,36 @@ def command_for(name, tools, fps, frames, output, magick_diffusion_amount=100):
 
 def command_sequence_for(name, tools, fps, frames, output, work, magick_diffusion_amount=100):
     if name != "imageio-gifsicle":
-        return [{"stage": name, "command": command_for(name, tools, fps, frames, output, magick_diffusion_amount)}]
-    intermediate = work / "imageio-input.gif"
-    return [
-        {
+        stages = [{"stage": name, "command": command_for(name, tools, fps, frames, output, magick_diffusion_amount)}]
+    else:
+        intermediate = work / "imageio-input.gif"
+        stages = [
+            {
             "stage": "imageio",
             "command": command_for("imageio", tools, fps, frames, intermediate),
-        },
-        {
-            "stage": "gifsicle",
-            "command": [
-                tools["gifsicle"]["path"],
-                "--optimize=3",
-                "--loopcount=0",
-                "--output",
-                str(output),
-                str(intermediate),
-            ],
-        },
-    ]
+            },
+            {
+                "stage": "gifsicle",
+                "command": [
+                    tools["gifsicle"]["path"],
+                    "--optimize=3",
+                    "--loopcount=0",
+                    "--output",
+                    str(output),
+                    str(intermediate),
+                ],
+            },
+        ]
+    # the app candidate validates its own output through GIFMetadataInspector before
+    # returning. other paths run that same per-frame ImageIO metadata inspection here.
+    if name != "imageio-app" and tools.get("imageio-app", {}).get("path"):
+        stages.append(
+            {
+                "stage": "imageio-metadata-validation",
+                "command": [tools["imageio-app"]["path"], "--validate", str(output)],
+            }
+        )
+    return stages
 
 
 def run_command(command, work, timeout_seconds, use_system_time):
