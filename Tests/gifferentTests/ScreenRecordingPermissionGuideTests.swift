@@ -29,7 +29,7 @@ final class ScreenRecordingPermissionGuideTests: XCTestCase {
     model.requestPermission()
     XCTAssertEqual(permission.requestCount, 1)
     XCTAssertTrue(model.hasRequestedPermission)
-    XCTAssertEqual(model.state, .needsPermission)
+    XCTAssertEqual(model.state, .restartRequired)
     XCTAssertEqual(grants, 0)
 
     permission.authorization = .granted
@@ -40,7 +40,7 @@ final class ScreenRecordingPermissionGuideTests: XCTestCase {
 
     permission.authorization = .needsPermission
     model.refresh()
-    XCTAssertEqual(model.state, .needsPermission)
+    XCTAssertEqual(model.state, .restartRequired)
 
     permission.authorization = .granted
     model.refresh()
@@ -61,6 +61,26 @@ final class ScreenRecordingPermissionGuideTests: XCTestCase {
 
     model.refresh()
     XCTAssertEqual(model.state, .needsPermission)
+  }
+
+  func testRecheckAfterOpeningSettingsExplainsRestartUntilPermissionIsActive() {
+    let permission = PermissionStub()
+    var grants = 0
+    let model = ScreenRecordingPermissionGuideModel(permission: permission) {
+      true
+    } onGranted: {
+      grants += 1
+    }
+
+    model.openSettings()
+    model.refresh()
+    XCTAssertEqual(model.state, .restartRequired)
+    XCTAssertEqual(grants, 0)
+
+    permission.authorization = .granted
+    model.refresh()
+    XCTAssertEqual(model.state, .granted)
+    XCTAssertEqual(grants, 1)
   }
 
   func testImmediateGrantAndSuccessfulSettingsOpen() {

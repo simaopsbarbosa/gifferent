@@ -5,6 +5,7 @@ enum ScreenRecordingPermissionGuideState: Equatable {
   case needsPermission
   case granted
   case settingsUnavailable
+  case restartRequired
 }
 
 @MainActor
@@ -16,6 +17,7 @@ final class ScreenRecordingPermissionGuideModel: ObservableObject {
   private let openSystemSettings: @MainActor () -> Bool
   private let onGranted: @MainActor () -> Void
   private var hasReportedGrant = false
+  private var hasOpenedSettings = false
 
   init(
     permission: (any ScreenRecordingPermissionProviding)? = nil,
@@ -31,12 +33,15 @@ final class ScreenRecordingPermissionGuideModel: ObservableObject {
   }
 
   func refresh() {
-    update(for: permission.preflight())
+    update(
+      for: permission.preflight(),
+      afterSettingsChange: hasOpenedSettings || hasRequestedPermission
+    )
   }
 
   func requestPermission() {
     hasRequestedPermission = true
-    update(for: permission.request())
+    update(for: permission.request(), afterSettingsChange: true)
   }
 
   func openSettings() {
@@ -44,12 +49,16 @@ final class ScreenRecordingPermissionGuideModel: ObservableObject {
       state = .settingsUnavailable
       return
     }
+    hasOpenedSettings = true
     if state == .settingsUnavailable {
       state = .needsPermission
     }
   }
 
-  private func update(for authorization: ScreenRecordingAuthorization) {
+  private func update(
+    for authorization: ScreenRecordingAuthorization,
+    afterSettingsChange: Bool = false
+  ) {
     switch authorization {
     case .granted:
       state = .granted
@@ -58,7 +67,7 @@ final class ScreenRecordingPermissionGuideModel: ObservableObject {
         onGranted()
       }
     case .needsPermission:
-      state = .needsPermission
+      state = afterSettingsChange ? .restartRequired : .needsPermission
       hasReportedGrant = false
     }
   }
@@ -66,6 +75,7 @@ final class ScreenRecordingPermissionGuideModel: ObservableObject {
 
 struct ScreenRecordingPermissionGuide: View {
   @StateObject private var model: ScreenRecordingPermissionGuideModel
+  @Environment(\.scenePhase) private var scenePhase
 
   init(
     permission: (any ScreenRecordingPermissionProviding)? = nil,
@@ -94,6 +104,14 @@ struct ScreenRecordingPermissionGuide: View {
       } else {
         Text("1. allow gifferent to record your screen.")
         Text("2. return here and check access again.")
+
+        if model.state == .restartRequired {
+          Text(
+            "macos still reports access as off. if you just enabled it, quit and reopen gifferent, then check again."
+          )
+          .font(.caption)
+          .accessibilityIdentifier("screen-recording-restart-required")
+        }
 
         if model.hasRequestedPermission {
           Text(
@@ -129,6 +147,11 @@ struct ScreenRecordingPermissionGuide: View {
     .padding()
     .onAppear {
       model.refresh()
+    }
+    .onChange(of: scenePhase) { _, phase in
+      if phase == .active {
+        model.refresh()
+      }
     }
   }
 }

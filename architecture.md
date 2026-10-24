@@ -4,7 +4,7 @@
 
 - language and build: Swift 6 with an Xcode macOS application project, deployment target macOS 14. the foundation pins Xcode 26.2 (build 17C52) locally and on the `macos-26` CI runner; update both deliberately after verification.
 - UI: SwiftUI scenes and controls, including `MenuBarExtra`; the menu bar label uses the static light/dark `MenuBarMark` asset at 16 points with the accessible name `gifferent`. narrow AppKit windows or views where the full-screen selection overlay, floating preview, drag magnifier, global event behavior, or pasteboard needs them. use native accessibility and appearance APIs.
-- capture: ScreenCaptureKit for display and window streams, with a display crop for region recording; public Core Graphics permission APIs for preflight and request. keep selection geometry in display coordinates and test scale factors and screen changes.
+- capture: ScreenCaptureKit for display and window streams, with a display crop for region recording; public Core Graphics permission APIs for preflight and request. include `NSScreenCaptureUsageDescription` in the generated app plist. after a settings change, refresh the preflight when the app becomes active and explain that macOS may require a full app restart before capture is available. use a stable Apple development signing identity for real permission acceptance; unsigned or ad hoc builds may not retain privacy authorization across rebuilds. keep selection geometry in display coordinates and test scale factors and screen changes.
 - hotkeys: a dedicated Carbon `RegisterEventHotKey` adapter with setting persistence and start/stop state. nonexclusive registration cannot detect another app using the same chord, so settings distinguish registered from observed delivery and warn until the user tests the shortcut from another app. duplicate chords within gifferent and system registration errors are rejected immediately.
 - pipeline: timestamped frames enter a bounded queue; encoding and optimization run off the main actor; a small temporary workspace holds the active session. preview closure after export and confirmed discard clean up temporary data. on launch after a crash, delete unfinished session data rather than restoring it.
 - editing: keep the captured PNG sequence and first validated GIF as immutable sources. apply trim, speed, and loop settings through `GIFEditModel`; encode replacements to separate quota-reserved files. keep the last usable preview visible while encoding, cancel superseded requests, and publish only the latest completed request. copy and save stay disabled until the visible output matches the selected settings. remove abandoned outputs and obsolete replacements without touching exported files.
@@ -48,6 +48,8 @@ the recording iteration connects the menu and `⌃⌥R` action to a ScreenCaptur
 ## references
 
 - [Apple ScreenCaptureKit capture sample](https://developer.apple.com/documentation/screencapturekit/capturing-screen-content-in-macos)
+- [Apple ScreenCaptureKit permission usage description](https://developer.apple.com/documentation/screencapturekit)
+- [Apple TN3127: inside code signing requirements](https://developer.apple.com/documentation/technotes/tn3127-inside-code-signing-requirements)
 - [Apple SwiftUI menu bar extra](https://developer.apple.com/documentation/swiftui/menubarextra)
 - [Apple testing guidance](https://developer.apple.com/documentation/xcode/adding-tests-to-your-xcode-project)
 - [gifski CLI and library](https://github.com/ImageOptim/gifski)
