@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">breathing room · monochrome</title>
+  <desc id="desc">selected compact vertical-loop geometry with breathing room and open crop-frame corners in black</desc>
+  <g fill="none" stroke="#111111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22V10h12M44 10h12v12M56 42v12H44M20 54H8V42"/></g>
+  <g fill="none" stroke="#111111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M24 28c1-6 6-9 11-7 4 1 6 5 6 8M40 36c-1 6-6 9-11 7-4-1-6-5-6-8"/></g>
+  <g id="monochrome-arrowheads" fill="none" stroke="#111111" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="m37 20 4 4-4 3M27 44l-4-4 4-3"/>
+  </g>
+</svg>

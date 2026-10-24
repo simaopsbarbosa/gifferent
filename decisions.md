@@ -31,6 +31,7 @@
 - refine study c, the vertical loop, in a second round of monochrome mark studies. this does not approve final artwork, exact orange values, motion, or sound.
 - after reviewing the second round, proceed with variant b, the vertical loop with directional ends, for final-art exploration. do not treat it as approved final artwork or infer orange, motion, or sound choices.
 - after reviewing round three, move study 03, compact orbit, into detailed final-art review. this chooses a refinement direction only; final silhouette, exact orange values, motion, and sound remain unapproved.
+- after reviewing the detail round, proceed with treatment 02, breathing room, toward final-art approval. the architect flagged its possible 16 px break for review; this does not approve final artwork, color, motion, or sound.
 
 ## compression behavior confirmed on 2026-10-24
 

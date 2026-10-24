@@ -27,6 +27,10 @@ round-three [final-art explorations](Brand/Studies/round-three/index.html) refin
 
 the architect selected 03, compact orbit, to move into detailed final-art review. this is a refinement direction only; do not treat its silhouette or provisional orange sample as approved artwork or color.
 
+the accessible [detail-round comparison](Brand/Studies/detail-round/index.html) refines 03 into three menu-bar and app-icon treatments. all three remain review studies; no silhouette or orange value has final approval.
+
+the architect selected detail-round 02, breathing room, to proceed toward final-art approval. the 16 px break and provisional orange treatment still need review; this selection does not approve final artwork, color, motion, or sound.
+
 ## interface rules
 
 - use native macOS hierarchy, materials, typography, focus rings, menus, dialogs, and keyboard behavior as the base. custom chrome stays around capture selection, preview progress, and small brand moments.
