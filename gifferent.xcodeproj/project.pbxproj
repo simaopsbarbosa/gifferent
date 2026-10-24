@@ -660,6 +660,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = gifferent;
+				INFOPLIST_FILE = Sources/App/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "gifferent captures the display or window you select to create a local gif.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
@@ -745,6 +746,7 @@
 				ENABLE_APP_SANDBOX = NO;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = gifferent;
+				INFOPLIST_FILE = Sources/App/Info.plist;
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSScreenCaptureUsageDescription = "gifferent captures the display or window you select to create a local gif.";
 				INFOPLIST_KEY_NSPrincipalClass = NSApplication;
