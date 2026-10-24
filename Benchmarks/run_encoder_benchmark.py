@@ -24,6 +24,7 @@ PRIMARY_MATRIX_CANDIDATES = ("gifski", "magick", "magick-unoptimized", "imageio"
 CANDIDATES = (*PRIMARY_MATRIX_CANDIDATES, "imageio-app")
 RSS_PATTERN = re.compile(r"(\d+)\s+maximum resident set size")
 CPU_PATTERN = re.compile(r"([\d.]+)\s+real\s+([\d.]+)\s+user\s+([\d.]+)\s+sys")
+POSIX_CPU_PATTERN = re.compile(r"real\s+([\d.]+)\s+user\s+([\d.]+)\s+sys\s+([\d.]+)")
 
 
 def capture(command):
@@ -60,6 +61,41 @@ def tree_bytes(path):
             except FileNotFoundError:
                 pass
     return total
+
+
+def process_tree_rss_bytes(ps_output, root_pid):
+    processes = {}
+    for line in ps_output.splitlines():
+        fields = line.split()
+        if len(fields) != 3:
+            continue
+        try:
+            pid, parent_pid, rss_kib = (int(field) for field in fields)
+        except ValueError:
+            continue
+        processes[pid] = (parent_pid, rss_kib)
+    if root_pid not in processes:
+        return None
+
+    tree_pids = {root_pid}
+    changed = True
+    while changed:
+        changed = False
+        for pid, (parent_pid, _) in processes.items():
+            if parent_pid in tree_pids and pid not in tree_pids:
+                tree_pids.add(pid)
+                changed = True
+    return sum(processes[pid][1] for pid in tree_pids) * 1024
+
+
+def cpu_seconds(stderr, use_system_time, use_posix_time):
+    if use_system_time:
+        match = CPU_PATTERN.search(stderr)
+        return (float(match.group(2)), float(match.group(3))) if match else (None, None)
+    if use_posix_time:
+        match = POSIX_CPU_PATTERN.search(stderr)
+        return (float(match.group(2)), float(match.group(3))) if match else (None, None)
+    return None, None
 
 
 def gif_metadata(path):
@@ -358,11 +394,11 @@ def command_sequence_for(name, tools, fps, frames, output, work, magick_diffusio
     return stages
 
 
-def run_command(command, work, timeout_seconds, use_system_time):
+def run_command(command, work, timeout_seconds, use_system_time, use_posix_time=False):
     peak_bytes = 0
     peak_rss_bytes = None
     done = threading.Event()
-    wrapped = ["/usr/bin/time", "-l", *command] if use_system_time else command
+    wrapped = ["/usr/bin/time", "-l", *command] if use_system_time else ["/usr/bin/time", "-p", *command] if use_posix_time else command
     started = time.perf_counter()
     process = subprocess.Popen(wrapped, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
 
@@ -371,9 +407,14 @@ def run_command(command, work, timeout_seconds, use_system_time):
         while not done.wait(0.02):
             peak_bytes = max(peak_bytes, tree_bytes(work))
             if not use_system_time:
-                sample = capture(["ps", "-o", "rss=", "-p", str(process.pid)])
-                if sample.get("exit_code") == 0 and sample["stdout"].strip().isdigit():
-                    peak_rss_bytes = max(peak_rss_bytes or 0, int(sample["stdout"].strip()) * 1024)
+                if use_posix_time:
+                    sample = capture(["ps", "-axo", "pid=,ppid=,rss="])
+                    sample_rss = process_tree_rss_bytes(sample.get("stdout", ""), process.pid) if sample.get("exit_code") == 0 else None
+                else:
+                    sample = capture(["ps", "-o", "rss=", "-p", str(process.pid)])
+                    sample_rss = int(sample["stdout"].strip()) * 1024 if sample.get("exit_code") == 0 and sample["stdout"].strip().isdigit() else None
+                if sample_rss is not None:
+                    peak_rss_bytes = max(peak_rss_bytes or 0, sample_rss)
 
     thread = threading.Thread(target=monitor, daemon=True)
     thread.start()
@@ -394,11 +435,11 @@ def run_command(command, work, timeout_seconds, use_system_time):
         thread.join()
         peak_bytes = max(peak_bytes, tree_bytes(work))
     match = RSS_PATTERN.search(stderr)
-    cpu = CPU_PATTERN.search(stderr) if use_system_time else None
-    return {"command": command, "elapsed_seconds": elapsed, "cpu_user_seconds": float(cpu.group(2)) if cpu else None, "cpu_system_seconds": float(cpu.group(3)) if cpu else None, "exit_code": process.returncode, "timed_out": timed_out, "peak_workspace_bytes_sampled": peak_bytes, "peak_resident_bytes_reported": int(match.group(1)) if match else peak_rss_bytes, "memory_measurement": "system_time" if match else "sampled_ps" if peak_rss_bytes is not None else "unavailable", "stdout": stdout[-16000:], "stderr": stderr[-16000:]}
+    cpu_user_seconds, cpu_system_seconds = cpu_seconds(stderr, use_system_time, use_posix_time)
+    return {"command": command, "elapsed_seconds": elapsed, "cpu_user_seconds": cpu_user_seconds, "cpu_system_seconds": cpu_system_seconds, "exit_code": process.returncode, "timed_out": timed_out, "peak_workspace_bytes_sampled": peak_bytes, "peak_resident_bytes_reported": int(match.group(1)) if match else peak_rss_bytes, "memory_measurement": "system_time" if match else "sampled_ps" if peak_rss_bytes is not None else "unavailable", "stdout": stdout[-16000:], "stderr": stderr[-16000:]}
 
 
-def run_one(name, tools, manifest, frames, output, label, timeout_seconds, use_system_time, magick_diffusion_amount=100, retained_hashes=None):
+def run_one(name, tools, manifest, frames, output, label, timeout_seconds, use_system_time, magick_diffusion_amount=100, retained_hashes=None, use_posix_time=False):
     fps = manifest["fps"]
     total_started = time.perf_counter()
     work = output / "work" / f"{name}-{label}"
@@ -425,7 +466,7 @@ def run_one(name, tools, manifest, frames, output, label, timeout_seconds, use_s
                     "stderr": "path timeout expired before this stage started",
                 }
             else:
-                stage_result = run_command(stage["command"], work, remaining, use_system_time)
+                stage_result = run_command(stage["command"], work, remaining, use_system_time, use_posix_time)
             stage_result["stage"] = stage["stage"]
             stage_results.append(stage_result)
             if stage_result["exit_code"] != 0 or stage_result["timed_out"]:
@@ -575,6 +616,9 @@ def main():
     availability = {name: path_availability(name, tools) for name in CANDIDATES}
     time_probe = capture(["/usr/bin/time", "-l", "/usr/bin/true"])
     use_system_time = time_probe.get("exit_code") == 0
+    posix_time_probe = capture(["/usr/bin/time", "-p", "/usr/bin/true"])
+    use_posix_time = not use_system_time and posix_time_probe.get("exit_code") == 0
+    measurement_mode = "system_time" if use_system_time else "posix_time_and_sampled_ps" if use_posix_time else "sampled_ps"
     selected = list(dict.fromkeys(args.candidates))
     records = []
     retained_hashes = {name: set() for name in selected}
@@ -587,7 +631,7 @@ def main():
             label = "cold" if round_index == 0 else f"warm-{round_index:02d}"
             print(f"running {name} {label}", flush=True)
             try:
-                result = run_one(name, tools, manifest, frames, args.output, label, args.timeout, use_system_time, args.magick_diffusion_amount, retained_hashes[name])
+                result = run_one(name, tools, manifest, frames, args.output, label, args.timeout, use_system_time, args.magick_diffusion_amount, retained_hashes[name], use_posix_time)
             except (OSError, ValueError) as error:
                 failed_work = args.output / "work" / f"{name}-{label}"
                 failed_commands = command_sequence_for(name, tools, fps, frames, failed_work / "output.gif", failed_work, args.magick_diffusion_amount)
@@ -613,7 +657,7 @@ def main():
             "p90_warm_seconds": percentile(warm, 0.9) if warm else None,
             "samples": [summary_sample(sample) for sample in samples],
         }
-    report = {"environment": environment(), "fixture": {"path": str(fixture), "manifest": manifest, "manifest_sha256": digest(manifest_path), "frames_sha256": fixture_digest(frames)}, "tools": tools, "path_availability": availability, "system_time_probe": time_probe, "runs_requested": args.runs, "cold_run_definition": "the first invocation of each path in this series; operating-system caches are not flushed", "magick_diffusion_amount_percent": args.magick_diffusion_amount, "timeout_seconds": args.timeout, "summary": summary, "limits": ["this measures offline PNG-to-GIF encoding, not capture or stop-to-preview latency", "per-frame centisecond delays and infinite-loop metadata must match the fixture/output contract", "peak workspace bytes are polled every 20 ms and can miss short-lived files", "memory uses macOS /usr/bin/time -l when available, otherwise sampled ps; either may include helper processes or miss short peaks", "GIF parsing checks structure and metadata, not visual fidelity or playback in another app"]}
+    report = {"environment": environment(), "fixture": {"path": str(fixture), "manifest": manifest, "manifest_sha256": digest(manifest_path), "frames_sha256": fixture_digest(frames)}, "tools": tools, "path_availability": availability, "system_time_probe": time_probe, "posix_time_probe": posix_time_probe, "measurement_mode": measurement_mode, "runs_requested": args.runs, "cold_run_definition": "the first invocation of each path in this series; operating-system caches are not flushed", "magick_diffusion_amount_percent": args.magick_diffusion_amount, "timeout_seconds": args.timeout, "summary": summary, "limits": ["this measures offline PNG-to-GIF encoding, not capture or stop-to-preview latency", "per-frame centisecond delays and infinite-loop metadata must match the fixture/output contract", "peak workspace bytes are polled every 20 ms and can miss short-lived files", "macOS /usr/bin/time -l reports command CPU/RSS when available; otherwise /usr/bin/time -p reports user/system CPU and sampled ps sums RSS for the timer process and descendants, which can miss short peaks", "GIF parsing checks structure and metadata, not visual fidelity or playback in another app"]}
     (args.output / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
     print(f"raw results: {args.output / 'raw.json'}")

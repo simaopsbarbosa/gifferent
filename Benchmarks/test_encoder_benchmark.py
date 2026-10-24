@@ -19,6 +19,8 @@ from run_encoder_benchmark import (
     fixture_digest,
     gif_metadata,
     path_availability,
+    cpu_seconds,
+    process_tree_rss_bytes,
     run_one,
     summary_sample,
 )
@@ -43,6 +45,20 @@ SIX_FRAME_MANIFEST = {"fps": 24, "width": 1, "height": 1, "duration_seconds": 6 
 
 
 class CleanupTests(unittest.TestCase):
+    def test_posix_time_parser_returns_user_and_system_cpu(self):
+        self.assertEqual(cpu_seconds("real 1.25\nuser 0.80\nsys 0.15\n", False, True), (0.8, 0.15))
+        self.assertEqual(cpu_seconds("0.50 real 0.30 user 0.10 sys", True, False), (0.3, 0.1))
+        self.assertEqual(cpu_seconds("no timing data", False, False), (None, None))
+
+    def test_process_tree_rss_sums_timer_and_descendant_processes(self):
+        ps_output = """100 1 10
+101 100 20
+102 101 30
+200 1 40
+"""
+        self.assertEqual(process_tree_rss_bytes(ps_output, 100), 60 * 1024)
+        self.assertIsNone(process_tree_rss_bytes(ps_output, 999))
+
     def test_primary_matrix_is_five_paths_and_alternates_order(self):
         self.assertEqual(
             PRIMARY_MATRIX_CANDIDATES,
