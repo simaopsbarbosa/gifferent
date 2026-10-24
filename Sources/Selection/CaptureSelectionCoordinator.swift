@@ -154,7 +154,15 @@ final class CaptureSelectionCoordinator: ObservableObject {
             heightInPoints: Int(screen.frame.height)
           )
         ],
-        windows: []
+        windows: [
+          CaptureWindowSource(
+            id: 1,
+            frame: CGRect(x: 24, y: 24, width: 320, height: 240),
+            title: "fixture window",
+            applicationName: "gifferent fixture",
+            applicationBundleIdentifier: "com.gifferent.ui-fixture"
+          )
+        ]
       )
       screens = [geometry.id: fixtureScreen]
       selection = CaptureSelectionRestoration.validSelection(
