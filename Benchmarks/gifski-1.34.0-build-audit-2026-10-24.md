@@ -106,6 +106,8 @@ the build exited 0; the complete output is `/private/tmp/gifski-build-1.34.0.log
 
 ## remaining distribution evidence
 
+the [cross-candidate package license evidence report](encoder-package-license-evidence-2026-10-24.md) records the specific `gif-dispose` and pngquant notice gaps found here and source-linked evidence for the Homebrew ImageMagick 7.1.2-34 candidate. it does not select an encoder or clear either build for distribution.
+
 - [x] run the pinned release build and retain the full build log and exact command.
 - [x] record binary SHA-256, `file`/`lipo`, `otool -L`, `gifski --version`, and complete `gifski --help` output; no FFmpeg-linked library is present.
 - [ ] obtain and archive the exact `gif-dispose` license/copyright text and resolve publisher pngquant notice presentation as recorded in the [dependency notice follow-up](#follow-up-gif-dispose-and-pngquant-notices-2026-10-24); complete the remaining active-crate license and notice review before distribution.
