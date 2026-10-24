@@ -86,9 +86,16 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(testWindow.waitForExistence(timeout: 10))
     testWindow.buttons["show-recording-frame-button"].click()
 
-    let frameWindow = app.windows.matching(identifier: "recording-frame-window").firstMatch
+    let fixtureState = testWindow.staticTexts["recording-frame-fixture-state"]
+    XCTAssertTrue(fixtureState.waitForExistence(timeout: 5))
+    XCTAssertTrue(waitForValue(containing: "visible=true", in: fixtureState))
+    XCTAssertTrue((fixtureState.value as? String)?.contains("app-window=true") == true)
+
+    let frameWindow = app.descendants(matching: .any)
+      .matching(identifier: "recording-frame-window").firstMatch
     XCTAssertTrue(frameWindow.waitForExistence(timeout: 5))
-    let label = frameWindow.staticTexts["recording-frame-label"]
+    let label = app.descendants(matching: .staticText)
+      .matching(identifier: "recording-frame-label").firstMatch
     XCTAssertTrue(label.waitForExistence(timeout: 5))
     XCTAssertEqual(label.label, "recording")
     let originalFrame = label.frame
@@ -101,7 +108,18 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertGreaterThan(label.frame.minX, originalFrame.minX)
 
     testWindow.buttons["hide-recording-frame-button"].click()
+    XCTAssertTrue(waitForValue(containing: "hidden", in: fixtureState))
     XCTAssertFalse(frameWindow.waitForExistence(timeout: 1))
+  }
+
+  private func waitForValue(
+    containing expected: String,
+    in element: XCUIElement,
+    timeout: TimeInterval = 5
+  ) -> Bool {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "value CONTAINS %@", expected), object: element)
+    return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
   }
 
   private func waitForStatus(

@@ -8,6 +8,9 @@ final class GifferentRuntime: ObservableObject {
 
   @Published private(set) var status = "idle"
   @Published private(set) var selectionDescription: String?
+  #if DEBUG
+    @Published private(set) var recordingFrameFixtureState = "hidden"
+  #endif
 
   let hotkeySettings: HotkeySettingsStore
 
@@ -224,15 +227,18 @@ final class GifferentRuntime: ObservableObject {
     func showRecordingFrameFixture() {
       recordingFrameOverlay.showFixture(
         frame: CGRect(x: 110, y: 110, width: 220, height: 130))
+      recordingFrameFixtureState = recordingFrameOverlay.fixtureStateDescription
     }
 
     func moveRecordingFrameFixture() {
       recordingFrameOverlay.moveFixture(
         to: CGRect(x: 180, y: 160, width: 260, height: 150))
+      recordingFrameFixtureState = recordingFrameOverlay.fixtureStateDescription
     }
 
     func hideRecordingFrameFixture() {
       recordingFrameOverlay.hide()
+      recordingFrameFixtureState = recordingFrameOverlay.fixtureStateDescription
     }
   #endif
 

@@ -38,6 +38,11 @@ final class RecordingFrameOverlayController {
   func hide() {
     trackingTask?.cancel()
     trackingTask = nil
+    if let panel {
+      let accessibilityWindows = (NSApp.accessibilityWindows() as? [NSWindow] ?? [])
+        .filter { $0 !== panel }
+      NSApp.setAccessibilityWindows(accessibilityWindows)
+    }
     panel?.orderOut(nil)
     panel?.close()
     panel = nil
@@ -45,6 +50,12 @@ final class RecordingFrameOverlayController {
   }
 
   #if DEBUG
+    var fixtureStateDescription: String {
+      guard let panel else { return "hidden" }
+      return
+        "visible=\(panel.isVisible), app-window=\(NSApp.windows.contains { $0 === panel }), x=\(Int(panel.frame.minX))"
+    }
+
     func showFixture(frame: CGRect) {
       show(frame: frame)
     }
@@ -59,6 +70,11 @@ final class RecordingFrameOverlayController {
     guard let panel = RecordingFramePanel(targetFrame: frame) else { return }
     self.panel = panel
     panel.orderFrontRegardless()
+    var accessibilityWindows = NSApp.accessibilityWindows() ?? []
+    if !accessibilityWindows.contains(where: { ($0 as? NSWindow) === panel }) {
+      accessibilityWindows.append(panel)
+      NSApp.setAccessibilityWindows(accessibilityWindows)
+    }
     isVisible = true
   }
 
