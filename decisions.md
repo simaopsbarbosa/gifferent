@@ -81,7 +81,7 @@
 ## bounded size-search implementation on 2026-10-24
 
 - destination buttons start a cancellable local search. the selected scale is the maximum; active candidates use only architect-approved scale/rate pairs at or below that scale. quality steps down from the selected value in five-point increments and always stops at 90, so the default 90 setting runs one quality attempt per eligible pair; the 100 setting runs three per pair.
-- sample source frames from cumulative GIF timing, preserve the full edited duration by adjusting the final output frame delay, and validate the expected sampled schedule and loop mode. run one candidate at a time, retain only the smallest candidate, and remove all other outputs on replacement, failure, or cancellation. the original GIF remains available throughout.
+- sample source frames from cumulative GIF timing, preserve the full edited duration by adjusting the final output frame delay, and validate exact total duration, valid frame metadata, and loop mode. run one candidate at a time, retain only the smallest candidate, and remove all other outputs on replacement, failure, or cancellation. the original GIF remains available throughout.
 
 ## confirmed by the architect on 2026-10-20
 

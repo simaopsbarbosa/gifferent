@@ -822,7 +822,6 @@ final class RecordingCoordinator: ObservableObject {
       )
       try Task.checkCancellation()
       try await workspace.keepCompressedPreviewOutput(for: previewID, at: result.gif.url)
-      ownedURLs.remove(result.gif.url)
       let snapshot = try await workspace.snapshot(for: previewID)
       guard compressionRequest == request, !Task.isCancelled else {
         try? await workspace.removeCompressedPreviewOutput(for: previewID, at: result.gif.url)
@@ -839,6 +838,7 @@ final class RecordingCoordinator: ObservableObject {
         attempts: result.attempts
       )
       state = .previewReady(previewID, snapshot, original)
+      ownedURLs.remove(result.gif.url)
       compressionAction = .compressed
       compressionTask = nil
       compressionRequest = nil

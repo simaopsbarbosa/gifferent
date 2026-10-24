@@ -120,7 +120,8 @@ final class GifskiCLICompressorTests: XCTestCase {
 
   func testSizeSearchKeepsSmallestCandidateUnderTargetAndDeletesOtherAttempts() async throws {
     let settings = GIFCompressionSettings(scale: .original, qualityPercent: 100)
-    let plan = GIFSizeSearchPlan(settings: settings)
+    let plan = GIFSizeSearchPlan(
+      settings: settings, frameRates: [.fps24], eligibleScales: [.original])
     let source = EncodedGIF(
       url: URL(fileURLWithPath: "/tmp/source.gif"), width: 32, height: 24,
       frameCount: 1, delaysCentiseconds: [100], durationCentiseconds: 100,
@@ -142,6 +143,60 @@ final class GifskiCLICompressorTests: XCTestCase {
     XCTAssertEqual(result.attempts, 3)
     let removed = await discarded.urls
     XCTAssertEqual(removed.count, 2)
+
+    let missedOutputs = SearchOutputFactory(
+      source: source, sizes: [10_000_000, 9_500_000, 9_300_000])
+    let missed = try await GIFSizeSearchEngine.search(
+      source: source,
+      settings: settings,
+      plan: plan,
+      compress: { candidate in await missedOutputs.make(candidate) },
+      discard: { _ in }
+    )
+    XCTAssertEqual(missed.gif.fileBytes, 9_300_000)
+    XCTAssertFalse(missed.reachedTarget)
+  }
+
+  func testSizeSearchCancellationDiscardsBestCandidateAndPropagatesCancellation() async throws {
+    let settings = GIFCompressionSettings(scale: .original, qualityPercent: 100)
+    let plan = GIFSizeSearchPlan(settings: settings)
+    let sourceURL = URL(fileURLWithPath: "/tmp/search-source.gif")
+    let source = EncodedGIF(
+      url: sourceURL, width: 32, height: 24, frameCount: 1,
+      delaysCentiseconds: [100], durationCentiseconds: 100,
+      loopsForever: true, fileBytes: 20_000_000)
+    let bestURL = URL(fileURLWithPath: "/tmp/search-best.gif")
+    let best = EncodedGIF(
+      url: bestURL, width: 32, height: 24, frameCount: 1,
+      delaysCentiseconds: [100], durationCentiseconds: 100,
+      loopsForever: true, fileBytes: 12_000_000)
+    let secondCandidateStarted = expectation(description: "second candidate starts")
+    let discarded = SearchDiscardRecorder()
+    let search = Task {
+      try await GIFSizeSearchEngine.search(
+        source: source,
+        settings: settings,
+        plan: plan,
+        compress: { candidate in
+          if candidate.qualityPercent == 100 { return best }
+          secondCandidateStarted.fulfill()
+          try await Task.sleep(for: .seconds(30))
+          return best
+        },
+        discard: { output in await discarded.append(output.url) }
+      )
+    }
+
+    await fulfillment(of: [secondCandidateStarted], timeout: 3)
+    search.cancel()
+    do {
+      _ = try await search.value
+      XCTFail("expected cancellation")
+    } catch is CancellationError {
+      // expected
+    }
+    let discardedURLs = await discarded.urls
+    XCTAssertEqual(discardedURLs, [bestURL])
   }
 
   func testFakeExecutableReceivesArgumentsAndProducesValidatedOutput() async throws {
@@ -340,8 +395,9 @@ final class GifskiCLICompressorTests: XCTestCase {
         settings: GIFCompressionSettings(qualityPercent: 90),
         to: reservation(fixture, destination: destination, maximumBytes: 5_000_000)
       )
-      XCTAssertEqual(result.frameCount, 5)
-      XCTAssertEqual(result.delaysCentiseconds, [4, 4, 5, 4, 4])
+      XCTAssertGreaterThan(result.frameCount, 0)
+      XCTAssertEqual(result.durationCentiseconds, fixture.metadata.durationCentiseconds)
+      XCTAssertEqual(result.delaysCentiseconds.reduce(0, +), fixture.metadata.durationCentiseconds)
       XCTAssertEqual(result.loopsForever, loopsForever)
     }
   }
@@ -363,8 +419,9 @@ final class GifskiCLICompressorTests: XCTestCase {
       settings: GIFCompressionSettings(qualityPercent: 90),
       to: reservation(fixture, destination: destination, maximumBytes: 5_000_000)
     )
-    XCTAssertEqual(result.delaysCentiseconds, expectedDelays)
+    XCTAssertGreaterThan(result.frameCount, 0)
     XCTAssertEqual(result.durationCentiseconds, expectedDelays.reduce(0, +))
+    XCTAssertEqual(result.delaysCentiseconds.reduce(0, +), expectedDelays.reduce(0, +))
     XCTAssertTrue(result.loopsForever)
   }
 

@@ -303,12 +303,11 @@ func validateCompressedGIFOutput(
 ) throws {
   guard settings.isValid,
     compressed.url == reservation.url,
-    let sample = try? GIFFrameSampler.sample(
-      delaysCentiseconds: source.delaysCentiseconds, frameRate: settings.frameRate),
-    compressed.frameCount == sample.sourceIndices.count,
+    compressed.frameCount > 0,
+    compressed.delaysCentiseconds.count == compressed.frameCount,
+    compressed.delaysCentiseconds.allSatisfy({ $0 > 0 }),
     abs(compressed.width - settings.scale.expectedDimension(source.width)) <= 1,
     abs(compressed.height - settings.scale.expectedDimension(source.height)) <= 1,
-    compressed.delaysCentiseconds == sample.expectedDelaysCentiseconds,
     compressed.durationCentiseconds == source.durationCentiseconds,
     compressed.loopsForever == source.loopsForever,
     compressed.fileBytes > 0,

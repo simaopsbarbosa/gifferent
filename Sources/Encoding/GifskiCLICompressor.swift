@@ -147,8 +147,13 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
         controller.cancel()
       }
       try Task.checkCancellation()
-      try Self.setFinalFrameDelay(
-        in: temporaryURL, centiseconds: sample.expectedDelaysCentiseconds.last ?? 0)
+      let initialOutput = try GIFMetadataInspector().inspect(temporaryURL)
+      let precedingDuration = initialOutput.delaysCentiseconds.dropLast().reduce(0, +)
+      let finalDelay = source.durationCentiseconds - precedingDuration
+      guard finalDelay > 0, finalDelay <= 65_535 else {
+        throw GifskiCompressionError.invalidOutput
+      }
+      try Self.setFinalFrameDelay(in: temporaryURL, centiseconds: finalDelay)
       try FileManager.default.moveItem(at: temporaryURL, to: reservation.url)
       movedOutput = true
       let output = try GIFMetadataInspector().inspect(reservation.url)
