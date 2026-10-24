@@ -78,7 +78,8 @@ final class GIFEditModelTests: XCTestCase {
 
   func testRejectsNonpositiveOrNonfinitePlaybackSpeed() {
     let source = sequence(timestamps: [0, 1])
-    for speed in [0, -1, .infinity, -.infinity, .nan] {
+    let speeds: [Double] = [0, -1, Double.infinity, -Double.infinity, Double.nan]
+    for speed in speeds {
       XCTAssertThrowsError(
         try GIFEditModel.apply(
           GIFEditParameters(
