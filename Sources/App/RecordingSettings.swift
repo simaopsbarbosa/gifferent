@@ -67,7 +67,7 @@ struct RecordingSettingsView: View {
     Form {
       Toggle("include cursor", isOn: $store.showsCursor)
         .accessibilityIdentifier("include-cursor-toggle")
-        .accessibilityValue(store.showsCursor ? "included" : "hidden")
+        .accessibilityLabel("include cursor, \(store.showsCursor ? "included" : "hidden")")
     }
     .formStyle(.grouped)
     .frame(minWidth: 320)

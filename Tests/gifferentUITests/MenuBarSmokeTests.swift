@@ -47,10 +47,10 @@ final class MenuBarSmokeTests: XCTestCase {
     let cursorToggle = settingsWindow.descendants(matching: .any)
       .matching(identifier: "include-cursor-toggle").firstMatch
     XCTAssertTrue(cursorToggle.exists)
-    XCTAssertEqual(cursorToggle.value as? String, "included")
+    XCTAssertEqual(cursorToggle.label, "include cursor, included")
     cursorToggle.click()
-    XCTAssertEqual(cursorToggle.value as? String, "hidden")
-    settingsWindow.buttons["Close"].click()
+    XCTAssertEqual(cursorToggle.label, "include cursor, hidden")
+    settingsWindow.typeKey("w", modifierFlags: .command)
 
     testWindow.buttons["recording-action-button"].click()
     let selectionWindow = app.windows["capture selection"]
