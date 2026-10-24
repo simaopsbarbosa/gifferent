@@ -320,7 +320,7 @@ final class SessionWorkspaceStoreTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: base) }
     let store = SessionWorkspaceStore(
       rootDirectory: base.appendingPathComponent("sessions"),
-      maximumSessionBytes: 128,
+      maximumSessionBytes: 1_024,
       minimumFreeBytes: 0
     )
     let id = try await store.start()
@@ -356,7 +356,7 @@ final class SessionWorkspaceStoreTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: base) }
     let store = SessionWorkspaceStore(
       rootDirectory: base.appendingPathComponent("sessions"),
-      maximumSessionBytes: 128,
+      maximumSessionBytes: 1_024,
       minimumFreeBytes: 0
     )
     let id = try await store.start()

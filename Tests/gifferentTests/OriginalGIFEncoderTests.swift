@@ -48,6 +48,11 @@ final class OriginalGIFEncoderTests: XCTestCase {
 
     XCTAssertFalse(result.loopsForever)
     XCTAssertEqual(try GIFMetadataInspector().inspect(output), result)
+    let source = try XCTUnwrap(CGImageSourceCreateWithURL(output as CFURL, nil))
+    let properties = try XCTUnwrap(
+      CGImageSourceCopyProperties(source, nil) as? [CFString: Any])
+    let gifProperties = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any] ?? [:]
+    XCTAssertNil(gifProperties[kCGImagePropertyGIFLoopCount])
   }
 
   func testCumulativeRoundingPreservesDurationForRegularAndIrregularTimestamps() throws {

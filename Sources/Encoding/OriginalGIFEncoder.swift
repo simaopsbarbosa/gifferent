@@ -360,9 +360,10 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
     guard let expectedDimensions,
       let source = CGImageSourceCreateWithURL(url as CFURL, nil),
       CGImageSourceGetCount(source) == expectedDelays.count,
-      let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any],
-      let gifProperties = globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any]
+      let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any]
     else { throw OriginalGIFEncodingError.invalidOutput }
+    let gifProperties =
+      globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any] ?? [:]
     let loopCount = gifProperties[kCGImagePropertyGIFLoopCount] as? Int
     guard
       (loopMode == .forever && loopCount == 0)
