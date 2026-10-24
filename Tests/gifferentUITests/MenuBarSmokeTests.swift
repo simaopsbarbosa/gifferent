@@ -276,10 +276,11 @@ final class MenuBarSmokeTests: XCTestCase {
     )
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
 
-    previewWindow.buttons["copy-preview-button"].click()
+    previewWindow.typeKey("c", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("copied", in: previewWindow))
-    previewWindow.buttons["save-preview-button"].click()
+    previewWindow.typeKey("s", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("saved", in: previewWindow))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: savedFixture.path))
 
     previewWindow.buttons["close-preview-button"].click()
     XCTAssertFalse(previewWindow.waitForExistence(timeout: 5))
