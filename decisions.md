@@ -66,6 +66,11 @@
 - after reviewing the animated [Gifski quality sweep](Benchmarks/reviews/gifski-quality-sweep-2026-10-24/index.html), the architect set quality 90 as the lowest value the automatic size search may use for now. the existing quality-90 animations remain the approved floor reference. keep the manual quality slider at 1–100; do not lower the automatic search floor without a later architect decision based on visual review.
 - the sweep records quality 70, 80, 90, and 100 outputs for mostly-static and high-motion profiles. its measurements are evidence, not approval of qualities below 90; three-run timings are indicative only.
 
+## Size-search resolution behavior confirmed on 2026-10-24
+
+- the current resolution choice is the maximum size the automatic destination search may use. search that size and smaller choices only; do not upscale above the user's selection.
+- sampled frame rates and reduced resolutions still need animated visual review against the approved quality floor before those combinations are accepted in the automatic candidate set.
+
 ## confirmed by the architect on 2026-10-20
 
 - macOS 14+, direct notarized download, menu bar only, background hotkeys, native SwiftUI UI.

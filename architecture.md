@@ -40,7 +40,7 @@ the recording iteration connects the menu and `⌃⌥R` action to a ScreenCaptur
 
 - 24 fps is the initial target, not a guarantee of every system or scene. preserve honest timing and report dropped frames in diagnostics.
 - display and region streams exclude gifferent's application in their ScreenCaptureKit filters. selected-window streams include only the chosen window, so the separate overlay window is outside that filter. do not rely on `NSWindow.sharingType` to omit content; Apple's current documentation marks that setting legacy. verify on a real Mac that the overlay never appears in captured frames.
-- the quality slider directly controls Gifski `--quality`. size search may adjust sampled frame rate and resolution; Gifski manages palette generation. make the effective settings visible so the result is understandable.
+- the quality slider directly controls Gifski `--quality`. size search may adjust sampled frame rate and resolution up to the currently selected resolution; never search above the user's selection. Gifski manages palette generation. make the effective settings visible so the result is understandable.
 - do not block first preview on secondary optimization if a playable original can appear sooner. show truthful processing state until the final GIF is ready for copy or save.
 - avoid automatic capture or background pixel access before the user invokes the recording flow and grants permission.
 
