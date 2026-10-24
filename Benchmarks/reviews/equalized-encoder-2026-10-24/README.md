@@ -13,7 +13,7 @@ open [`index.html`](index.html) locally for side-by-side source and decoded GIF 
 
 the selected frames show legible text at native size and clear cursor edges. the high-motion samples preserve the broad gradient transitions without an obvious still-frame banding defect in these frames. the optimized ImageMagick 100% diffusion sample has visible speckling in flat dark UI regions at native size, more apparent at 2×; the ImageIO and unoptimized ImageMagick samples look cleaner in those regions. this is a concrete visual difference, not by itself a confirmed floor failure: the approved floor allows minor differences visible only at 2×, while this speckle is also faintly visible at native size. architect review is needed to classify whether its native-size visibility is distracting. no objective text-blur or cursor-edge loss was evident in these selected frames.
 
-this spot check cannot assess flicker, temporal noise, cursor trails over time, playback differences among applications, or other slider values. it does not select a release encoder. the benchmark also had no peak-resident-memory or CPU measurements, and this page makes no memory claim.
+the architect reviewed the 100% diffusion sample and confirmed that the approved quality floor holds despite faint native-size speckling. this spot check cannot assess flicker, temporal noise, cursor trails over time, playback differences among applications, or other slider values. it does not select a release encoder. the benchmark also had no peak-resident-memory or CPU measurements, and this page makes no memory claim.
 
 ## provenance
 

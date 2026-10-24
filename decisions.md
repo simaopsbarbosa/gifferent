@@ -26,6 +26,12 @@
 - playback speed uses a continuous slider from 0.5× to 2× in 0.1× steps, centered at 1×.
 - the real-Mac animated clipboard paste acceptance test covers GitHub only. other destinations are outside this first-release clipboard compatibility gate.
 
+## recording preferences and warnings confirmed on 2026-10-24
+
+- put the configurable cursor-inclusion setting in a separate “recording settings…” window reachable from the menu. include the cursor by default; let the user turn it off.
+- warn once per recording after 30 seconds or when its session workspace reaches 75% of the 512 mib quota. keep recording, let the user dismiss the warning, and do not repeat it in that session.
+- warning presentation is still awaiting architect choice. the behavior is settled, but its visible surface must not interrupt normal Mac interaction or enter captured pixels.
+
 ## brand exploration confirmed on 2026-10-24
 
 - refine study c, the vertical loop, in a second round of monochrome mark studies. this does not approve final artwork, exact orange values, motion, or sound.
@@ -66,5 +72,5 @@
 - [gifski](https://github.com/ImageOptim/gifski/blob/main/README.md) uses temporal dithering and has a C API, but the architect asked for a bundled CLI. [gifsicle](https://github.com/kohler/gifsicle/blob/master/gifsicle.1) exposes dither methods including Floyd–Steinberg, Atkinson, and ordered variants. performance and visual quality must be benchmarked before selecting one or both.
 - the installed exploratory ImageMagick build changed encoded pixels and output size at 0%, 35%, and 70% diffusion on sparse samples from two synthetic fixtures; see the [prototype report](Benchmarks/imagemagick-dither-control-prototype-2026-10-24.md). this confirms only that the slider mapping has an observable effect in that build.
 - the candidate encoder license screen is an engineering risk review, not legal advice or an encoder choice. exact release builds still require locked dependency, runtime, notice, corresponding-source, signature, and notarization review.
-- the limited equal-work still-frame review found faint native-size speckling in optimized ImageMagick output at 100% diffusion. the architect must classify it against the approved floor before the setting or candidate can be treated as acceptable; the review does not assess temporal quality or select an encoder.
+- the limited equal-work still-frame review found faint native-size speckling in optimized ImageMagick output at 100% diffusion. the architect confirmed that this sample holds against the approved floor; the review does not assess temporal quality or select an encoder.
 - destination file limits can change. the limits quoted in [mvp.md](mvp.md) are a 2026-10-20 research snapshot and need verification before release.
