@@ -212,78 +212,122 @@ private struct GIFCompressionControls: View {
       Text("compression")
         .font(.caption)
         .foregroundStyle(.secondary)
+      GIFCompressionDestinationControl(coordinator: coordinator)
+      GIFCompressionScaleControl(coordinator: coordinator)
+      GIFCompressionDiffusionControl(coordinator: coordinator)
+      GIFCompressionActionControl(coordinator: coordinator)
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
+  }
+}
 
-      HStack(spacing: 8) {
-        ForEach(GIFCompressionDestination.allCases) { destination in
-          Button {
-            coordinator.selectCompressionDestination(destination)
-          } label: {
-            HStack(spacing: 6) {
-              Image(systemName: destination.systemImage)
-                .accessibilityIdentifier(
-                  "compression-destination-symbol-\(destination.accessibilityID)")
-              Text(
-                "\(destination.displayName) · \(destination.targetLabel) target · "
-                  + "\(destination.publishedMaximumLabel) max"
-              )
-            }
-          }
-          .buttonStyle(.bordered)
-          .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
-          .accessibilityIdentifier("compression-destination-\(destination.accessibilityID)")
-          .accessibilityLabel(
-            "\(destination.displayName), \(destination.targetLabel) target, "
-              + "\(destination.publishedMaximumLabel) published maximum"
-          )
-          .accessibilityAddTraits(
-            coordinator.compressionSettings.destination == destination
-              ? .isSelected : []
-          )
-          .help(
-            "target: \(destination.targetLabel) · published maximum: "
-              + "\(destination.publishedMaximumLabel) for "
-              + "\(destination.limitScopeDescription) · "
-              + "checked \(destination.limitResearchDate)"
-          )
-        }
+@MainActor
+private struct GIFCompressionDestinationControl: View {
+  @ObservedObject var coordinator: RecordingCoordinator
+
+  var body: some View {
+    HStack(spacing: 8) {
+      ForEach(GIFCompressionDestination.allCases) { destination in
+        GIFCompressionDestinationButton(coordinator: coordinator, destination: destination)
       }
+    }
+  }
+}
 
-      HStack(spacing: 8) {
-        Text("size")
-        Picker(
-          "size",
-          selection: Binding(
-            get: { coordinator.compressionSettings.scale },
-            set: { coordinator.selectCompressionScale($0) }
-          )
-        ) {
-          ForEach(GIFCompressionScale.allCases) { scale in
-            Text(scale.label).tag(scale)
-          }
-        }
-        .labelsHidden()
-        .pickerStyle(.segmented)
-        .accessibilityIdentifier("compression-scale-picker")
-        .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
-      }
+@MainActor
+private struct GIFCompressionDestinationButton: View {
+  @ObservedObject var coordinator: RecordingCoordinator
+  let destination: GIFCompressionDestination
 
-      HStack {
-        Text("dithering")
-        Slider(
-          value: Binding(
-            get: { Double(coordinator.compressionSettings.diffusionPercent) },
-            set: { coordinator.setCompressionDiffusion(Int($0.rounded())) }
-          ),
-          in: 0...100,
-          step: 5
+  var body: some View {
+    Button {
+      coordinator.selectCompressionDestination(destination)
+    } label: {
+      HStack(spacing: 6) {
+        Image(systemName: destination.systemImage)
+          .accessibilityIdentifier(
+            "compression-destination-symbol-\(destination.accessibilityID)")
+        Text(
+          "\(destination.displayName) · \(destination.targetLabel) target · "
+            + "\(destination.publishedMaximumLabel) max"
         )
-        .accessibilityLabel("dithering strength")
-        .accessibilityIdentifier("compression-diffusion-slider")
-        Text("\(coordinator.compressionSettings.diffusionPercent)%")
-          .accessibilityIdentifier("compression-diffusion-value")
       }
-      .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+    }
+    .buttonStyle(.bordered)
+    .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+    .accessibilityIdentifier("compression-destination-\(destination.accessibilityID)")
+    .accessibilityLabel(
+      "\(destination.displayName), \(destination.targetLabel) target, "
+        + "\(destination.publishedMaximumLabel) published maximum"
+    )
+    .accessibilityAddTraits(
+      coordinator.compressionSettings.destination == destination ? .isSelected : []
+    )
+    .help(
+      "target: \(destination.targetLabel) · published maximum: "
+        + "\(destination.publishedMaximumLabel) for "
+        + "\(destination.limitScopeDescription) · "
+        + "checked \(destination.limitResearchDate)"
+    )
+  }
+}
 
+@MainActor
+private struct GIFCompressionScaleControl: View {
+  @ObservedObject var coordinator: RecordingCoordinator
+
+  var body: some View {
+    HStack(spacing: 8) {
+      Text("size")
+      Picker(
+        "size",
+        selection: Binding(
+          get: { coordinator.compressionSettings.scale },
+          set: { coordinator.selectCompressionScale($0) }
+        )
+      ) {
+        ForEach(GIFCompressionScale.allCases) { scale in
+          Text(scale.label).tag(scale)
+        }
+      }
+      .labelsHidden()
+      .pickerStyle(.segmented)
+      .accessibilityIdentifier("compression-scale-picker")
+      .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+    }
+  }
+}
+
+@MainActor
+private struct GIFCompressionDiffusionControl: View {
+  @ObservedObject var coordinator: RecordingCoordinator
+
+  var body: some View {
+    HStack {
+      Text("dithering")
+      Slider(
+        value: Binding(
+          get: { Double(coordinator.compressionSettings.diffusionPercent) },
+          set: { coordinator.setCompressionDiffusion(Int($0.rounded())) }
+        ),
+        in: 0...100,
+        step: 5
+      )
+      .accessibilityLabel("dithering strength")
+      .accessibilityIdentifier("compression-diffusion-slider")
+      Text("\(coordinator.compressionSettings.diffusionPercent)%")
+        .accessibilityIdentifier("compression-diffusion-value")
+    }
+    .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+  }
+}
+
+@MainActor
+private struct GIFCompressionActionControl: View {
+  @ObservedObject var coordinator: RecordingCoordinator
+
+  var body: some View {
+    Group {
       if coordinator.isCompressionAvailable {
         if coordinator.isCompressionInProgress {
           HStack {
@@ -317,7 +361,6 @@ private struct GIFCompressionControls: View {
         EmptyView()
       }
     }
-    .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 
