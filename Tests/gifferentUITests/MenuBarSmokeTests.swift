@@ -193,6 +193,33 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(selectionStatus.value as? String, "window selected")
   }
 
+  func testSelectedWindowLossOpensUsablePartialPreview() {
+    let app = XCUIApplication()
+    app.launchArguments.append("--ui-testing")
+    app.launch()
+
+    let testWindow = app.windows["gifferent test menu"]
+    XCTAssertTrue(testWindow.waitForExistence(timeout: 10))
+    testWindow.buttons["recording-action-button"].click()
+
+    let selectionWindow = app.windows["capture selection"]
+    XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
+    selectionWindow.descendants(matching: .any)["select-window-picker"].click()
+    let fixtureWindow = app.menuItems["gifferent fixture · fixture window"]
+    XCTAssertTrue(fixtureWindow.waitForExistence(timeout: 5))
+    fixtureWindow.click()
+    selectionWindow.buttons["confirm-selection-button"].click()
+    waitForStatus("recording", in: testWindow)
+
+    testWindow.buttons["lose-selected-window-button"].click()
+    let previewWindow = app.windows["gif preview"]
+    XCTAssertTrue(previewWindow.waitForExistence(timeout: 10))
+    XCTAssertTrue(waitForPreviewStatus("preview ready", in: previewWindow))
+    XCTAssertTrue(previewWindow.staticTexts["preview-partial-status"].exists)
+    previewWindow.buttons["copy-preview-button"].click()
+    XCTAssertTrue(waitForPreviewAction("copied", in: previewWindow))
+  }
+
   func testRecordingActionOpensPreviewAndKeepsExportAfterClose() {
     let savedFixture = FileManager.default.temporaryDirectory
       .appendingPathComponent("gifferent-preview-ui-save.gif")

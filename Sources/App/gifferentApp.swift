@@ -101,6 +101,8 @@ private struct GifferentMenuContent: View {
           .accessibilityIdentifier("show-recording-warning-button")
         Button("show workspace warning fixture") { runtime.showWorkspaceWarningFixture() }
           .accessibilityIdentifier("show-workspace-warning-button")
+        Button("lose selected window fixture") { runtime.simulateWindowLossFixture() }
+          .accessibilityIdentifier("lose-selected-window-button")
       }
     #endif
 

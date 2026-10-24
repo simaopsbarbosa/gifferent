@@ -230,6 +230,11 @@ final class GifferentRuntime: ObservableObject {
   }
 
   #if DEBUG
+    func simulateWindowLossFixture() {
+      guard case .recording = recordingCoordinator.state else { return }
+      fixtureRecordingStreamFactory?.reportWindowLoss()
+    }
+
     func showRecordingWarningFixture() {
       guard recordingStartedAt != nil else { return }
       recordingStartedAt =
@@ -636,14 +641,26 @@ struct SavePanelGIFSaver: GIFSaving {
   @MainActor
   private final class FixtureRecordingStreamFactory: RecordingStreamPreparing {
     var onPrepare: ((Bool) -> Void)?
+    private var windowTermination: (@MainActor (CaptureTerminationReason) -> Void)?
 
     func prepare(
-      target _: RecordingTarget,
+      target: RecordingTarget,
       showsCursor: Bool,
-      onTermination _: @escaping @MainActor (CaptureTerminationReason) -> Void
+      onTermination: @escaping @MainActor (CaptureTerminationReason) -> Void
     ) async throws -> any RecordingCaptureSession {
       onPrepare?(showsCursor)
+      if case .window = target {
+        windowTermination = onTermination
+      } else {
+        windowTermination = nil
+      }
       return FixtureRecordingCaptureSession()
+    }
+
+    func reportWindowLoss() {
+      let callback = windowTermination
+      windowTermination = nil
+      callback?(.windowUnavailable)
     }
   }
 
