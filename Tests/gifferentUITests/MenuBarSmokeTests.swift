@@ -86,7 +86,7 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(testWindow.waitForExistence(timeout: 10))
     testWindow.buttons["show-recording-frame-button"].click()
 
-    let frameWindow = app.windows["recording frame"]
+    let frameWindow = app.windows.matching(identifier: "recording-frame-window").firstMatch
     XCTAssertTrue(frameWindow.waitForExistence(timeout: 5))
     let label = frameWindow.staticTexts["recording-frame-label"]
     XCTAssertTrue(label.waitForExistence(timeout: 5))
