@@ -96,6 +96,7 @@ struct GIFPreviewReadyView: View {
 @MainActor
 private struct GIFEditControls: View {
   @ObservedObject var coordinator: RecordingCoordinator
+  @State private var playbackSpeed = 1.0
 
   var body: some View {
     Group {
@@ -107,22 +108,21 @@ private struct GIFEditControls: View {
           GIFTimelineControl(
             frameCount: coordinator.editFrameCount,
             startIndex: parameters.frameRange.startIndex,
-            endIndexExclusive: parameters.frameRange.endIndexExclusive,
-            onChange: updateTrim
+            endIndexExclusive: parameters.frameRange.endIndexExclusive
           )
 
           HStack {
             Text("speed")
             Slider(
-              value: Binding(
-                get: { coordinator.editParameters?.playbackSpeed ?? 1 },
-                set: updateSpeed
-              ),
+              value: $playbackSpeed,
               in: 0.5...2,
               step: 0.1
             )
             .accessibilityLabel("playback speed")
             .accessibilityIdentifier("playback-speed-slider")
+            .onChange(of: playbackSpeed) { _, value in
+              coordinator.updatePlaybackSpeed(value)
+            }
             Text(String(format: "%.1f×", parameters.playbackSpeed))
               .accessibilityIdentifier("playback-speed-value")
           }
@@ -147,16 +147,14 @@ private struct GIFEditControls: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .disabled(coordinator.isPreviewActionInProgress)
+        .onAppear {
+          playbackSpeed = coordinator.editParameters?.playbackSpeed ?? 1
+        }
+        .onChange(of: coordinator.editParameters?.playbackSpeed) { _, value in
+          if let value { playbackSpeed = value }
+        }
       }
     }
-  }
-
-  private func updateTrim(start: Int, end: Int) {
-    coordinator.updateTrim(startIndex: start, endIndexExclusive: end)
-  }
-
-  private func updateSpeed(_ value: Double) {
-    coordinator.updatePlaybackSpeed(value)
   }
 
   private func selectForever() {
@@ -173,7 +171,6 @@ private struct GIFTimelineControl: View {
   let frameCount: Int
   let startIndex: Int
   let endIndexExclusive: Int
-  let onChange: @MainActor (Int, Int) -> Void
 
   var body: some View {
     GeometryReader { geometry in
@@ -194,31 +191,8 @@ private struct GIFTimelineControl: View {
           .frame(width: max(4, endX - startX), height: 4)
           .offset(x: startX)
 
-        GIFTimelineHandle(
-          identifier: "trim-start-handle",
-          label: "trim start",
-          index: start,
-          frameCount: frameCount,
-          lastIndex: max(0, min(lastIndex, end - 1)),
-          minimumIndex: 0,
-          x: startX,
-          trackWidth: trackWidth,
-          currentRange: start..<(end + 1),
-          onMove: { value in onChange(value, endIndexExclusive) }
-        )
-
-        GIFTimelineHandle(
-          identifier: "trim-end-handle",
-          label: "trim end",
-          index: end,
-          frameCount: frameCount,
-          lastIndex: lastIndex,
-          minimumIndex: min(lastIndex, max(0, start + 1)),
-          x: endX,
-          trackWidth: trackWidth,
-          currentRange: start..<(end + 1),
-          onMove: { value in onChange(startIndex, value + 1) }
-        )
+        GIFTimelineHandle(x: startX)
+        GIFTimelineHandle(x: endX)
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .coordinateSpace(name: "gif-timeline")
@@ -235,49 +209,13 @@ private struct GIFTimelineControl: View {
 
 @MainActor
 private struct GIFTimelineHandle: View {
-  let identifier: String
-  let label: String
-  let index: Int
-  let frameCount: Int
-  let lastIndex: Int
-  let minimumIndex: Int
   let x: CGFloat
-  let trackWidth: CGFloat
-  let currentRange: Range<Int>
-  let onMove: @MainActor (Int) -> Void
 
   var body: some View {
     Circle()
       .fill(Color.accentColor)
       .frame(width: 18, height: 18)
       .position(x: x, y: 16)
-      .gesture(
-        DragGesture(minimumDistance: 0, coordinateSpace: .named("gif-timeline"))
-          .onChanged { value in move(to: value.location.x) }
-      )
-      .accessibilityElement()
-      .accessibilityLabel(label)
-      .accessibilityValue("frame \(index + 1) of \(frameCount)")
-      .accessibilityIdentifier(identifier)
-      .accessibilityAddTraits(.isButton)
-      .accessibilityAdjustableAction(adjust)
-      .help("selected frames \(currentRange.lowerBound + 1) to \(currentRange.upperBound)")
-  }
-
-  private func move(to locationX: CGFloat) {
-    let normalized = min(max((locationX - 12) / trackWidth, 0), 1)
-    let moved = Int((normalized * CGFloat(max(0, frameCount - 1))).rounded())
-    onMove(min(max(moved, minimumIndex), lastIndex))
-  }
-
-  private func adjust(_ direction: AccessibilityAdjustmentDirection) {
-    let changed: Int
-    switch direction {
-    case .increment: changed = min(index + 1, lastIndex)
-    case .decrement: changed = max(index - 1, minimumIndex)
-    @unknown default: changed = index
-    }
-    onMove(changed)
   }
 }
 
