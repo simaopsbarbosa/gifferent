@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">warm orange 02 · provisional · light appearance</title><desc id="desc">compact-orbit loop-frame with a 0.7 pixel rounded-stroke gap at 16 pixels; warm orange 02 · provisional for light appearance</desc>
+  <g id="crop-frame" fill="none" stroke="#111111" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M8 22V10h12M44 10h12v12M56 42v12H44M20 54H8V42"/></g>
+  <g id="compact-loop" fill="none" stroke="#111111" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M23 30C25 24 29 20 33 23M41 34C39 40 35 44 31 41"/></g>
+  <g id="direction-tips" fill="none" stroke="#D45D21" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"><path d="M41.867 23l-4 -4 M41.867 23l-4 4 M22.133 41l4 -4 M22.133 41l4 4"/></g>
+</svg>

@@ -1,0 +1,27 @@
+{
+  "configurations" : [
+    {
+      "id" : "A9332EE7-DFB2-4935-88D8-871CE71E608A",
+      "name" : "default",
+      "options" : {}
+    }
+  ],
+  "defaultOptions" : {},
+  "testTargets" : [
+    {
+      "target" : {
+        "containerPath" : "container:gifferent.xcodeproj",
+        "identifier" : "gifferentTests",
+        "name" : "gifferentTests"
+      }
+    },
+    {
+      "target" : {
+        "containerPath" : "container:gifferent.xcodeproj",
+        "identifier" : "gifferentUITests",
+        "name" : "gifferentUITests"
+      }
+    }
+  ],
+  "version" : 1
+}

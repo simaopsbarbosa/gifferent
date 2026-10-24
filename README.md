@@ -2,9 +2,9 @@
 
 a fast, native GIF maker for macOS. summon capture, record while using your Mac, then copy, save, or compress locally.
 
-this repository currently contains the product specification. the app and its test suite have not been created yet.
+the app and its test suite are being built in tested iterations. capture selection has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. the current recording slice can capture to a private temporary workspace, encode a playable GIF candidate, and show an animated preview with metadata. copy and save actions are implemented behind testable adapters; animated paste into GitHub still needs real-Mac acceptance. compression and the release encoder are not available yet.
 
-the planned source license is AGPL-3.0-or-later. the full license text and bundled-tool notices will be added before code or binaries are distributed.
+the source license is [AGPL-3.0-or-later](LICENSE). [third-party notices](THIRD-PARTY-NOTICES.md) track bundled dependencies and tools.
 
 - [agent hub](AGENTS.md)
 - [vision](vision.md)
@@ -13,4 +13,23 @@ the planned source license is AGPL-3.0-or-later. the full license text and bundl
 - [architecture and experiments](architecture.md)
 - [definition of done](definition-of-done.md)
 - [decisions and open questions](decisions.md)
+- [delivery plan](delivery-plan.md)
+
+## local development
+
+use Xcode 26.2 (build 17C52) for the current foundation. open `gifferent.xcodeproj` with the shared `gifferent` scheme, or run:
+
+```sh
+bash Scripts/check-toolchain.sh
+python3 Scripts/check-docs.py
+bash Scripts/format-check.sh
+bash Scripts/lint.sh
+bash Scripts/build.sh
+bash Scripts/test-unit.sh
+bash Scripts/test-ui.sh
+```
+
+the build and test scripts write logs and `.xcresult` bundles under `.build/ci/`. UI tests need a macOS session that permits Xcode automation. deterministic UI tests use synthetic capture frames and injected clipboard and save adapters without requesting screen access. actual menu bar clicking, screen permission, shortcut delivery, overlay interaction, animated paste in destination apps, and release checks remain acceptance gates in [delivery-plan.md](delivery-plan.md).
+
+for a reliable local Screen Recording permission check, choose an Apple Development team in Xcode's signing settings and build with `bash Scripts/build.sh`. unsigned or ad hoc builds may lose the permission association after a rebuild. after enabling access in System Settings, quit and reopen gifferent before checking again. CI intentionally builds without signing because it does not exercise live screen capture.
 # gifferent

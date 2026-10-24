@@ -1,0 +1,29 @@
+# macOS and Xcode local state
+.DS_Store
+__pycache__/
+*.pyc
+xcuserdata/
+*.xcuserstate
+*.xccheckout
+*.xcscmblueprint
+DerivedData/
+
+# local build and test output
+build/
+.build/
+.swiftpm/xcode/
+*.xcresult/
+*.xcarchive/
+*.dSYM/
+*.app/
+*.dmg
+*.pkg
+Benchmarks/generated/
+Benchmarks/outputs/
+
+# local signing material and environment files
+.env
+.env.local
+*.p8
+*.p12
+*.keychain-db

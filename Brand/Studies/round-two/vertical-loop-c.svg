@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">vertical loop c: offset return</title>
+  <desc id="desc">two vertically opposed loop arcs with a slight diagonal offset inside four crop-frame corners</desc>
+  <g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 22V10h12M44 10h12v12M56 42v12H44M20 54H8V42"/>
+    <path d="M20 27a14 14 0 0 1 22 1M44 37a14 14 0 0 1-22-1"/>
+    <path d="m38 22 5 4-5 3M26 42l-5-4 5-3"/>
+  </g>
+</svg>

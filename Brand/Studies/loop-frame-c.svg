@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">study c: vertical loop</title>
+  <desc id="desc">two vertically opposed open loop arcs centered inside a crop frame</desc>
+  <g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 22V10h12M44 10h12v12M56 42v12H44M20 54H8V42"/>
+    <path d="M22 26a13 13 0 0 1 20 0M42 38a13 13 0 0 1-20 0"/>
+    <path d="m37 20 5 4-5 3M27 44l-5-4 5-3"/>
+  </g>
+</svg>

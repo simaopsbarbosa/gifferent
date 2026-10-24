@@ -12,8 +12,8 @@ a feature is complete only when all applicable checks below have evidence. an ex
 ## verification
 
 - unit tests cover the changed logic: geometry, timing, state transitions, size targeting, setting persistence, and error mapping as relevant.
-- integration tests cover the seams touched by the change, including ScreenCaptureKit adapters, frame processing, command-line encoding, metadata, clipboard, and disk export using controlled fixtures or suitable system integration.
-- automated acceptance tests exercise each affected user journey through the macOS UI with XCTest UI tests. provide stable launch arguments and deterministic test fixtures so CI does not depend on an uncontrolled desktop recording for every pull request. a real-Mac acceptance pass checks system permission, global hotkeys, multi-display selection, window movement, clipboard paste into a real target, sound, and visual feel before release.
+- integration tests cover the seams touched by the change, including ScreenCaptureKit adapters, frame processing, command-line encoding, metadata, clipboard, and disk export using controlled fixtures or suitable system integration. real-Mac animated clipboard compatibility is tested in GitHub for the first release.
+- automated acceptance tests exercise each affected user journey through the macOS UI with XCTest UI tests. provide stable launch arguments and deterministic test fixtures so CI does not depend on an uncontrolled desktop recording for every pull request. a real-Mac acceptance pass checks system permission, global hotkeys, multi-display selection, window movement, animated clipboard paste into GitHub, sound, and visual feel before release.
 - every existing feature remains covered by its unit, integration, and acceptance tests; run the full suite before merge. a regression gets a focused test.
 - build succeeds on the supported deployment target. no new compiler warnings, force unwraps in fallible capture paths, unhandled task failures, or persistent temporary media.
 

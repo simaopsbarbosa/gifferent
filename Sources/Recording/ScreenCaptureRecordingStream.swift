@@ -1,0 +1,325 @@
+import CoreMedia
+import CoreVideo
+import Foundation
+import ScreenCaptureKit
+
+enum RecordingStreamError: Error, Equatable {
+  case displayUnavailable
+  case windowUnavailable
+  case invalidRegion
+  case invalidDimensions
+}
+
+/// this adapter owns capture and frame delivery; a consumer must be installed before `start()`.
+@MainActor
+final class ScreenCaptureRecordingStream: RecordingCaptureSession {
+  let transport: RecordingFrameTransport
+  var frames: AsyncStream<RecordingFrame> { transport.frames }
+  var frameStatistics: RecordingFrameStatistics { transport.statistics() }
+
+  private let stream: SCStream
+  private let output: ScreenFrameOutput
+  private let target: RecordingTarget
+  private let sourceService: CaptureSourceService
+  private let onTermination: @MainActor (CaptureTerminationReason) -> Void
+  private var monitorTask: Task<Void, Never>?
+  private var startTask: Task<Void, Error>?
+  private var stopTask: Task<Void, Never>?
+  private var stopped = false
+
+  private init(
+    stream: SCStream,
+    output: ScreenFrameOutput,
+    target: RecordingTarget,
+    sourceService: CaptureSourceService,
+    transport: RecordingFrameTransport,
+    onTermination: @escaping @MainActor (CaptureTerminationReason) -> Void
+  ) {
+    self.stream = stream
+    self.output = output
+    self.target = target
+    self.sourceService = sourceService
+    self.transport = transport
+    self.onTermination = onTermination
+  }
+
+  /// prepares filters and outputs without starting capture, so the owner can begin
+  /// consuming `transport.frames` before the first sample is delivered.
+  static func prepare(
+    target: RecordingTarget,
+    showsCursor: Bool,
+    sourceService: CaptureSourceService = CaptureSourceService(),
+    onTermination: @escaping @MainActor (CaptureTerminationReason) -> Void
+  ) async throws -> ScreenCaptureRecordingStream {
+    guard sourceService.authorizationStatus() == .granted else {
+      throw CaptureSourceError.permissionRequired
+    }
+    let inventory = try await sourceService.availableSources()
+    try validate(target: target, against: inventory)
+    let content = try await SCShareableContent.excludingDesktopWindows(
+      false, onScreenWindowsOnly: true)
+    let filter = try makeFilter(target: target, content: content)
+    let configuration = try makeConfiguration(
+      target: target, filter: filter, showsCursor: showsCursor)
+    let transport = RecordingFrameTransport()
+    let output = ScreenFrameOutput(transport: transport)
+    let stream = SCStream(filter: filter, configuration: configuration, delegate: output)
+    try stream.addStreamOutput(output, type: .screen, sampleHandlerQueue: output.sampleQueue)
+
+    let session = ScreenCaptureRecordingStream(
+      stream: stream,
+      output: output,
+      target: target,
+      sourceService: sourceService,
+      transport: transport,
+      onTermination: onTermination
+    )
+    output.onStreamFailure = { [weak session] in
+      Task { @MainActor in
+        await session?.terminate(reason: .streamFailed)
+      }
+    }
+    return session
+  }
+
+  func start() async throws {
+    guard !stopped, startTask == nil else { return }
+    let task = Task { @MainActor [stream] in try await stream.startCapture() }
+    startTask = task
+    do {
+      try await task.value
+      startTask = nil
+      guard !stopped else { return }
+      startMonitoring()
+    } catch {
+      startTask = nil
+      transport.finish()
+      stopped = true
+      throw error
+    }
+  }
+
+  func stop(reason: CaptureTerminationReason = .userStopped) async {
+    await shutDown(reason: reason, notifyOwner: false)
+  }
+
+  private func terminate(reason: CaptureTerminationReason) async {
+    await shutDown(reason: reason, notifyOwner: true)
+  }
+
+  private func shutDown(reason: CaptureTerminationReason, notifyOwner: Bool) async {
+    if let stopTask {
+      await stopTask.value
+      return
+    }
+    guard !stopped else { return }
+    stopped = true
+    monitorTask?.cancel()
+    monitorTask = nil
+    let pendingStart = startTask
+    let task = Task { @MainActor [stream, transport, onTermination] in
+      if let pendingStart {
+        _ = try? await pendingStart.value
+      }
+      do {
+        try await stream.stopCapture()
+      } catch {
+        // a failed stop still closes the local frame handoff.
+      }
+      transport.finish()
+      if notifyOwner { onTermination(reason) }
+    }
+    stopTask = task
+    await task.value
+  }
+
+  private func startMonitoring() {
+    monitorTask = Task { [weak self] in
+      var consecutiveListingFailures = 0
+      while !Task.isCancelled {
+        try? await Task.sleep(for: .milliseconds(500))
+        guard let self, !Task.isCancelled else { return }
+        do {
+          let inventory = try await self.sourceService.availableSources()
+          consecutiveListingFailures = 0
+          let snapshot = RecordingTargetSnapshot(
+            displayIDs: Set(inventory.displays.map(\.id)),
+            visibleWindowIDs: Set(inventory.windows.map(\.id))
+          )
+          if let reason = RecordingTargetMonitor.lossReason(for: self.target, in: snapshot) {
+            await self.terminate(reason: reason)
+            return
+          }
+        } catch CaptureSourceError.permissionRequired {
+          await self.terminate(reason: .permissionLost)
+          return
+        } catch {
+          consecutiveListingFailures += 1
+          if consecutiveListingFailures >= 3 {
+            await self.terminate(reason: .streamFailed)
+            return
+          }
+        }
+      }
+    }
+  }
+
+  private static func makeFilter(
+    target: RecordingTarget,
+    content: SCShareableContent
+  ) throws -> SCContentFilter {
+    switch target {
+    case .display(let id):
+      guard let display = content.displays.first(where: { $0.displayID == id }) else {
+        throw RecordingStreamError.displayUnavailable
+      }
+      let ownApplication = content.applications.filter {
+        $0.bundleIdentifier == Bundle.main.bundleIdentifier
+      }
+      return SCContentFilter(
+        display: display, excludingApplications: ownApplication, exceptingWindows: [])
+    case .region(let geometry):
+      let id = geometry.display.id
+      guard let display = content.displays.first(where: { $0.displayID == id }) else {
+        throw RecordingStreamError.displayUnavailable
+      }
+      let ownApplication = content.applications.filter {
+        $0.bundleIdentifier == Bundle.main.bundleIdentifier
+      }
+      return SCContentFilter(
+        display: display, excludingApplications: ownApplication, exceptingWindows: [])
+    case .window(let id):
+      guard let window = content.windows.first(where: { $0.windowID == id }) else {
+        throw RecordingStreamError.windowUnavailable
+      }
+      return SCContentFilter(desktopIndependentWindow: window)
+    }
+  }
+
+  private static func makeConfiguration(
+    target: RecordingTarget,
+    filter: SCContentFilter,
+    showsCursor: Bool
+  ) throws -> SCStreamConfiguration {
+    let sourceRect: CGRect
+    switch target {
+    case .region(let geometry):
+      let rect = geometry.regionInDisplayPoints
+      guard rect.origin.x.isFinite, rect.origin.y.isFinite,
+        rect.width.isFinite, rect.height.isFinite,
+        rect.width > 0, rect.height > 0,
+        CGRect(origin: .zero, size: filter.contentRect.size).contains(rect)
+      else { throw RecordingStreamError.invalidRegion }
+      sourceRect = rect
+    case .display, .window:
+      sourceRect = CGRect(origin: .zero, size: filter.contentRect.size)
+    }
+
+    let scale = CGFloat(filter.pointPixelScale)
+    let pixelWidth = (sourceRect.width * scale).rounded(.up)
+    let pixelHeight = (sourceRect.height * scale).rounded(.up)
+    guard pixelWidth.isFinite, pixelHeight.isFinite,
+      pixelWidth > 0, pixelHeight > 0,
+      pixelWidth <= CGFloat(Int.max), pixelHeight <= CGFloat(Int.max)
+    else { throw RecordingStreamError.invalidDimensions }
+
+    let configuration = SCStreamConfiguration()
+    configuration.width = Int(pixelWidth)
+    configuration.height = Int(pixelHeight)
+    configuration.minimumFrameInterval = CMTime(value: 1, timescale: 24)
+    configuration.pixelFormat = kCVPixelFormatType_32BGRA
+    configuration.queueDepth = 3
+    configuration.showsCursor = showsCursor
+    configuration.capturesAudio = false
+    configuration.scalesToFit = target.isWindow
+    configuration.preservesAspectRatio = target.isWindow
+    if case .region = target {
+      configuration.sourceRect = sourceRect
+    }
+    return configuration
+  }
+
+  private static func validate(
+    target: RecordingTarget,
+    against inventory: CaptureSourceInventory
+  ) throws {
+    switch target {
+    case .display(let id):
+      _ = try inventory.display(id: id)
+    case .window(let id):
+      _ = try inventory.window(id: id)
+    case .region(let selection):
+      let source = try inventory.display(id: selection.display.id)
+      guard
+        let current = DisplayGeometry(
+          id: source.id,
+          frameInGlobalPoints: source.frame,
+          pixelWidth: CGDisplayPixelsWide(source.id),
+          pixelHeight: CGDisplayPixelsHigh(source.id)
+        ), selection.isValid(on: current)
+      else {
+        throw RecordingStreamError.invalidRegion
+      }
+    }
+  }
+}
+
+extension RecordingTarget {
+  fileprivate var isWindow: Bool {
+    if case .window = self { return true }
+    return false
+  }
+}
+
+private final class ScreenFrameOutput: NSObject, SCStreamOutput, SCStreamDelegate,
+  @unchecked Sendable
+{
+  let sampleQueue = DispatchQueue(label: "gifferent.recording.samples", qos: .userInitiated)
+  var onStreamFailure: (@Sendable () -> Void)?
+  private let transport: RecordingFrameTransport
+
+  init(transport: RecordingFrameTransport) {
+    self.transport = transport
+  }
+
+  func stream(
+    _ stream: SCStream, didOutputSampleBuffer sampleBuffer: CMSampleBuffer,
+    of type: SCStreamOutputType
+  ) {
+    guard type == .screen,
+      let attachments = CMSampleBufferGetSampleAttachmentsArray(
+        sampleBuffer, createIfNecessary: false) as? [[SCStreamFrameInfo: Any]],
+      let statusValue = attachments.first?[.status] as? Int,
+      let status = SCFrameStatus(rawValue: statusValue),
+      status == .complete,
+      let pixelBuffer = CMSampleBufferGetImageBuffer(sampleBuffer)
+    else { return }
+
+    let time = CMSampleBufferGetPresentationTimeStamp(sampleBuffer)
+    guard time.isValid else { return }
+    let nanoseconds = CMTimeConvertScale(
+      time, timescale: 1_000_000_000,
+      method: .roundTowardZero
+    ).value
+    guard CVPixelBufferLockBaseAddress(pixelBuffer, .readOnly) == kCVReturnSuccess else { return }
+    defer { CVPixelBufferUnlockBaseAddress(pixelBuffer, .readOnly) }
+    guard let base = CVPixelBufferGetBaseAddress(pixelBuffer) else { return }
+    let width = CVPixelBufferGetWidth(pixelBuffer)
+    let height = CVPixelBufferGetHeight(pixelBuffer)
+    let bytesPerRow = CVPixelBufferGetBytesPerRow(pixelBuffer)
+    let (byteCount, overflow) = bytesPerRow.multipliedReportingOverflow(by: height)
+    guard !overflow, byteCount > 0 else { return }
+    transport.offer(
+      RecordingFrame(
+        timestampNanoseconds: nanoseconds,
+        width: width,
+        height: height,
+        bytesPerRow: bytesPerRow,
+        bgra: Data(bytes: base, count: byteCount)
+      ))
+  }
+
+  func stream(_ stream: SCStream, didStopWithError error: Error) {
+    onStreamFailure?()
+  }
+}

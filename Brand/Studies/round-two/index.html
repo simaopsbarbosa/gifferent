@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gifferent vertical-loop mark studies · round two</title>
+  <style>
+    :root { color-scheme: light dark; font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    body { margin: 0; padding: 2rem; background: Canvas; color: CanvasText; }
+    main { max-width: 1050px; margin: auto; }
+    h1 { font-size: 1.5rem; }
+    .notice { padding: .75rem 1rem; border: 2px solid currentColor; font-weight: 650; }
+    article { margin: 1rem 0; border: 1px solid GrayText; border-radius: .5rem; padding: 1rem; }
+    article h2 { font-size: 1.1rem; }
+    table { width: 100%; border-collapse: separate; border-spacing: .35rem; table-layout: fixed; }
+    caption { text-align: left; font-weight: 650; padding-bottom: .25rem; }
+    th, td { padding: .25rem .1rem; text-align: center; font-size: .8rem; }
+    th:first-child { width: 6rem; text-align: left; }
+    .surface { min-height: 60px; display: grid; place-items: center; border: 1px solid GrayText; border-radius: .3rem; }
+    .surface img { display: block; width: var(--size); height: var(--size); }
+    .light { background: #fff; }
+    .dark { background: #151515; }
+    .hc-light { background: #fff; outline: 2px solid #000; outline-offset: -3px; }
+    .hc-dark { background: #000; outline: 2px solid #fff; outline-offset: -3px; }
+    .inverse { filter: invert(1); }
+    .tradeoff { padding-top: .5rem; border-top: 1px solid GrayText; }
+    @media (max-width: 520px) { body { padding: 1rem; } th:first-child { width: 4rem; } th, td { font-size: .7rem; } .surface { min-height: 48px; } }
+  </style>
+</head>
+<body>
+<main>
+  <h1>vertical-loop mark studies · round two</h1>
+  <p class="notice">selected direction refined · monochrome studies only · not approved artwork</p>
+  <p>the architect selected the vertical-loop silhouette from round one. these variants test how much directional detail the mark can carry while staying legible at menu-bar sizes. each surface row shows all four sizes.</p>
+  <p><a href="../index.html">return to round one</a> · <a href="review-notes.md">read the tradeoffs and open choices</a></p>
+  <section aria-label="three vertical-loop mark variants">
+<article aria-labelledby="variant-a">
+      <h2 id="variant-a">variant a · clean arcs</h2>
+      <p>removes arrowheads entirely, leaving the simplest shape at 16 px.</p>
+      <table><caption>mark size by background</caption><thead><tr><th scope="col">background</th><th scope="col">16 px</th><th scope="col">24 px</th><th scope="col">32 px</th><th scope="col">128 px</th></tr></thead><tbody><tr><th scope="row">light</th><td><div class="surface light"><img src="vertical-loop-a.svg" alt="variant a, clean arcs, light background, 16 pixels" style="--size:16px"></div></td><td><div class="surface light"><img src="vertical-loop-a.svg" alt="variant a, clean arcs, light background, 24 pixels" style="--size:24px"></div></td><td><div class="surface light"><img src="vertical-loop-a.svg" alt="variant a, clean arcs, light background, 32 pixels" style="--size:32px"></div></td><td><div class="surface light"><img src="vertical-loop-a.svg" alt="variant a, clean arcs, light background, 128 pixels" style="--size:128px"></div></td></tr><tr><th scope="row">dark</th><td><div class="surface dark"><img class="inverse" src="vertical-loop-a.svg" alt="variant a, clean arcs, dark background, 16 pixels" style="--size:16px"></div></td><td><div class="surface dark"><img class="inverse" src="vertical-loop-a.svg" alt="variant a, clean arcs, dark background, 24 pixels" style="--size:24px"></div></td><td><div class="surface dark"><img class="inverse" src="vertical-loop-a.svg" alt="variant a, clean arcs, dark background, 32 pixels" style="--size:32px"></div></td><td><div class="surface dark"><img class="inverse" src="vertical-loop-a.svg" alt="variant a, clean arcs, dark background, 128 pixels" style="--size:128px"></div></td></tr><tr><th scope="row">high contrast</th><td><div class="surface hc-light"><img src="vertical-loop-a.svg" alt="variant a, clean arcs, high contrast background, 16 pixels" style="--size:16px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="vertical-loop-a.svg" alt="variant a, clean arcs, high contrast background, 24 pixels" style="--size:24px"></div></td><td><div class="surface hc-light"><img src="vertical-loop-a.svg" alt="variant a, clean arcs, high contrast background, 32 pixels" style="--size:32px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="vertical-loop-a.svg" alt="variant a, clean arcs, high contrast background, 128 pixels" style="--size:128px"></div></td></tr></tbody></table>
+      <p class="tradeoff"><strong>tradeoff:</strong> quietest silhouette and strongest stroke clarity; looping direction may be less obvious.</p>
+    </article>
+<article aria-labelledby="variant-b">
+      <h2 id="variant-b">variant b · directional ends</h2>
+      <p>keeps the selected vertical rhythm and adds short arrow-like ends.</p>
+      <table><caption>mark size by background</caption><thead><tr><th scope="col">background</th><th scope="col">16 px</th><th scope="col">24 px</th><th scope="col">32 px</th><th scope="col">128 px</th></tr></thead><tbody><tr><th scope="row">light</th><td><div class="surface light"><img src="vertical-loop-b.svg" alt="variant b, directional ends, light background, 16 pixels" style="--size:16px"></div></td><td><div class="surface light"><img src="vertical-loop-b.svg" alt="variant b, directional ends, light background, 24 pixels" style="--size:24px"></div></td><td><div class="surface light"><img src="vertical-loop-b.svg" alt="variant b, directional ends, light background, 32 pixels" style="--size:32px"></div></td><td><div class="surface light"><img src="vertical-loop-b.svg" alt="variant b, directional ends, light background, 128 pixels" style="--size:128px"></div></td></tr><tr><th scope="row">dark</th><td><div class="surface dark"><img class="inverse" src="vertical-loop-b.svg" alt="variant b, directional ends, dark background, 16 pixels" style="--size:16px"></div></td><td><div class="surface dark"><img class="inverse" src="vertical-loop-b.svg" alt="variant b, directional ends, dark background, 24 pixels" style="--size:24px"></div></td><td><div class="surface dark"><img class="inverse" src="vertical-loop-b.svg" alt="variant b, directional ends, dark background, 32 pixels" style="--size:32px"></div></td><td><div class="surface dark"><img class="inverse" src="vertical-loop-b.svg" alt="variant b, directional ends, dark background, 128 pixels" style="--size:128px"></div></td></tr><tr><th scope="row">high contrast</th><td><div class="surface hc-light"><img src="vertical-loop-b.svg" alt="variant b, directional ends, high contrast background, 16 pixels" style="--size:16px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="vertical-loop-b.svg" alt="variant b, directional ends, high contrast background, 24 pixels" style="--size:24px"></div></td><td><div class="surface hc-light"><img src="vertical-loop-b.svg" alt="variant b, directional ends, high contrast background, 32 pixels" style="--size:32px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="vertical-loop-b.svg" alt="variant b, directional ends, high contrast background, 128 pixels" style="--size:128px"></div></td></tr></tbody></table>
+      <p class="tradeoff"><strong>tradeoff:</strong> clearest motion cue at larger sizes; tips may crowd the center at 16 px.</p>
+    </article>
+<article aria-labelledby="variant-c">
+      <h2 id="variant-c">variant c · offset return</h2>
+      <p>shifts the opposed arcs diagonally while keeping the frame fixed.</p>
+      <table><caption>mark size by background</caption><thead><tr><th scope="col">background</th><th scope="col">16 px</th><th scope="col">24 px</th><th scope="col">32 px</th><th scope="col">128 px</th></tr></thead><tbody><tr><th scope="row">light</th><td><div class="surface light"><img src="vertical-loop-c.svg" alt="variant c, offset return, light background, 16 pixels" style="--size:16px"></div></td><td><div class="surface light"><img src="vertical-loop-c.svg" alt="variant c, offset return, light background, 24 pixels" style="--size:24px"></div></td><td><div class="surface light"><img src="vertical-loop-c.svg" alt="variant c, offset return, light background, 32 pixels" style="--size:32px"></div></td><td><div class="surface light"><img src="vertical-loop-c.svg" alt="variant c, offset return, light background, 128 pixels" style="--size:128px"></div></td></tr><tr><th scope="row">dark</th><td><div class="surface dark"><img class="inverse" src="vertical-loop-c.svg" alt="variant c, offset return, dark background, 16 pixels" style="--size:16px"></div></td><td><div class="surface dark"><img class="inverse" src="vertical-loop-c.svg" alt="variant c, offset return, dark background, 24 pixels" style="--size:24px"></div></td><td><div class="surface dark"><img class="inverse" src="vertical-loop-c.svg" alt="variant c, offset return, dark background, 32 pixels" style="--size:32px"></div></td><td><div class="surface dark"><img class="inverse" src="vertical-loop-c.svg" alt="variant c, offset return, dark background, 128 pixels" style="--size:128px"></div></td></tr><tr><th scope="row">high contrast</th><td><div class="surface hc-light"><img src="vertical-loop-c.svg" alt="variant c, offset return, high contrast background, 16 pixels" style="--size:16px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="vertical-loop-c.svg" alt="variant c, offset return, high contrast background, 24 pixels" style="--size:24px"></div></td><td><div class="surface hc-light"><img src="vertical-loop-c.svg" alt="variant c, offset return, high contrast background, 32 pixels" style="--size:32px"></div></td><td><div class="surface hc-dark"><img class="inverse" src="vertical-loop-c.svg" alt="variant c, offset return, high contrast background, 128 pixels" style="--size:128px"></div></td></tr></tbody></table>
+      <p class="tradeoff"><strong>tradeoff:</strong> adds a sense of return without a separate dot; the asymmetry may feel less calm.</p>
+    </article>
+  </section>
+  <section aria-labelledby="choices">
+    <h2 id="choices">open architect choices</h2>
+    <ul>
+      <li>which monochrome silhouette should proceed to the next review, if any?</li>
+      <li>should the mark use arrow-like ends, plain arcs, or a slight offset?</li>
+      <li>are the frame corners distinct enough at 16 px?</li>
+      <li>what orange values, motion, sound, and usage rules should be explored later?</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

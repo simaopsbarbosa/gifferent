@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title desc">
+  <title id="title">study a: paired loop</title>
+  <desc id="desc">two open opposing arcs inside four crop-frame corners</desc>
+  <g fill="none" stroke="#000" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M8 22V10h12M44 10h12v12M56 42v12H44M20 54H8V42"/>
+    <path d="M25 20a14 14 0 0 1 18 12M39 44a14 14 0 0 1-18-12"/>
+    <path d="m40 19 4 1-1 4M24 45l-4-1 1-4"/>
+  </g>
+</svg>
