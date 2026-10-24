@@ -221,13 +221,13 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(github.exists)
     XCTAssertTrue(github.label.contains("GitHub"), github.label)
     XCTAssertTrue(github.label.contains("9 MB target"), github.label)
-    XCTAssertTrue(github.label.contains("10 MB max"), github.label)
+    XCTAssertTrue(github.label.contains("10 MB published maximum"), github.label)
 
     let discord = previewWindow.buttons["compression-destination-discord"]
     XCTAssertTrue(discord.exists)
     XCTAssertTrue(discord.label.contains("Discord"), discord.label)
     XCTAssertTrue(discord.label.contains("18 MB target"), discord.label)
-    XCTAssertTrue(discord.label.contains("20 MB max"), discord.label)
+    XCTAssertTrue(discord.label.contains("20 MB published maximum"), discord.label)
 
     XCTAssertTrue(previewWindow.staticTexts["compression-unavailable-status"].exists)
     XCTAssertFalse(previewWindow.buttons["compress-preview-button"].exists)
