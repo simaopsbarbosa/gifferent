@@ -8,6 +8,7 @@ final class GifferentRuntime: ObservableObject {
 
   @Published private(set) var status = "idle"
   @Published private(set) var selectionDescription: String?
+  @Published var isPreviewCloseConfirmationPresented = false
   #if DEBUG
     @Published private(set) var recordingFrameFixtureState = "hidden"
   #endif
@@ -20,6 +21,7 @@ final class GifferentRuntime: ObservableObject {
   let recordingCoordinator: RecordingCoordinator
   private var permissionWindow: NSWindow?
   private var settingsWindow: NSWindow?
+  private var previewWindowController: GIFPreviewWindowController?
   private var lastSelection: CaptureSelection?
   private var recordAfterSelection = false
   private var hasStarted = false
@@ -38,7 +40,11 @@ final class GifferentRuntime: ObservableObject {
     #if DEBUG
       if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
         recordingCoordinator = RecordingCoordinator(
-          streamFactory: FixtureRecordingStreamFactory(), workspace: workspace)
+          streamFactory: FixtureRecordingStreamFactory(),
+          workspace: workspace,
+          clipboard: UITestGIFClipboardWriter(),
+          fileSaver: UITestGIFSavePanelSaver()
+        )
       } else {
         recordingCoordinator = RecordingCoordinator(
           streamFactory: ScreenCaptureRecordingStreamFactory(sourceService: service),
@@ -188,6 +194,8 @@ final class GifferentRuntime: ObservableObject {
       break
     case .captured:
       status = "discard captured frames before recording again"
+    case .preparingPreview, .previewReady:
+      break
     case .idle, .failed:
       guard let lastSelection else {
         recordAfterSelection = true
@@ -202,23 +210,100 @@ final class GifferentRuntime: ObservableObject {
     Task { await recordingCoordinator.discardCapturedSession() }
   }
 
+  func copyPreview() {
+    Task { await recordingCoordinator.copyPreview() }
+  }
+
+  func savePreview() {
+    Task { await recordingCoordinator.savePreview() }
+  }
+
+  func requestPreviewClose() {
+    guard !recordingCoordinator.isPreviewActionInProgress else {
+      status = "wait for export to finish before closing the preview"
+      return
+    }
+    Task {
+      if await recordingCoordinator.closePreview(discardUnexported: false) {
+        previewWindowController?.closeAfterCleanup()
+      } else {
+        switch recordingCoordinator.state {
+        case .captured, .preparingPreview, .previewReady:
+          isPreviewCloseConfirmationPresented = true
+        default:
+          status = "could not close preview; temporary files remain"
+        }
+      }
+    }
+  }
+
+  func confirmPreviewDiscard() {
+    guard !recordingCoordinator.isPreviewActionInProgress else {
+      status = "wait for export to finish before discarding the preview"
+      return
+    }
+    isPreviewCloseConfirmationPresented = false
+    Task {
+      let discarded: Bool
+      switch recordingCoordinator.state {
+      case .captured, .previewReady:
+        discarded = await recordingCoordinator.closePreview(discardUnexported: true)
+      case .preparingPreview:
+        await recordingCoordinator.discardCapturedSession()
+        discarded = recordingCoordinator.state == .idle
+      default:
+        discarded = false
+      }
+      if discarded {
+        previewWindowController?.closeAfterCleanup()
+      } else {
+        status = "could not discard preview; temporary files remain"
+      }
+    }
+  }
+
+  func retryPreview() {
+    recordingCoordinator.retryPreviewEncoding()
+  }
+
+  func cancelPreviewDiscard() {
+    isPreviewCloseConfirmationPresented = false
+  }
+
+  func requestDiscardPreview() {
+    guard !recordingCoordinator.isPreviewActionInProgress else {
+      status = "wait for export to finish before discarding the preview"
+      return
+    }
+    isPreviewCloseConfirmationPresented = true
+  }
+
+  func previewWindowDidClose(_ controller: GIFPreviewWindowController) {
+    guard previewWindowController === controller else { return }
+    previewWindowController = nil
+  }
+
   var recordingActionTitle: String {
     switch recordingCoordinator.state {
     case .starting, .recording, .stopping: "stop recording"
-    case .captured: "discard captured frames"
+    case .captured, .preparingPreview: "preparing preview"
+    case .previewReady: "preview ready"
     case .idle, .failed: "start recording"
     }
   }
 
   var recordingActionIsDisabled: Bool {
-    if case .stopping = recordingCoordinator.state { return true }
-    return false
+    switch recordingCoordinator.state {
+    case .stopping, .captured, .preparingPreview, .previewReady: true
+    default: false
+    }
   }
 
   func performRecordingAction() {
-    if case .captured = recordingCoordinator.state {
-      discardCapturedFrames()
-    } else {
+    switch recordingCoordinator.state {
+    case .captured, .preparingPreview, .previewReady:
+      return
+    default:
       toggleRecording()
     }
   }
@@ -280,12 +365,20 @@ final class GifferentRuntime: ObservableObject {
       recordingFrameOverlay.hide()
       switch snapshot.stopReason {
       case .windowUnavailable:
-        status = "window ended; partial frames ready to discard"
+        status = "window ended; preparing partial preview"
       case .displayUnavailable:
-        status = "display disconnected; partial frames ready to discard"
+        status = "display disconnected; preparing partial preview"
       case .user, .none:
-        status = "frames captured; GIF preview is not available yet"
+        status = "preparing preview"
       }
+    case .preparingPreview:
+      recordingFrameOverlay.hide()
+      status = "preparing preview"
+      showPreviewWindow()
+    case .previewReady:
+      recordingFrameOverlay.hide()
+      status = "preview ready"
+      showPreviewWindow()
     case .failed(let failure):
       recordingFrameOverlay.hide()
       switch failure {
@@ -305,8 +398,20 @@ final class GifferentRuntime: ObservableObject {
         status = "no frames captured; try again"
       case .cancelled:
         status = "recording cancelled"
+      case .gifEncodingFailed:
+        status = "could not create a valid gif; captured frames were retained"
       }
     }
+  }
+
+  private func showPreviewWindow() {
+    if let previewWindowController {
+      previewWindowController.showWindow()
+      return
+    }
+    let controller = GIFPreviewWindowController(runtime: self, coordinator: recordingCoordinator)
+    previewWindowController = controller
+    controller.showWindow()
   }
 
   private func showRecordingFrame(for selection: CaptureSelection?) {
@@ -353,7 +458,69 @@ final class GifferentRuntime: ObservableObject {
   }
 }
 
+@MainActor
+struct NSPasteboardGIFWriter: GIFClipboardWriting {
+  func writeGIF(at url: URL) async throws {
+    let data = try await Task.detached(priority: .userInitiated) {
+      try Data(contentsOf: url, options: .mappedIfSafe)
+    }.value
+    let pasteboard = NSPasteboard.general
+    pasteboard.clearContents()
+    guard pasteboard.setData(data, forType: NSPasteboard.PasteboardType("com.compuserve.gif"))
+    else { throw NSError(domain: "gifferent.clipboard", code: 1) }
+  }
+}
+
+@MainActor
+struct SavePanelGIFSaver: GIFSaving {
+  func saveGIF(at url: URL) async throws -> PreviewSaveResult {
+    let panel = NSSavePanel()
+    panel.allowedContentTypes = [.gif]
+    panel.canCreateDirectories = true
+    panel.nameFieldStringValue = "gifferent.gif"
+    panel.title = "save gif"
+    panel.prompt = "save"
+    let response = await withCheckedContinuation { continuation in
+      panel.begin { continuation.resume(returning: $0) }
+    }
+    guard response == .OK, let destination = panel.url else { return .cancelled }
+    try await Task.detached(priority: .utility) {
+      let fileManager = FileManager.default
+      let staged = destination.deletingLastPathComponent()
+        .appendingPathComponent(".gifferent-\(UUID().uuidString).gif")
+      defer { try? fileManager.removeItem(at: staged) }
+      try fileManager.copyItem(at: url, to: staged)
+      if fileManager.fileExists(atPath: destination.path) {
+        _ = try fileManager.replaceItemAt(destination, withItemAt: staged)
+      } else {
+        try fileManager.moveItem(at: staged, to: destination)
+      }
+    }.value
+    return .saved
+  }
+}
+
 #if DEBUG
+  @MainActor
+  private struct UITestGIFClipboardWriter: GIFClipboardWriting {
+    func writeGIF(at url: URL) async throws {
+      guard FileManager.default.fileExists(atPath: url.path) else {
+        throw CocoaError(.fileReadNoSuchFile)
+      }
+    }
+  }
+
+  @MainActor
+  private struct UITestGIFSavePanelSaver: GIFSaving {
+    func saveGIF(at url: URL) async throws -> PreviewSaveResult {
+      let destination = FileManager.default.temporaryDirectory
+        .appendingPathComponent("gifferent-preview-ui-save.gif")
+      try? FileManager.default.removeItem(at: destination)
+      try FileManager.default.copyItem(at: url, to: destination)
+      return .saved
+    }
+  }
+
   @MainActor
   private struct FixtureRecordingStreamFactory: RecordingStreamPreparing {
     func prepare(

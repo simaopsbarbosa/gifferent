@@ -53,7 +53,12 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(testWindow.buttons["recording-action-button"].label, "start recording")
   }
 
-  func testRecordingActionSelectsTargetStartsAndRetainsCapturedFramesUntilDiscard() {
+  func testRecordingActionOpensPreviewAndKeepsExportAfterClose() {
+    let savedFixture = FileManager.default.temporaryDirectory
+      .appendingPathComponent("gifferent-preview-ui-save.gif")
+    try? FileManager.default.removeItem(at: savedFixture)
+    defer { try? FileManager.default.removeItem(at: savedFixture) }
+
     let app = XCUIApplication()
     app.launchArguments.append("--ui-testing")
     app.launch()
@@ -71,9 +76,57 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(status.waitForExistence(timeout: 5))
     waitForStatus("recording", in: testWindow)
     testWindow.buttons["recording-action-button"].click()
-    waitForStatus("frames captured; GIF preview is not available yet", in: testWindow)
 
+    let previewWindow = app.windows["gif preview"]
+    XCTAssertTrue(previewWindow.waitForExistence(timeout: 10))
+    XCTAssertTrue(waitForPreviewStatus("preview ready", in: previewWindow))
+    XCTAssertTrue(previewWindow.staticTexts["preview-size"].exists)
+    XCTAssertTrue(previewWindow.staticTexts["preview-duration"].exists)
+    XCTAssertEqual(previewWindow.staticTexts["preview-dimensions"].value as? String, "16 by 16")
+    XCTAssertTrue(
+      app.descendants(matching: .any).matching(identifier: "animated-gif-view").firstMatch
+        .waitForExistence(timeout: 5))
+
+    previewWindow.buttons["copy-preview-button"].click()
+    XCTAssertTrue(waitForPreviewAction("copied", in: previewWindow))
+    previewWindow.buttons["save-preview-button"].click()
+    XCTAssertTrue(waitForPreviewAction("saved", in: previewWindow))
+
+    previewWindow.buttons["close-preview-button"].click()
+    XCTAssertFalse(previewWindow.waitForExistence(timeout: 5))
+    waitForStatus("selection ready", in: testWindow)
+  }
+
+  func testUnexportedPreviewCanStayOpenOrBeDiscardedAfterConfirmation() {
+    let app = XCUIApplication()
+    app.launchArguments.append("--ui-testing")
+    app.launch()
+
+    let testWindow = app.windows["gifferent test menu"]
+    XCTAssertTrue(testWindow.waitForExistence(timeout: 10))
     testWindow.buttons["recording-action-button"].click()
+
+    let selectionWindow = app.windows["capture selection"]
+    XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
+    selectionWindow.buttons["select-display-button"].click()
+    selectionWindow.buttons["confirm-selection-button"].click()
+    waitForStatus("recording", in: testWindow)
+    testWindow.buttons["recording-action-button"].click()
+
+    let previewWindow = app.windows["gif preview"]
+    XCTAssertTrue(previewWindow.waitForExistence(timeout: 10))
+    XCTAssertTrue(waitForPreviewStatus("preview ready", in: previewWindow))
+    previewWindow.buttons["close-preview-button"].click()
+    let keepButton = app.buttons["keep-preview-button"]
+    XCTAssertTrue(keepButton.waitForExistence(timeout: 5))
+    keepButton.click()
+    XCTAssertTrue(previewWindow.exists)
+
+    previewWindow.buttons["discard-preview-button"].click()
+    let discardButton = app.buttons["confirm-preview-discard-button"]
+    XCTAssertTrue(discardButton.waitForExistence(timeout: 5))
+    discardButton.click()
+    XCTAssertFalse(previewWindow.waitForExistence(timeout: 5))
     waitForStatus("selection ready", in: testWindow)
   }
 
@@ -148,5 +201,21 @@ final class MenuBarSmokeTests: XCTestCase {
     )
     XCTAssertEqual(
       XCTWaiter.wait(for: [expectation], timeout: 5), .completed, file: file, line: line)
+  }
+
+  private func waitForPreviewStatus(_ expected: String, in window: XCUIElement) -> Bool {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "value == %@", expected),
+      object: window.staticTexts["preview-status"]
+    )
+    return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
+  }
+
+  private func waitForPreviewAction(_ expected: String, in window: XCUIElement) -> Bool {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "value == %@", expected),
+      object: window.staticTexts["preview-action-status"]
+    )
+    return XCTWaiter.wait(for: [expectation], timeout: 5) == .completed
   }
 }

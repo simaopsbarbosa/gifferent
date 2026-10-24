@@ -2,7 +2,7 @@
 
 a fast, native GIF maker for macOS. summon capture, record while using your Mac, then copy, save, or compress locally.
 
-the app and its test suite are being built in tested iterations. capture selection has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. recording components are being integrated, but recording and GIF export are not available yet.
+the app and its test suite are being built in tested iterations. capture selection has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. the current recording slice can capture to a private temporary workspace, encode a playable GIF candidate, and show an animated preview with metadata. copy and save actions are implemented behind testable adapters; clipboard compatibility with GitHub, Discord, and other destinations remains unverified. compression and the release encoder are not available yet.
 
 the source license is [AGPL-3.0-or-later](LICENSE). [third-party notices](THIRD-PARTY-NOTICES.md) track bundled dependencies and tools.
 
@@ -29,5 +29,5 @@ bash Scripts/test-unit.sh
 bash Scripts/test-ui.sh
 ```
 
-the build and test scripts write logs and `.xcresult` bundles under `.build/ci/`. UI tests need a macOS session that permits Xcode automation. deterministic UI tests open the production SwiftUI menu content in a debug-only test window and use a synthetic selection display without requesting screen access. actual menu bar clicking, screen permission, shortcut delivery, and overlay interaction remain real-Mac acceptance checks. recording, export, and release checks are later iterations in [delivery-plan.md](delivery-plan.md).
+the build and test scripts write logs and `.xcresult` bundles under `.build/ci/`. UI tests need a macOS session that permits Xcode automation. deterministic UI tests use synthetic capture frames and injected clipboard and save adapters without requesting screen access. actual menu bar clicking, screen permission, shortcut delivery, overlay interaction, animated paste in destination apps, and release checks remain acceptance gates in [delivery-plan.md](delivery-plan.md).
 # gifferent

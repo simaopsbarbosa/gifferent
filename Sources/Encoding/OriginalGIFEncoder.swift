@@ -28,6 +28,61 @@ struct EncodedGIF: Sendable, Equatable {
   let fileBytes: Int64
 }
 
+struct GIFMetadataInspector {
+  func inspect(_ url: URL) throws -> EncodedGIF {
+    var fileInfo = stat()
+    guard lstat(url.path, &fileInfo) == 0,
+      fileInfo.st_mode & S_IFMT == S_IFREG,
+      fileInfo.st_size > 0,
+      let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+      CGImageSourceGetCount(source) > 0,
+      let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any],
+      let globalGIF = globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any],
+      let loopCount = globalGIF[kCGImagePropertyGIFLoopCount] as? Int
+    else { throw OriginalGIFEncodingError.invalidOutput }
+
+    let count = CGImageSourceGetCount(source)
+    var width: Int?
+    var height: Int?
+    var delays: [Int] = []
+    for index in 0..<count {
+      guard
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil)
+          as? [CFString: Any],
+        let frameWidth = properties[kCGImagePropertyPixelWidth] as? Int,
+        let frameHeight = properties[kCGImagePropertyPixelHeight] as? Int,
+        frameWidth > 0, frameHeight > 0,
+        let gif = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any],
+        let delay = gif[kCGImagePropertyGIFUnclampedDelayTime] as? Double
+          ?? gif[kCGImagePropertyGIFDelayTime] as? Double,
+        delay.isFinite, delay > 0
+      else { throw OriginalGIFEncodingError.invalidOutput }
+      if let width, let height {
+        guard frameWidth == width, frameHeight == height else {
+          throw OriginalGIFEncodingError.invalidOutput
+        }
+      } else {
+        width = frameWidth
+        height = frameHeight
+      }
+      let centiseconds = Int((delay * 100).rounded(.toNearestOrAwayFromZero))
+      guard centiseconds > 0 else { throw OriginalGIFEncodingError.invalidOutput }
+      delays.append(centiseconds)
+    }
+    guard let width, let height else { throw OriginalGIFEncodingError.invalidOutput }
+    return EncodedGIF(
+      url: url,
+      width: width,
+      height: height,
+      frameCount: count,
+      delaysCentiseconds: delays,
+      durationCentiseconds: delays.reduce(0, +),
+      loopsForever: loopCount == 0,
+      fileBytes: Int64(fileInfo.st_size)
+    )
+  }
+}
+
 protocol OriginalGIFEncoding: Sendable {
   /// run from an asynchronous caller; ImageIO work is dispatched away from the main actor.
   func encode(

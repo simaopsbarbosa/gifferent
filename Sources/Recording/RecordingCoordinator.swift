@@ -49,6 +49,7 @@ enum RecordingCoordinatorFailure: Equatable {
   case workspaceFailed
   case noUsableFrames
   case cancelled
+  case gifEncodingFailed
 }
 
 enum RecordingCoordinatorState: Equatable {
@@ -57,7 +58,34 @@ enum RecordingCoordinatorState: Equatable {
   case recording
   case stopping
   case captured(RecordingSessionID, RecordingSessionSnapshot)
+  case preparingPreview(RecordingSessionID, RecordingSessionSnapshot)
+  case previewReady(RecordingSessionID, RecordingSessionSnapshot, EncodedGIF)
   case failed(RecordingCoordinatorFailure)
+}
+
+enum PreviewSaveResult: Equatable, Sendable {
+  case saved
+  case cancelled
+}
+
+@MainActor
+protocol GIFClipboardWriting {
+  func writeGIF(at url: URL) async throws
+}
+
+@MainActor
+protocol GIFSaving {
+  func saveGIF(at url: URL) async throws -> PreviewSaveResult
+}
+
+enum PreviewAction: Equatable {
+  case idle
+  case copying
+  case saving
+  case copied
+  case saved
+  case cancelled
+  case failed
 }
 
 /// serially turns captured frames into bounded, private PNG session files.
@@ -90,10 +118,14 @@ actor RecordingFramePipeline {
 @MainActor
 final class RecordingCoordinator: ObservableObject {
   @Published private(set) var state: RecordingCoordinatorState = .idle
+  @Published private(set) var previewAction: PreviewAction = .idle
 
   private let streamFactory: any RecordingStreamPreparing
   private let workspace: SessionWorkspaceStore
   private let encoder: PNGFrameEncoder
+  private let gifEncoder: any OriginalGIFEncoding
+  private let clipboard: any GIFClipboardWriting
+  private let fileSaver: any GIFSaving
 
   private var generation: UUID?
   private var startTask: Task<Void, Never>?
@@ -103,15 +135,23 @@ final class RecordingCoordinator: ObservableObject {
   private var sessionID: RecordingSessionID?
   private var stopReason: CaptureTerminationReason?
   private var consumerFailure: RecordingCoordinatorFailure?
+  private var previewTask: Task<Void, Never>?
+  private var previewExported = false
 
   init(
     streamFactory: any RecordingStreamPreparing,
     workspace: SessionWorkspaceStore,
-    encoder: PNGFrameEncoder = PNGFrameEncoder()
+    encoder: PNGFrameEncoder = PNGFrameEncoder(),
+    gifEncoder: any OriginalGIFEncoding = ImageIOOriginalGIFEncoder(),
+    clipboard: any GIFClipboardWriting = NSPasteboardGIFWriter(),
+    fileSaver: any GIFSaving = SavePanelGIFSaver()
   ) {
     self.streamFactory = streamFactory
     self.workspace = workspace
     self.encoder = encoder
+    self.gifEncoder = gifEncoder
+    self.clipboard = clipboard
+    self.fileSaver = fileSaver
   }
 
   func cleanOrphanedSessions() async throws {
@@ -164,13 +204,95 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func discardCapturedSession() async {
-    guard case .captured(let id, _) = state else { return }
+    guard !isPreviewActionInProgress else { return }
+    let id: RecordingSessionID
+    switch state {
+    case .captured(let capturedID, _), .preparingPreview(let capturedID, _),
+      .previewReady(let capturedID, _, _):
+      id = capturedID
+      previewTask?.cancel()
+      await previewTask?.value
+      previewTask = nil
+    default:
+      return
+    }
     do {
       try await workspace.discard(id)
       sessionID = nil
+      previewExported = false
       state = .idle
     } catch {
-      state = .failed(.workspaceFailed)
+      if case .preparingPreview(_, let snapshot) = state {
+        state = .captured(id, snapshot)
+      }
+      previewAction = .failed
+    }
+  }
+
+  var isPreviewActionInProgress: Bool {
+    previewAction == .copying || previewAction == .saving
+  }
+
+  func retryPreviewEncoding() {
+    guard case .captured(let id, let snapshot) = state, previewTask == nil else { return }
+    previewTask = Task { @MainActor [weak self] in
+      await self?.preparePreview(sessionID: id, snapshot: snapshot)
+    }
+  }
+
+  func copyPreview() async {
+    guard case .previewReady(_, _, let gif) = state else { return }
+    previewAction = .copying
+    do {
+      try await clipboard.writeGIF(at: gif.url)
+      previewExported = true
+      previewAction = .copied
+    } catch {
+      previewAction = .failed
+    }
+  }
+
+  func savePreview() async {
+    guard case .previewReady(_, _, let gif) = state else { return }
+    previewAction = .saving
+    do {
+      switch try await fileSaver.saveGIF(at: gif.url) {
+      case .saved:
+        previewExported = true
+        previewAction = .saved
+      case .cancelled:
+        previewAction = .cancelled
+      }
+    } catch {
+      previewAction = .failed
+    }
+  }
+
+  func closePreview(discardUnexported: Bool) async -> Bool {
+    guard !isPreviewActionInProgress else { return false }
+    let id: RecordingSessionID
+    switch state {
+    case .previewReady(let previewID, _, _), .captured(let previewID, _):
+      id = previewID
+    default:
+      return false
+    }
+    do {
+      if previewExported, case .previewReady = state {
+        try await workspace.closePreviewAfterExport(id)
+      } else if discardUnexported {
+        try await workspace.discard(id)
+      } else {
+        return false
+      }
+      sessionID = nil
+      previewExported = false
+      previewAction = .idle
+      state = .idle
+      return true
+    } catch {
+      previewAction = .failed
+      return false
     }
   }
 
@@ -272,12 +394,59 @@ final class RecordingCoordinator: ObservableObject {
     do {
       let snapshot = try await workspace.stop(sessionID, reason: workspaceReason)
       state = .captured(sessionID, snapshot)
+      previewTask = Task { @MainActor [weak self] in
+        await self?.preparePreview(sessionID: sessionID, snapshot: snapshot)
+      }
     } catch SessionWorkspaceError.noUsableFrames {
       state = .failed(.noUsableFrames)
     } catch {
       await removeSessionIfPresent()
       state = .failed(.workspaceFailed)
     }
+  }
+
+  private func preparePreview(
+    sessionID: RecordingSessionID,
+    snapshot: RecordingSessionSnapshot
+  ) async {
+    state = .preparingPreview(sessionID, snapshot)
+    previewAction = .idle
+    previewExported = false
+    var reservation: PreviewOutputReservation?
+    do {
+      let sequence = try await workspace.pngSequence(for: sessionID)
+      try Task.checkCancellation()
+      let output = try await workspace.reservePreviewOutput(for: sessionID)
+      reservation = output
+      let encoded = try await gifEncoder.encode(sequence, to: output)
+      try Task.checkCancellation()
+      guard encoded.url == output.url,
+        encoded.frameCount == sequence.frames.count,
+        encoded.width > 0, encoded.height > 0,
+        encoded.durationCentiseconds > 0,
+        encoded.delaysCentiseconds.count == encoded.frameCount,
+        encoded.delaysCentiseconds.allSatisfy({ $0 > 0 }),
+        encoded.fileBytes > 0
+      else { throw OriginalGIFEncodingError.invalidOutput }
+      let actual = try GIFMetadataInspector().inspect(encoded.url)
+      guard actual == encoded, actual.fileBytes <= output.maximumBytes else {
+        throw OriginalGIFEncodingError.invalidOutput
+      }
+      let committed = try await workspace.commitPreviewOutput(for: sessionID)
+      state = .previewReady(sessionID, committed, encoded)
+    } catch let error as OriginalGIFEncodingError where error == .cancelled {
+      if reservation != nil { try? await workspace.abandonPreviewOutput(for: sessionID) }
+      previewAction = .cancelled
+      state = .captured(sessionID, snapshot)
+    } catch is CancellationError {
+      if reservation != nil { try? await workspace.abandonPreviewOutput(for: sessionID) }
+      state = .captured(sessionID, snapshot)
+    } catch {
+      if reservation != nil { try? await workspace.abandonPreviewOutput(for: sessionID) }
+      previewAction = .failed
+      state = .captured(sessionID, snapshot)
+    }
+    previewTask = nil
   }
 
   private func removeSessionIfPresent() async {
