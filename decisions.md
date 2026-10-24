@@ -26,6 +26,11 @@
 - playback speed uses a continuous slider from 0.5× to 2× in 0.1× steps, centered at 1×.
 - the real-Mac animated clipboard paste acceptance test covers GitHub only. other destinations are outside this first-release clipboard compatibility gate.
 
+## compression behavior confirmed on 2026-10-24
+
+- the minimum acceptable compression quality keeps text legible at native scale, keeps cursor edges clear, and has no distracting banding or flicker in gradients. minor differences visible only at 2× are acceptable.
+- the dithering slider controls ImageMagick's documented `dither:diffusion-amount` from 0% to 100% in 5% steps, with a default of 35%. this product choice does not select ImageMagick as the release encoder; the pinned build must prove the setting changes output, and candidate, quality, performance, and distribution gates remain open.
+
 ## confirmed by the architect on 2026-10-20
 
 - macOS 14+, direct notarized download, menu bar only, background hotkeys, native SwiftUI UI.
@@ -43,11 +48,12 @@
 
 1. **brand asset:** develop loop-frame sketches with a warm orange accent. the exact artwork, orange values, motion signature, and sound palette still need architect review.
 2. **bundled tool license:** verify which candidate CLIs can be distributed with an AGPL-3.0-or-later app and document their notices and source obligations before packaging.
-3. **minimum visual quality:** define how much text blur, temporal noise, and dither pattern are acceptable for automatic size-goal search. collect architect-reviewed comparison samples.
+3. **quality review evidence:** collect and review representative comparison samples against the approved minimum quality floor before selecting size-goal search settings.
 4. **clipboard representation:** verify the chosen pasteboard representations by pasting an animated GIF into GitHub on a real Mac. a successful local pasteboard write alone does not establish destination compatibility.
 
 ## research notes, not product decisions
 
 - [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit/capturing-screen-content-in-macos) supports display, app, and window filters. selected-window capture fits the architect's answer.
 - [gifski](https://github.com/ImageOptim/gifski/blob/main/README.md) uses temporal dithering and has a C API, but the architect asked for a bundled CLI. [gifsicle](https://github.com/kohler/gifsicle/blob/master/gifsicle.1) exposes dither methods including Floyd–Steinberg, Atkinson, and ordered variants. performance and visual quality must be benchmarked before selecting one or both.
+- the installed exploratory ImageMagick build changed encoded pixels and output size at 0%, 35%, and 70% diffusion on sparse samples from two synthetic fixtures; see the [prototype report](Benchmarks/imagemagick-dither-control-prototype-2026-10-24.md). this confirms only that the slider mapping has an observable effect in that build.
 - destination file limits can change. the limits quoted in [mvp.md](mvp.md) are a 2026-10-20 research snapshot and need verification before release.

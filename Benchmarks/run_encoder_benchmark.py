@@ -161,6 +161,17 @@ def expected_frame_delays(fps, frame_count):
     return [boundary(index + 1) - boundary(index) for index in range(frame_count)]
 
 
+def diffusion_amount(value):
+    """Parse ImageMagick's numeric diffusion amount as a percentage."""
+    try:
+        amount = int(value)
+    except (TypeError, ValueError) as error:
+        raise argparse.ArgumentTypeError("diffusion amount must be an integer from 0 to 100") from error
+    if (isinstance(value, float) and not value.is_integer()) or not 0 <= amount <= 100:
+        raise argparse.ArgumentTypeError("diffusion amount must be from 0 to 100")
+    return amount
+
+
 def environment():
     return {
         "timestamp_utc": datetime.now(timezone.utc).isoformat(),
@@ -249,7 +260,8 @@ def path_availability(name, tools):
     return {"available": not missing, "required_tools": list(required), "missing_tools": missing, "reason": f"missing: {', '.join(missing)}" if missing else None}
 
 
-def command_for(name, tools, fps, frames, output):
+def command_for(name, tools, fps, frames, output, magick_diffusion_amount=100):
+    magick_diffusion_amount = diffusion_amount(magick_diffusion_amount)
     binary = tools["magick"]["path"] if name == "magick-unoptimized" else tools[name]["path"]
     if name == "gifski":
         return [binary, "--fps", str(fps), "--quality", "90", "--repeat", "0", "--no-sort", "-o", str(output), *map(str, frames)]
@@ -257,16 +269,16 @@ def command_for(name, tools, fps, frames, output):
         timed_frames = []
         for frame, delay in zip(frames, expected_frame_delays(fps, len(frames))):
             timed_frames.extend(["-delay", f"{delay}x100", str(frame)])
-        command = [binary, *timed_frames, "-dither", "FloydSteinberg", "-define", "dither:diffusion-amount=100%", "-colors", "256"]
+        command = [binary, *timed_frames, "-dither", "FloydSteinberg", "-define", f"dither:diffusion-amount={magick_diffusion_amount}%", "-colors", "256"]
         if name == "magick":
             command.extend(["-layers", "Optimize"])
         return [*command, "-loop", "0", str(output)]
     return [binary, str(fps), str(output), *map(str, frames)]
 
 
-def command_sequence_for(name, tools, fps, frames, output, work):
+def command_sequence_for(name, tools, fps, frames, output, work, magick_diffusion_amount=100):
     if name != "imageio-gifsicle":
-        return [{"stage": name, "command": command_for(name, tools, fps, frames, output)}]
+        return [{"stage": name, "command": command_for(name, tools, fps, frames, output, magick_diffusion_amount)}]
     intermediate = work / "imageio-input.gif"
     return [
         {
@@ -327,13 +339,13 @@ def run_command(command, work, timeout_seconds, use_system_time):
     return {"command": command, "elapsed_seconds": elapsed, "cpu_user_seconds": float(cpu.group(2)) if cpu else None, "cpu_system_seconds": float(cpu.group(3)) if cpu else None, "exit_code": process.returncode, "timed_out": timed_out, "peak_workspace_bytes_sampled": peak_bytes, "peak_resident_bytes_reported": int(match.group(1)) if match else peak_rss_bytes, "memory_measurement": "system_time" if match else "sampled_ps" if peak_rss_bytes is not None else "unavailable", "stdout": stdout[-16000:], "stderr": stderr[-16000:]}
 
 
-def run_one(name, tools, manifest, frames, output, label, timeout_seconds, use_system_time):
+def run_one(name, tools, manifest, frames, output, label, timeout_seconds, use_system_time, magick_diffusion_amount=100, retained_hashes=None):
     fps = manifest["fps"]
     total_started = time.perf_counter()
     work = output / "work" / f"{name}-{label}"
     work.mkdir(parents=True)
     temporary_gif = work / "output.gif"
-    commands = command_sequence_for(name, tools, fps, frames, temporary_gif, work)
+    commands = command_sequence_for(name, tools, fps, frames, temporary_gif, work, magick_diffusion_amount)
     try:
         stage_results = []
         deadline = time.monotonic() + timeout_seconds
@@ -363,6 +375,7 @@ def run_one(name, tools, manifest, frames, output, label, timeout_seconds, use_s
             "command": commands[0]["command"],
             "commands": [stage["command"] for stage in commands],
             "stage_results": stage_results,
+            "magick_diffusion_amount_percent": magick_diffusion_amount if name in ("magick", "magick-unoptimized") else None,
             "elapsed_seconds": None,
             "component_elapsed_seconds": sum(stage["elapsed_seconds"] for stage in stage_results),
             "cpu_user_seconds": sum((stage["cpu_user_seconds"] or 0) for stage in stage_results) if any(stage["cpu_user_seconds"] is not None for stage in stage_results) else None,
@@ -412,10 +425,26 @@ def run_one(name, tools, manifest, frames, output, label, timeout_seconds, use_s
                 metadata["expected_frame_delays_centiseconds"] = expected_delays
                 metadata["duration_tolerance_seconds"] = duration_tolerance
                 result["gif"] = metadata
-                destination = output / "gifs" / name / f"{label}.gif"
-                destination.parent.mkdir(parents=True, exist_ok=True)
-                shutil.move(str(temporary_gif), destination)
-                result["output"] = str(destination)
+                output_hash = digest(temporary_gif)
+                result["output_sha256"] = output_hash
+                result["output_bytes"] = metadata["bytes"]
+                hashes = retained_hashes if retained_hashes is not None else set()
+                if output_hash in hashes:
+                    # this temporary GIF was created by this invocation; prior artifacts are untouched.
+                    temporary_gif.unlink()
+                    result["retained_output"] = False
+                    result["retained_output_path"] = None
+                    result["output"] = None
+                else:
+                    destination = output / "gifs" / name / f"{label}.gif"
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    if destination.exists():
+                        raise FileExistsError(f"refusing to overwrite existing benchmark output: {destination}")
+                    shutil.move(str(temporary_gif), destination)
+                    hashes.add(output_hash)
+                    result["retained_output"] = True
+                    result["retained_output_path"] = str(destination)
+                    result["output"] = str(destination)
                 result["status"] = "ok"
             except ValueError as error:
                 result["status"] = "invalid_output"
@@ -447,6 +476,7 @@ def main():
     parser.add_argument("--imageio-app-binary", type=Path, help="reuse a previously compiled app candidate helper")
     parser.add_argument("--timeout", type=float, default=180, help="total seconds allowed per benchmark path")
     parser.add_argument("--candidates", nargs="+", choices=CANDIDATES, default=CANDIDATES)
+    parser.add_argument("--magick-diffusion-amount", type=diffusion_amount, default=100, metavar="0..100", help="ImageMagick Floyd-Steinberg diffusion amount as a percentage (default: 100)")
     args = parser.parse_args()
     if args.runs < 1 or args.timeout <= 0:
         parser.error("runs and timeout must be positive")
@@ -482,6 +512,7 @@ def main():
     use_system_time = time_probe.get("exit_code") == 0
     selected = list(dict.fromkeys(args.candidates))
     records = []
+    retained_hashes = {name: set() for name in selected}
     (args.output / "raw.json").write_text("[]\n")
     for round_index in range(args.runs + 1):
         order = selected if round_index % 2 == 0 else list(reversed(selected))
@@ -491,12 +522,13 @@ def main():
             label = "first-invocation" if round_index == 0 else f"warm-{round_index:02d}"
             print(f"running {name} {label}", flush=True)
             try:
-                result = run_one(name, tools, manifest, frames, args.output, label, args.timeout, use_system_time)
+                result = run_one(name, tools, manifest, frames, args.output, label, args.timeout, use_system_time, args.magick_diffusion_amount, retained_hashes[name])
             except (OSError, ValueError) as error:
                 failed_work = args.output / "work" / f"{name}-{label}"
-                failed_commands = command_sequence_for(name, tools, fps, frames, failed_work / "output.gif", failed_work)
+                failed_commands = command_sequence_for(name, tools, fps, frames, failed_work / "output.gif", failed_work, args.magick_diffusion_amount)
                 result = {"status": "runner_error", "error": str(error), "command": failed_commands[0]["command"], "commands": [stage["command"] for stage in failed_commands], "elapsed_seconds": None, "cpu_user_seconds": None, "cpu_system_seconds": None, "exit_code": None, "timed_out": False, "peak_workspace_bytes_sampled": None, "peak_resident_bytes_reported": None, "memory_measurement": "unavailable", "stdout": "", "stderr": ""}
             result.update({"candidate": name, "run": label, "round": round_index})
+            result["magick_diffusion_amount_percent"] = args.magick_diffusion_amount if name in ("magick", "magick-unoptimized") else None
             records.append(result)
             (args.output / "raw.json").write_text(json.dumps(records, indent=2) + "\n")
     summary = {}
@@ -504,8 +536,8 @@ def main():
         samples = [sample for sample in records if sample["candidate"] == name]
         warm = [sample["elapsed_seconds"] for sample in samples if sample["run"] != "first-invocation" and sample["status"] == "ok"]
         path = availability[name]
-        summary[name] = {"available": path["available"], "required_tools": path["required_tools"], "missing_tools": path["missing_tools"], "reason": path["reason"], "status": "unavailable" if not path["available"] else "ok" if len(warm) == args.runs else "incomplete", "successful_warm_runs": len(warm), "median_warm_seconds": statistics.median(warm) if warm else None, "p90_warm_seconds": percentile(warm, 0.9) if warm else None, "samples": [{"run": sample["run"], "status": sample["status"], "elapsed_seconds": sample["elapsed_seconds"], "cpu_user_seconds": sample["cpu_user_seconds"], "cpu_system_seconds": sample["cpu_system_seconds"], "bytes": sample.get("gif", {}).get("bytes"), "frame_count": sample.get("gif", {}).get("frame_count"), "duration_seconds": sample.get("gif", {}).get("duration_seconds"), "frame_delays_centiseconds": sample.get("gif", {}).get("frame_delays_centiseconds"), "peak_resident_bytes_reported": sample["peak_resident_bytes_reported"], "peak_workspace_bytes_sampled": sample["peak_workspace_bytes_sampled"]} for sample in samples]}
-    report = {"environment": environment(), "fixture": {"path": str(fixture), "manifest": manifest, "manifest_sha256": digest(manifest_path), "frames_sha256": fixture_digest(frames)}, "tools": tools, "path_availability": availability, "system_time_probe": time_probe, "runs_requested": args.runs, "timeout_seconds": args.timeout, "summary": summary, "limits": ["this measures offline PNG-to-GIF encoding, not capture or stop-to-preview latency", "per-frame centisecond delays and infinite-loop metadata must match the fixture/output contract", "peak workspace bytes are polled every 20 ms and can miss short-lived files", "memory uses macOS /usr/bin/time -l when available, otherwise sampled ps; either may include helper processes or miss short peaks", "GIF parsing checks structure and metadata, not visual fidelity or playback in another app"]}
+        summary[name] = {"available": path["available"], "required_tools": path["required_tools"], "missing_tools": path["missing_tools"], "reason": path["reason"], "magick_diffusion_amount_percent": args.magick_diffusion_amount if name in ("magick", "magick-unoptimized") else None, "status": "unavailable" if not path["available"] else "ok" if len(warm) == args.runs else "incomplete", "successful_warm_runs": len(warm), "median_warm_seconds": statistics.median(warm) if warm else None, "p90_warm_seconds": percentile(warm, 0.9) if warm else None, "samples": [{"run": sample["run"], "status": sample["status"], "elapsed_seconds": sample["elapsed_seconds"], "cpu_user_seconds": sample["cpu_user_seconds"], "cpu_system_seconds": sample["cpu_system_seconds"], "bytes": sample.get("output_bytes"), "output_sha256": sample.get("output_sha256"), "retained_output": sample.get("retained_output", False), "retained_output_path": sample.get("retained_output_path"), "frame_count": sample.get("gif", {}).get("frame_count"), "duration_seconds": sample.get("gif", {}).get("duration_seconds"), "frame_delays_centiseconds": sample.get("gif", {}).get("frame_delays_centiseconds"), "peak_resident_bytes_reported": sample["peak_resident_bytes_reported"], "peak_workspace_bytes_sampled": sample["peak_workspace_bytes_sampled"]} for sample in samples]}
+    report = {"environment": environment(), "fixture": {"path": str(fixture), "manifest": manifest, "manifest_sha256": digest(manifest_path), "frames_sha256": fixture_digest(frames)}, "tools": tools, "path_availability": availability, "system_time_probe": time_probe, "runs_requested": args.runs, "magick_diffusion_amount_percent": args.magick_diffusion_amount, "timeout_seconds": args.timeout, "summary": summary, "limits": ["this measures offline PNG-to-GIF encoding, not capture or stop-to-preview latency", "per-frame centisecond delays and infinite-loop metadata must match the fixture/output contract", "peak workspace bytes are polled every 20 ms and can miss short-lived files", "memory uses macOS /usr/bin/time -l when available, otherwise sampled ps; either may include helper processes or miss short peaks", "GIF parsing checks structure and metadata, not visual fidelity or playback in another app"]}
     (args.output / "summary.json").write_text(json.dumps(report, indent=2) + "\n")
     print(json.dumps(summary, indent=2))
     print(f"raw results: {args.output / 'raw.json'}")

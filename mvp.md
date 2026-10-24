@@ -11,7 +11,7 @@
 - stop with the same hotkey. show a floating, animated preview with file size, duration, dimensions, and clear processing status. offer copy, save, discard, and compress. `⌘C` copies and confirms success; `⌘S` opens the save dialog. closing an unexported preview asks before discarding.
 - trim the beginning and end before export with two timeline handles. choose playback speed from a 0.5×–2× slider in 0.1× steps, centered at 1×. choose loop forever or once. preview and export must agree.
 - while an edit is being encoded, keep the last usable preview visible and disable copy and save. apply only the newest requested edit. keep original frames and the original GIF for recovery; bound replacement outputs by the session quota and remove cancelled or obsolete outputs.
-- compression uses bundled local command-line tooling. preserve the original; show compressed output with a back action. offer dithering-strength slider, original/75%/50%/25% resolution choices, and goal buttons for Discord and GitHub. each button shows the destination logo and current published maximum. aim below the limit with a safety margin. automatically search resolution, frame rate, palette, and dithering settings for the smallest file under the target. report the best attempt and a warning if the goal cannot be met acceptably.
+- compression uses bundled local command-line tooling. preserve the original; show compressed output with a back action. offer a dithering-strength slider from 0% to 100% in 5% steps, defaulting to 35%, using ImageMagick's documented `dither:diffusion-amount` mapping if the pinned release candidate verifies it. offer original/75%/50%/25% resolution choices and goal buttons for Discord and GitHub. each button shows the destination logo and current published maximum. aim below the limit with a safety margin. automatically search resolution, frame rate, palette, and dithering settings for the smallest file under the target while preserving the approved quality floor: text remains legible at native scale, cursor edges remain clear, and gradients have no distracting banding or flicker; minor differences visible only at 2× are acceptable. report the best attempt and a warning if the goal cannot be met acceptably.
 - guided screen-recording permission setup; clear failures for missing permissions, hotkey conflict, unavailable display/window, full disk, encoder failure, and failed clipboard or save operations.
 - retain temporary completed media while its preview is active. remove it when the preview closes after export or after confirmed discard; remove orphaned preview media on the next launch after a crash without touching exported files.
 - subtle optional interaction sounds, brief motion feedback, reduced-motion support, keyboard navigation, and accessible labels.
@@ -26,7 +26,7 @@
 | background use | other apps receive normal mouse and keyboard input while recording; the record hotkey still stops capture. |
 | preview and export | stop opens an animated preview; metadata matches exported GIF; copy and `⌘C` paste animation into GitHub on a real Mac; save and `⌘S` produce the same valid file. |
 | editing | two accessible timeline handles trim the beginning and end; the 0.5×–2× speed slider starts at 1× with 0.1× steps; loop forever and once changes appear in the preview and persist in copied and saved GIFs. exports are unavailable until the newest edit is ready; a cancelled or failed edit leaves the previous preview usable, and the original frames and GIF remain available. |
-| compression | original is recoverable with back; resolution and dithering controls alter the result; preset reports actual size against its target, including failure to meet it. |
+| compression | original is recoverable with back; resolution and dithering controls alter the result; every accepted size-goal output meets the approved quality floor; preset reports actual size against its target, including failure to meet it. |
 | failure recovery | permission loss, disappearing target, low disk space, encoder failure, and hotkey conflict produce actionable states and clean up temporary files. after a crash, unfinished recordings are deleted on next launch rather than restored. |
 
 ## release boundary
@@ -34,7 +34,7 @@
 - no account, cloud upload, screen-content analytics, video export, or captured audio.
 - recording spans one monitor at a time. cross-display region recording is outside this release.
 - no Slack size-goal button until a useful target is defined. no restoration of unfinished recordings after a crash.
-- no promise of a specific size, frame rate, or latency until the benchmark environment and quality floor are agreed and measured.
+- no promise of a specific size, frame rate, or latency until the benchmark environment and approved quality floor have been measured.
 
 ## destination limit policy
 

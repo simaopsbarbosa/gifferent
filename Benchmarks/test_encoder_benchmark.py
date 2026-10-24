@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """check benchmark failure and cancellation cleanup without real encoders."""
 
+import argparse
 import hashlib
 import shlex
 import tempfile
@@ -10,6 +11,7 @@ from pathlib import Path
 from generate_fixture import draw_frame
 from run_encoder_benchmark import (
     command_for,
+    diffusion_amount,
     expected_frame_delays,
     fixture_digest,
     gif_metadata,
@@ -95,6 +97,54 @@ class CleanupTests(unittest.TestCase):
             self.assertEqual(result["gif"]["frame_delays_centiseconds"], [4])
             self.assertTrue(Path(result["output"]).is_file())
             self.assertFalse((output / "work" / "imageio-valid").exists())
+
+    def test_duplicate_success_is_hashed_but_not_retained_twice(self):
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory)
+            encoder = output / "fake-encoder"
+            gif = output / "valid.gif"
+            gif.write_bytes(tiny_gif_with_delays([4]))
+            encoder.write_text(
+                "#!/bin/sh\ncp " + shlex.quote(str(gif)) + " \"$2\"\nexit 0\n"
+            )
+            encoder.chmod(0o755)
+            frame = output / "frame.png"
+            frame.write_bytes(b"synthetic")
+            tools = {"imageio": {"path": str(encoder)}}
+            retained_hashes = set()
+            manifest = {**MANIFEST, "duration_seconds": 1 / 24}
+
+            first = run_one("imageio", tools, manifest, [frame], output, "first", 2, False, retained_hashes=retained_hashes)
+            second = run_one("imageio", tools, manifest, [frame], output, "second", 2, False, retained_hashes=retained_hashes)
+
+            self.assertTrue(first["retained_output"])
+            self.assertTrue(Path(first["retained_output_path"]).is_file())
+            self.assertFalse(second["retained_output"])
+            self.assertIsNone(second["retained_output_path"])
+            self.assertIsNone(second["output"])
+            self.assertEqual(second["output_sha256"], first["output_sha256"])
+            self.assertEqual(second["output_bytes"], len(tiny_gif_with_delays([4])))
+            self.assertFalse((output / "gifs" / "imageio" / "second.gif").exists())
+
+    def test_magick_diffusion_amount_accepts_bounds_and_default(self):
+        self.assertEqual(diffusion_amount("0"), 0)
+        self.assertEqual(diffusion_amount("100"), 100)
+        self.assertEqual(diffusion_amount(100), 100)
+        tools = {"magick": {"path": "/opt/homebrew/bin/magick"}}
+        frames = [Path("frame.png")]
+        for candidate in ("magick", "magick-unoptimized"):
+            for amount in (0, 35, 100):
+                with self.subTest(candidate=candidate, amount=amount):
+                    command = command_for(candidate, tools, 24, frames, Path("output.gif"), amount)
+                    flags = ["-dither", "FloydSteinberg", "-define", f"dither:diffusion-amount={amount}%", "-colors", "256"]
+                    self.assertEqual(command[command.index("-dither") : command.index("-colors") + 2], flags)
+            default_command = command_for(candidate, tools, 24, frames, Path("output.gif"))
+            self.assertIn("dither:diffusion-amount=100%", default_command)
+
+    def test_magick_diffusion_amount_rejects_out_of_range_values(self):
+        for amount in (-1, 101):
+            with self.subTest(amount=amount), self.assertRaises(argparse.ArgumentTypeError):
+                diffusion_amount(amount)
 
     def test_frame_count_mismatch_is_rejected(self):
         with tempfile.TemporaryDirectory() as directory:

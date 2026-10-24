@@ -47,7 +47,7 @@ for each run, record:
 - validity and visual review of animation, text, motion, dithering, and color; include reviewer and known limits;
 - baseline and candidate results on the same input and machine, with a conclusion tied to measured evidence.
 
-the speed goals in [vision.md](../vision.md) remain targets until runs on an agreed reference Mac and fixture set establish them. the acceptable visual quality floor is an open product decision in [decisions.md](../decisions.md).
+the speed goals in [vision.md](../vision.md) remain targets until runs on an agreed reference Mac and fixture set establish them. the architect approved the minimum visual quality floor in [decisions.md](../decisions.md); representative samples still need review against it.
 
 ## exploratory encoder run
 
@@ -56,6 +56,8 @@ on the [reference Mac](environment.md), run one command from the repository root
 ```sh
 python3 Benchmarks/run_encoder_benchmark.py --output Benchmarks/outputs/reference-640x360-01 --frames 240 --width 640 --height 360 --runs 7
 ```
+
+ImageMagick paths use a Floyd–Steinberg diffusion amount of 100% by default, preserving the setting used in existing exploratory results. to run a controlled value from 0 to 100%, pass `--magick-diffusion-amount 35`; the runner rejects values outside that range. the selected percentage is recorded in `raw.json`, `summary.json`, and each ImageMagick command.
 
 the runner creates the requested synthetic fixture once, records one first-invocation sample and seven warm samples per available path, and alternates path order. paths are `gifski`, `magick` with `-layers Optimize`, `magick-unoptimized`, the legacy ImageIO helper, the app's `ImageIOOriginalGIFEncoder` via `imageio-app`, and ImageIO followed by `gifsicle --optimize=3`. it discovers `gifski`, `magick`, and `gifsicle` from `PATH`, and compiles both ImageIO helpers with `xcrun swiftc`. missing or unbuildable tools are reported as unavailable in `summary.json`; the raw report records path requirements and missing tools. no tool is installed by the runner.
 
@@ -73,9 +75,9 @@ to name all six paths explicitly, use:
 python3 Benchmarks/run_encoder_benchmark.py --fixture Benchmarks/generated/mixed-640x360 --output Benchmarks/outputs/mixed-matrix-01 --runs 7 --candidates gifski magick magick-unoptimized imageio imageio-app imageio-gifsicle
 ```
 
-`gifski` pins quality 90 explicitly and `--no-sort` to preserve manifest order. the existing `magick` path retains its optimized command; `magick-unoptimized` runs the same input and delay configuration without `-layers Optimize`. ImageMagick's `-loop 0` follows the input frames so it applies to the output animation. the ImageIO→Gifsicle path runs as two stages, writes its intermediate GIF inside the per-run temporary workspace, and includes both stages in elapsed time and the total timeout. each successful final GIF is retained under `gifs/` for visual review.
+`gifski` pins quality 90 explicitly and `--no-sort` to preserve manifest order. the existing `magick` path retains its optimized command; `magick-unoptimized` runs the same input and delay configuration without `-layers Optimize`. ImageMagick's `-loop 0` follows the input frames so it applies to the output animation. the ImageIO→Gifsicle path runs as two stages, writes its intermediate GIF inside the per-run temporary workspace, and includes both stages in elapsed time and the total timeout. each successful output is SHA-256 hashed. the first output with a new hash per candidate is retained under `gifs/` for visual review; identical later outputs from that candidate are removed after validation. every successful sample records its hash, byte count, and retained-output path (or `null`) in both reports.
 
-all paths must pass GIF structure, dimensions, frame count, exact per-frame centisecond schedule, cumulative duration, and infinite-loop validation. `raw.json` contains exact argument arrays for each path and stage, per-stage and total elapsed times, CPU user/system time when obtainable, exit status, sampled peak workspace bytes, peak resident bytes when obtainable, stderr, and parsed GIF metadata for every attempted run. `summary.json` contains environment/tool provenance, manifest and frame-content checksums, availability and missing-tool reasons, median/p90 of successful warm runs, and the per-run size, frame count, duration, and frame delays. a failed, invalid, timed-out, wrong-dimension, wrong-frame-count, wrong-loop, wrong-per-frame-delay, or out-of-tolerance-duration run removes its partial GIF and workspace, remains in the reports, and is not counted in the statistic.
+all paths must pass GIF structure, dimensions, frame count, exact per-frame centisecond schedule, cumulative duration, and infinite-loop validation. `raw.json` contains exact argument arrays for each path and stage, per-stage and total elapsed times, CPU user/system time when obtainable, exit status, sampled peak workspace bytes, peak resident bytes when obtainable, stderr, and parsed GIF metadata for every attempted run. `summary.json` contains environment/tool provenance, manifest and frame-content checksums, availability and missing-tool reasons, median/p90 of successful warm runs, and the per-run hash, size, retention status/path, frame count, duration, and frame delays. a failed, invalid, timed-out, wrong-dimension, wrong-frame-count, wrong-loop, wrong-per-frame-delay, or out-of-tolerance-duration run removes its partial GIF and workspace, remains in the reports, and is not counted in the statistic.
 
 run the harness checks with `python3 -m unittest discover -s Benchmarks -p 'test_encoder_benchmark.py' -v`. for a quick real-encoder smoke test, use a new output directory with `--frames 6 --width 320 --height 180 --runs 1`; it does not provide a valid performance comparison.
 
