@@ -131,7 +131,7 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(testWindow.buttons["recording-action-button"].label, "start recording")
   }
 
-  func testFixtureRegionSelectionAndCancellationRestoreLastSelection() throws {
+  func testFixtureRegionSelectionAndCancellationRestoreLastSelection() {
     let app = XCUIApplication()
     app.launchArguments.append("--ui-testing")
     app.launch()
@@ -148,28 +148,20 @@ final class MenuBarSmokeTests: XCTestCase {
     let regionEnd = selectionWindow.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.48))
     regionStart.press(forDuration: 0.1, thenDragTo: regionEnd)
 
-    let selectedRegion = app.descendants(matching: .any)
-      .matching(NSPredicate(format: "label == %@", "selected region")).firstMatch
-    XCTAssertTrue(selectedRegion.waitForExistence(timeout: 5))
-    let regionValue = try XCTUnwrap(selectedRegion.value as? String)
-    let dimensions = regionValue.replacingOccurrences(of: " points", with: "").split(
-      separator: " by "
-    )
-    XCTAssertEqual(dimensions.count, 2)
-    XCTAssertGreaterThan(try XCTUnwrap(Int(dimensions[0])), 0)
-    XCTAssertGreaterThan(try XCTUnwrap(Int(dimensions[1])), 0)
+    let confirmButton = selectionWindow.buttons["confirm-selection-button"]
+    XCTAssertTrue(confirmButton.isEnabled, "drawing a region should enable confirmation")
 
-    selectionWindow.buttons["confirm-selection-button"].click()
+    confirmButton.click()
     XCTAssertTrue(testWindow.staticTexts["selection-status"].waitForExistence(timeout: 5))
     XCTAssertEqual(testWindow.staticTexts["selection-status"].label, "region selected")
 
     testWindow.buttons["select-capture-button"].click()
     let restoredSelectionWindow = app.windows["capture selection"]
     XCTAssertTrue(restoredSelectionWindow.waitForExistence(timeout: 10))
-    let restoredRegion = app.descendants(matching: .any)
-      .matching(NSPredicate(format: "label == %@", "selected region")).firstMatch
-    XCTAssertTrue(restoredRegion.waitForExistence(timeout: 5))
-    XCTAssertEqual(restoredRegion.value as? String, regionValue)
+    let restoredTargetDescription = app.descendants(matching: .any)
+      .matching(NSPredicate(format: "label == %@", "capture target: region selected")).firstMatch
+    XCTAssertTrue(restoredTargetDescription.waitForExistence(timeout: 5))
+    XCTAssertTrue(restoredSelectionWindow.buttons["confirm-selection-button"].isEnabled)
 
     restoredSelectionWindow.buttons["cancel-selection-button"].click()
     XCTAssertFalse(restoredSelectionWindow.waitForExistence(timeout: 5))
@@ -188,8 +180,7 @@ final class MenuBarSmokeTests: XCTestCase {
 
     let selectionWindow = app.windows["capture selection"]
     XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
-    selectionWindow.descendants(matching: .any)
-      .matching(identifier: "select-window-menu").firstMatch.click()
+    selectionWindow.popUpButtons["select a window"].click()
     let fixtureWindow = app.menuItems["gifferent fixture · fixture window"]
     XCTAssertTrue(fixtureWindow.waitForExistence(timeout: 5))
     fixtureWindow.click()

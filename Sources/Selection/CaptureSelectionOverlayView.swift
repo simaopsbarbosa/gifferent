@@ -68,7 +68,6 @@ struct CaptureSelectionOverlayView: View {
         }
       }
       .accessibilityLabel("select a window")
-      .accessibilityIdentifier("select-window-menu")
 
       Button("region") {
         draftRegion = nil
