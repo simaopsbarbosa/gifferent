@@ -41,6 +41,8 @@
 		A00000000000000000000064 /* RecordingFrameGeometryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000065 /* RecordingFrameGeometryTests.swift */; };
 		A00000000000000000000066 /* OriginalGIFEncoder.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000068 /* OriginalGIFEncoder.swift */; };
 		A00000000000000000000067 /* OriginalGIFEncoderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000069 /* OriginalGIFEncoderTests.swift */; };
+		A00000000000000000000070 /* GIFEditModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000071 /* GIFEditModel.swift */; };
+		A00000000000000000000072 /* GIFEditModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000073 /* GIFEditModelTests.swift */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -99,6 +101,8 @@
 		A00000000000000000000065 /* RecordingFrameGeometryTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingFrameGeometryTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000068 /* OriginalGIFEncoder.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OriginalGIFEncoder.swift; sourceTree = "<group>"; };
 		A00000000000000000000069 /* OriginalGIFEncoderTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = OriginalGIFEncoderTests.swift; sourceTree = "<group>"; };
+		A00000000000000000000071 /* GIFEditModel.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFEditModel.swift; sourceTree = "<group>"; };
+		A00000000000000000000073 /* GIFEditModelTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFEditModelTests.swift; sourceTree = "<group>"; };
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -177,6 +181,7 @@
 				A0000000000000000000005A /* RecordingCoordinatorTests.swift */,
 				A00000000000000000000065 /* RecordingFrameGeometryTests.swift */,
 				A00000000000000000000069 /* OriginalGIFEncoderTests.swift */,
+				A00000000000000000000073 /* GIFEditModelTests.swift */,
 			);
 			name = gifferentTests;
 			path = gifferentTests;
@@ -270,6 +275,7 @@
 			children = (
 				A00000000000000000000057 /* PNGFrameEncoder.swift */,
 				A00000000000000000000068 /* OriginalGIFEncoder.swift */,
+				A00000000000000000000071 /* GIFEditModel.swift */,
 			);
 			name = Encoding;
 			path = Encoding;
@@ -445,6 +451,7 @@
 				A0000000000000000000004A /* RecordingCoordinatorTests.swift in Sources */,
 				A00000000000000000000064 /* RecordingFrameGeometryTests.swift in Sources */,
 				A00000000000000000000067 /* OriginalGIFEncoderTests.swift in Sources */,
+				A00000000000000000000072 /* GIFEditModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -470,6 +477,7 @@
 				A00000000000000000000043 /* SessionWorkspaceStore.swift in Sources */,
 				A00000000000000000000047 /* PNGFrameEncoder.swift in Sources */,
 				A00000000000000000000066 /* OriginalGIFEncoder.swift in Sources */,
+				A00000000000000000000070 /* GIFEditModel.swift in Sources */,
 				A00000000000000000000049 /* RecordingCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
