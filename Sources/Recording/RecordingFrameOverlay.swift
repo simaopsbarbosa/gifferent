@@ -42,6 +42,7 @@ final class RecordingFrameOverlayController {
       let accessibilityWindows = (NSApp.accessibilityWindows() as? [NSWindow] ?? [])
         .filter { $0 !== panel }
       NSApp.setAccessibilityWindows(accessibilityWindows)
+      NSAccessibility.post(element: panel, notification: .uiElementDestroyed)
     }
     panel?.orderOut(nil)
     panel?.close()
@@ -52,8 +53,10 @@ final class RecordingFrameOverlayController {
   #if DEBUG
     var fixtureStateDescription: String {
       guard let panel else { return "hidden" }
+      let isAccessibilityWindow =
+        (NSApp.accessibilityWindows() as? [NSWindow] ?? []).contains { $0 === panel }
       return
-        "visible=\(panel.isVisible), app-window=\(NSApp.windows.contains { $0 === panel }), x=\(Int(panel.frame.minX))"
+        "visible=\(panel.isVisible), app-window=\(NSApp.windows.contains { $0 === panel }), ax-window=\(isAccessibilityWindow), x=\(Int(panel.frame.minX))"
     }
 
     func showFixture(frame: CGRect) {
@@ -134,7 +137,13 @@ private final class RecordingFramePanel: NSPanel {
     hasShadow = false
     ignoresMouseEvents = true
     isReleasedWhenClosed = false
-    contentView = NSHostingView(rootView: RecordingFrameView(targetRect: targetRect))
+    let hostingView = NSHostingView(rootView: RecordingFrameView(targetRect: targetRect))
+    hostingView.setAccessibilityElement(true)
+    hostingView.setAccessibilityRole(.group)
+    hostingView.setAccessibilityLabel("recording")
+    hostingView.setAccessibilityValue("recording")
+    hostingView.setAccessibilityIdentifier("recording-frame-label")
+    contentView = hostingView
     if let contentView {
       setAccessibilityContents([contentView])
     }
@@ -183,7 +192,7 @@ private struct RecordingFrameView: View {
         .overlay(RoundedRectangle(cornerRadius: 3).stroke(.white, lineWidth: 1))
         .position(x: targetRect.minX + 31, y: targetRect.minY / 2)
         .accessibilityLabel("recording")
-        .accessibilityIdentifier("recording-frame-label")
+        .accessibilityIdentifier("recording-frame-caption")
     }
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .accessibilityElement(children: .contain)

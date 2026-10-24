@@ -74,6 +74,7 @@ private struct GifferentMenuContent: View {
         Text(runtime.recordingFrameFixtureState)
           .accessibilityIdentifier("recording-frame-fixture-state")
           .accessibilityLabel("recording frame fixture state")
+          .accessibilityValue(runtime.recordingFrameFixtureState)
       }
     #endif
 

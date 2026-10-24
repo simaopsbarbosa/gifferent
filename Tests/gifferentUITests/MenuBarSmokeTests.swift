@@ -88,16 +88,24 @@ final class MenuBarSmokeTests: XCTestCase {
 
     let fixtureState = testWindow.staticTexts["recording-frame-fixture-state"]
     XCTAssertTrue(fixtureState.waitForExistence(timeout: 5))
-    XCTAssertTrue(waitForValue(containing: "visible=true", in: fixtureState))
-    XCTAssertTrue((fixtureState.value as? String)?.contains("app-window=true") == true)
+    XCTAssertTrue(
+      waitForValue(containing: "visible=true", in: fixtureState),
+      "fixture state: \(fixtureState.value as? String ?? "<nil>")\n\(app.debugDescription)")
+    XCTAssertTrue(
+      (fixtureState.value as? String)?.contains("app-window=true") == true,
+      "fixture state: \(fixtureState.value as? String ?? "<nil>")\n\(app.debugDescription)")
+    XCTAssertTrue(
+      (fixtureState.value as? String)?.contains("ax-window=true") == true,
+      "fixture state: \(fixtureState.value as? String ?? "<nil>")\n\(app.debugDescription)")
 
     let frameWindow = app.descendants(matching: .any)
       .matching(identifier: "recording-frame-window").firstMatch
     XCTAssertTrue(frameWindow.waitForExistence(timeout: 5))
-    let label = app.descendants(matching: .staticText)
+    let label = frameWindow.descendants(matching: .any)
       .matching(identifier: "recording-frame-label").firstMatch
     XCTAssertTrue(label.waitForExistence(timeout: 5))
     XCTAssertEqual(label.label, "recording")
+    XCTAssertEqual(label.value as? String, "recording")
     let originalFrame = label.frame
 
     testWindow.buttons["move-recording-frame-button"].click()
@@ -108,8 +116,14 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertGreaterThan(label.frame.minX, originalFrame.minX)
 
     testWindow.buttons["hide-recording-frame-button"].click()
-    XCTAssertTrue(waitForValue(containing: "hidden", in: fixtureState))
-    XCTAssertFalse(frameWindow.waitForExistence(timeout: 1))
+    XCTAssertTrue(
+      waitForValue(containing: "hidden", in: fixtureState),
+      "fixture state: \(fixtureState.value as? String ?? "<nil>")\n\(app.debugDescription)")
+    let removalDeadline = Date().addingTimeInterval(5)
+    while frameWindow.exists && Date() < removalDeadline {
+      Thread.sleep(forTimeInterval: 0.05)
+    }
+    XCTAssertFalse(frameWindow.exists, "\(app.debugDescription)")
   }
 
   private func waitForValue(
