@@ -315,6 +315,66 @@ final class SessionWorkspaceStoreTests: XCTestCase {
     _ = try await store.reservePreviewOutput(for: id)
   }
 
+  func testEditedOutputsRetainOriginalAndPruneOnlyObsoleteTemporaryGIFs() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 128,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    _ = try await store.appendFrame(pngFrame(), timestamp: 0, to: id)
+    _ = try await store.stop(id, reason: .user)
+
+    let originalReservation = try await store.reservePreviewOutput(for: id)
+    try Data([71, 73, 70, 56, 57, 97]).write(to: originalReservation.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: originalReservation)
+    let originalURL = originalReservation.url
+
+    let firstEdit = try await store.reservePreviewOutput(for: id)
+    XCTAssertNotEqual(firstEdit.url, originalURL)
+    try Data([1, 2, 3]).write(to: firstEdit.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: firstEdit)
+    XCTAssertTrue(FileManager.default.fileExists(atPath: originalURL.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: firstEdit.url.path))
+
+    let secondEdit = try await store.reservePreviewOutput(for: id)
+    try Data([4, 5, 6, 7]).write(to: secondEdit.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: secondEdit)
+    try await store.keepEditedPreviewOutput(for: id, at: secondEdit.url)
+
+    XCTAssertTrue(FileManager.default.fileExists(atPath: originalURL.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: firstEdit.url.path))
+    XCTAssertTrue(FileManager.default.fileExists(atPath: secondEdit.url.path))
+    let snapshot = try await store.snapshot(for: id)
+    XCTAssertEqual(snapshot.temporaryBytes, Int64(try pngFrame().count + 6 + 4))
+  }
+
+  func testAbandoningEditReservationPreservesCommittedOriginal() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 128,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    _ = try await store.appendFrame(pngFrame(), timestamp: 0, to: id)
+    _ = try await store.stop(id, reason: .user)
+    let original = try await store.reservePreviewOutput(for: id)
+    try Data([71, 73, 70]).write(to: original.url)
+    _ = try await store.commitPreviewOutput(for: id, reservation: original)
+    let edit = try await store.reservePreviewOutput(for: id)
+    try Data([1, 2]).write(to: edit.url)
+    try await store.abandonPreviewOutput(for: id, reservation: edit)
+
+    XCTAssertTrue(FileManager.default.fileExists(atPath: original.url.path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: edit.url.path))
+    let snapshot = try await store.snapshot(for: id)
+    XCTAssertEqual(snapshot.temporaryBytes, Int64(try pngFrame().count + 3))
+  }
+
   func testCleanupKeepsActiveConcurrentSessionsAndUnlinksOrphanSymlink() async throws {
     let base = uniqueTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: base) }

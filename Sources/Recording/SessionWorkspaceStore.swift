@@ -75,7 +75,8 @@ actor SessionWorkspaceStore {
     var lastTimestamp: TimeInterval?
     var stopReason: RecordingStopReason?
     var previewReady = false
-    var previewReserved = false
+    var previewReservedURL: URL?
+    var editedPreviewURLs: [URL: Int64] = [:]
 
     var isRecording: Bool { stopReason == nil }
   }
@@ -163,15 +164,16 @@ actor SessionWorkspaceStore {
 
   func reservePreviewOutput(for id: RecordingSessionID) throws -> PreviewOutputReservation {
     guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard !session.isRecording, !session.previewReady, !session.previewReserved else {
+    guard !session.isRecording, session.previewReservedURL == nil else {
       throw SessionWorkspaceError.invalidState
     }
     try verify(session)
     let remaining = maximumSessionBytes - session.temporaryBytes
     try checkCapacity(adding: 1, current: session.temporaryBytes)
-    let previewURL = session.directory.appendingPathComponent("preview.gif", isDirectory: false)
+    let fileName = session.previewReady ? "preview-edit-\(UUID().uuidString).gif" : "preview.gif"
+    let previewURL = session.directory.appendingPathComponent(fileName, isDirectory: false)
     guard !entryExists(at: previewURL) else { throw SessionWorkspaceError.invalidPreviewFile }
-    session.previewReserved = true
+    session.previewReservedURL = previewURL
     sessions[id] = session
     return PreviewOutputReservation(
       url: previewURL,
@@ -181,7 +183,7 @@ actor SessionWorkspaceStore {
 
   func pngSequence(for id: RecordingSessionID) throws -> CapturedPNGSequence {
     guard let session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard !session.isRecording, !session.previewReady, !session.previewReserved else {
+    guard !session.isRecording, session.previewReservedURL == nil else {
       throw SessionWorkspaceError.invalidState
     }
     try verify(session)
@@ -211,42 +213,78 @@ actor SessionWorkspaceStore {
   }
 
   @discardableResult
-  func commitPreviewOutput(for id: RecordingSessionID) throws -> RecordingSessionSnapshot {
+  func commitPreviewOutput(
+    for id: RecordingSessionID,
+    reservation: PreviewOutputReservation? = nil
+  ) throws -> RecordingSessionSnapshot {
     guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard !session.isRecording, !session.previewReady, session.previewReserved else {
+    guard !session.isRecording, let reservedURL = session.previewReservedURL,
+      reservation?.url == nil || reservation?.url == reservedURL
+    else {
       throw SessionWorkspaceError.invalidState
     }
     try verify(session)
-    let previewURL = session.directory.appendingPathComponent("preview.gif", isDirectory: false)
     do {
-      let fileSize = try sizeOfRegularFile(at: previewURL)
+      let fileSize = try sizeOfRegularFile(at: reservedURL)
       let bytes = Int64(fileSize)
       guard bytes <= maximumSessionBytes - session.temporaryBytes else {
         throw SessionWorkspaceError.sizeLimitExceeded
       }
       session.temporaryBytes += bytes
       session.previewReady = true
-      session.previewReserved = false
+      session.previewReservedURL = nil
+      if reservedURL.lastPathComponent != "preview.gif" {
+        session.editedPreviewURLs[reservedURL] = bytes
+      }
       sessions[id] = session
       return snapshot(of: session)
     } catch {
-      try? fileManager.removeItem(at: previewURL)
-      session.previewReserved = false
+      try? fileManager.removeItem(at: reservedURL)
+      session.previewReservedURL = nil
       sessions[id] = session
       throw error
     }
   }
 
-  func abandonPreviewOutput(for id: RecordingSessionID) throws {
+  func abandonPreviewOutput(
+    for id: RecordingSessionID,
+    reservation: PreviewOutputReservation? = nil
+  ) throws {
     guard var session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard session.previewReserved else { throw SessionWorkspaceError.invalidState }
+    guard let reservedURL = session.previewReservedURL,
+      reservation?.url == nil || reservation?.url == reservedURL
+    else { throw SessionWorkspaceError.invalidState }
     try verify(session)
-    let previewURL = session.directory.appendingPathComponent("preview.gif", isDirectory: false)
-    if entryExists(at: previewURL) {
-      try fileManager.removeItem(at: previewURL)
+    if entryExists(at: reservedURL) {
+      try fileManager.removeItem(at: reservedURL)
     }
-    session.previewReserved = false
+    session.previewReservedURL = nil
     sessions[id] = session
+  }
+
+  func removeEditedPreviewOutput(for id: RecordingSessionID, at url: URL) throws {
+    guard var session = sessions[id], let bytes = session.editedPreviewURLs[url] else {
+      throw SessionWorkspaceError.invalidState
+    }
+    try verify(session)
+    try fileManager.removeItem(at: url)
+    session.editedPreviewURLs.removeValue(forKey: url)
+    session.temporaryBytes -= bytes
+    sessions[id] = session
+  }
+
+  func keepEditedPreviewOutput(for id: RecordingSessionID, at url: URL) throws {
+    guard var session = sessions[id], session.editedPreviewURLs[url] != nil else {
+      throw SessionWorkspaceError.invalidState
+    }
+    try verify(session)
+    let obsoleteOutputs = session.editedPreviewURLs.filter { $0.key != url }
+    for (obsoleteURL, bytes) in obsoleteOutputs {
+      try fileManager.removeItem(at: obsoleteURL)
+      session.editedPreviewURLs.removeValue(forKey: obsoleteURL)
+      session.temporaryBytes -= bytes
+      sessions[id] = session
+    }
   }
 
   func snapshot(for id: RecordingSessionID) throws -> RecordingSessionSnapshot {
@@ -264,7 +302,9 @@ actor SessionWorkspaceStore {
 
   func closePreviewAfterExport(_ id: RecordingSessionID) throws {
     guard let session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
-    guard session.previewReady else { throw SessionWorkspaceError.invalidState }
+    guard session.previewReady, session.previewReservedURL == nil else {
+      throw SessionWorkspaceError.invalidState
+    }
     try remove(id)
   }
 

@@ -88,6 +88,27 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(animatedPreview.elementType, .image)
     XCTAssertEqual(animatedPreview.label, "animated gif preview")
 
+    let startHandle = previewWindow.descendants(matching: .any)
+      .matching(identifier: "trim-start-handle").firstMatch
+    let endHandle = previewWindow.descendants(matching: .any)
+      .matching(identifier: "trim-end-handle").firstMatch
+    XCTAssertTrue(startHandle.exists)
+    XCTAssertEqual(startHandle.label, "trim start")
+    XCTAssertTrue(endHandle.exists)
+    XCTAssertEqual(endHandle.label, "trim end")
+    let speedSlider = previewWindow.sliders["playback-speed-slider"]
+    XCTAssertTrue(speedSlider.exists)
+    XCTAssertTrue(previewWindow.buttons["loop-once-button"].exists)
+    XCTAssertTrue(previewWindow.buttons["loop-forever-button"].exists)
+
+    previewWindow.buttons["loop-once-button"].click()
+    XCTAssertTrue(waitForPreviewAction("gif updated", in: previewWindow))
+    speedSlider.adjust(toNormalizedSliderPosition: 0.666)
+    XCTAssertTrue(
+      waitForValue(containing: "1.5×", in: previewWindow.staticTexts["playback-speed-value"])
+    )
+    XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
+
     previewWindow.buttons["copy-preview-button"].click()
     XCTAssertTrue(waitForPreviewAction("copied", in: previewWindow))
     previewWindow.buttons["save-preview-button"].click()
@@ -218,5 +239,11 @@ final class MenuBarSmokeTests: XCTestCase {
       object: window.staticTexts["preview-action-status"]
     )
     return XCTWaiter.wait(for: [expectation], timeout: 5) == .completed
+  }
+
+  private func waitForEnabled(_ element: XCUIElement, timeout: TimeInterval = 5) -> Bool {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "isEnabled == true"), object: element)
+    return XCTWaiter.wait(for: [expectation], timeout: timeout) == .completed
   }
 }

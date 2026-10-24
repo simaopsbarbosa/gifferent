@@ -36,10 +36,9 @@ struct GIFMetadataInspector {
       fileInfo.st_size > 0,
       let source = CGImageSourceCreateWithURL(url as CFURL, nil),
       CGImageSourceGetCount(source) > 0,
-      let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any],
-      let globalGIF = globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any],
-      let loopCount = globalGIF[kCGImagePropertyGIFLoopCount] as? Int
+      let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any]
     else { throw OriginalGIFEncodingError.invalidOutput }
+    let globalGIF = globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any] ?? [:]
 
     let count = CGImageSourceGetCount(source)
     var width: Int?
@@ -77,7 +76,7 @@ struct GIFMetadataInspector {
       frameCount: count,
       delaysCentiseconds: delays,
       durationCentiseconds: delays.reduce(0, +),
-      loopsForever: loopCount == 0,
+      loopsForever: (globalGIF[kCGImagePropertyGIFLoopCount] as? Int) == 0,
       fileBytes: Int64(fileInfo.st_size)
     )
   }
@@ -89,6 +88,23 @@ protocol OriginalGIFEncoding: Sendable {
     _ sequence: CapturedPNGSequence,
     to reservation: PreviewOutputReservation
   ) async throws -> EncodedGIF
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    loopMode: GIFLoopMode,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF
+}
+
+extension OriginalGIFEncoding {
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    loopMode: GIFLoopMode,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    guard loopMode == .forever else { throw OriginalGIFEncodingError.invalidOutput }
+    return try await encode(sequence, to: reservation)
+  }
 }
 
 private final class GIFCancellationFlag: @unchecked Sendable {
@@ -154,10 +170,19 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
     _ sequence: CapturedPNGSequence,
     to reservation: PreviewOutputReservation
   ) async throws -> EncodedGIF {
+    try await encode(sequence, loopMode: .forever, to: reservation)
+  }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    loopMode: GIFLoopMode,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
     let cancellation = GIFCancellationFlag()
     return try await withTaskCancellationHandler {
       try await Task.detached(priority: .utility) {
-        try encodeSynchronously(sequence, to: reservation, cancellation: cancellation)
+        try encodeSynchronously(
+          sequence, loopMode: loopMode, to: reservation, cancellation: cancellation)
       }.value
     } onCancel: {
       cancellation.cancel()
@@ -166,6 +191,7 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
 
   private func encodeSynchronously(
     _ sequence: CapturedPNGSequence,
+    loopMode: GIFLoopMode,
     to reservation: PreviewOutputReservation,
     cancellation: GIFCancellationFlag
   ) throws -> EncodedGIF {
@@ -205,10 +231,13 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
       guard let consumer = CGDataConsumer(info: contextPointer, cbks: &callbacks) else {
         throw OriginalGIFEncodingError.destinationCreationFailed
       }
+      let gifProperties: [CFString: Any] =
+        loopMode == .forever
+        ? [kCGImagePropertyGIFLoopCount: 0] : [:]
       guard
         let destination = CGImageDestinationCreateWithDataConsumer(
           consumer, UTType.gif.identifier as CFString, sequence.frames.count,
-          [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary
+          [kCGImagePropertyGIFDictionary: gifProperties] as CFDictionary
         )
       else { throw OriginalGIFEncodingError.destinationCreationFailed }
 
@@ -257,6 +286,7 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
         at: reservation.url,
         dimensions: dimensions,
         delays: delays,
+        loopMode: loopMode,
         maximumBytes: reservation.maximumBytes
       )
     } catch {
@@ -324,15 +354,19 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
     at url: URL,
     dimensions expectedDimensions: (width: Int, height: Int)?,
     delays expectedDelays: [Int],
+    loopMode: GIFLoopMode,
     maximumBytes: Int64
   ) throws -> EncodedGIF {
     guard let expectedDimensions,
       let source = CGImageSourceCreateWithURL(url as CFURL, nil),
       CGImageSourceGetCount(source) == expectedDelays.count,
       let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any],
-      let gifProperties = globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any],
-      let loopCount = gifProperties[kCGImagePropertyGIFLoopCount] as? Int,
-      loopCount == 0
+      let gifProperties = globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any]
+    else { throw OriginalGIFEncodingError.invalidOutput }
+    let loopCount = gifProperties[kCGImagePropertyGIFLoopCount] as? Int
+    guard
+      (loopMode == .forever && loopCount == 0)
+        || (loopMode == .once && loopCount == nil)
     else { throw OriginalGIFEncodingError.invalidOutput }
 
     var actualDelays: [Int] = []
@@ -366,7 +400,7 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
       frameCount: actualDelays.count,
       delaysCentiseconds: actualDelays,
       durationCentiseconds: actualDelays.reduce(0, +),
-      loopsForever: true,
+      loopsForever: loopMode == .forever,
       fileBytes: Int64(info.st_size)
     )
   }

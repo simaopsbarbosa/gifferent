@@ -106,6 +106,59 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(stream.stopCalls, 1)
   }
 
+  func testNewestEditRequestWinsAndClipboardUsesTheEditedGIF() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let encoder = GatedEditGIFEncoder()
+    let clipboard = RecordingTestClipboard()
+    let coordinator = RecordingCoordinator(
+      streamFactory: FakeRecordingStreamFactory(
+        stream: FakeRecordingStream(
+          framesOnStart: [
+            validFrame(at: 100_000_000),
+            validFrame(at: 200_000_000),
+            validFrame(at: 300_000_000),
+          ])),
+      workspace: fixture.workspace,
+      gifEncoder: encoder,
+      clipboard: clipboard
+    )
+    await coordinator.start(target: .display(1), showsCursor: false)
+    await coordinator.stop()
+    await waitForPreview(coordinator)
+
+    guard case .previewReady(_, _, let original) = coordinator.state else {
+      return XCTFail("expected the original preview")
+    }
+    coordinator.updateTrim(startIndex: 0, endIndexExclusive: 2)
+    while !(await encoder.isWaitingForEdit()) { await Task.yield() }
+    XCTAssertTrue(coordinator.isPreviewUpdateInProgress)
+    await coordinator.copyPreview()
+    XCTAssertTrue(clipboard.urls.isEmpty)
+
+    coordinator.updatePlaybackSpeed(1.5)
+    coordinator.updateLoopMode(.once)
+    await waitUntil(timeout: .seconds(5)) { !coordinator.isPreviewUpdateInProgress }
+
+    guard case .previewReady(_, _, let edited) = coordinator.state else {
+      return XCTFail("expected an edited preview")
+    }
+    XCTAssertEqual(edited.frameCount, 2)
+    XCTAssertFalse(edited.loopsForever)
+    XCTAssertNotEqual(edited.url, original.url)
+    XCTAssertTrue(FileManager.default.fileExists(atPath: original.url.path))
+    XCTAssertEqual(
+      coordinator.editParameters?.frameRange, GIFFrameRange(startIndex: 0, endIndexExclusive: 2))
+    XCTAssertEqual(coordinator.editParameters?.playbackSpeed, 1.5)
+    XCTAssertEqual(coordinator.editParameters?.loopMode, .once)
+
+    await coordinator.copyPreview()
+    XCTAssertEqual(clipboard.urls, [edited.url])
+    let closed = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertTrue(closed)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: clipboard.urls[0].path))
+  }
+
   func testConcurrentStopCallersAwaitOneFinalization() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
@@ -451,6 +504,52 @@ final class RecordingCoordinatorTests: XCTestCase {
 }
 
 private enum TestFailure: Error { case start }
+
+@MainActor
+private final class RecordingTestClipboard: GIFClipboardWriting {
+  private(set) var urls: [URL] = []
+
+  func writeGIF(at url: URL) async throws {
+    guard FileManager.default.fileExists(atPath: url.path) else {
+      throw CocoaError(.fileNoSuchFile)
+    }
+    urls.append(url)
+  }
+}
+
+private actor GatedEditGIFEncoder: OriginalGIFEncoding {
+  private let encoder = ImageIOOriginalGIFEncoder()
+  private var waitingForEdit = false
+  private var didWaitForEdit = false
+
+  func isWaitingForEdit() -> Bool { waitingForEdit }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    try await encode(sequence, loopMode: .forever, to: reservation)
+  }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    loopMode: GIFLoopMode,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    if sequence.frames.count == 2, !didWaitForEdit {
+      didWaitForEdit = true
+      waitingForEdit = true
+      do {
+        try await Task.sleep(for: .seconds(30))
+      } catch {
+        waitingForEdit = false
+        throw OriginalGIFEncodingError.cancelled
+      }
+      waitingForEdit = false
+    }
+    return try await encoder.encode(sequence, loopMode: loopMode, to: reservation)
+  }
+}
 
 @MainActor
 private final class FakeRecordingStreamFactory: RecordingStreamPreparing {

@@ -80,6 +80,8 @@ protocol GIFSaving {
 
 enum PreviewAction: Equatable {
   case idle
+  case updated
+  case updateFailed
   case copying
   case saving
   case copied
@@ -119,6 +121,9 @@ actor RecordingFramePipeline {
 final class RecordingCoordinator: ObservableObject {
   @Published private(set) var state: RecordingCoordinatorState = .idle
   @Published private(set) var previewAction: PreviewAction = .idle
+  @Published private(set) var editParameters: GIFEditParameters?
+  @Published private(set) var isPreviewUpdateInProgress = false
+  @Published private(set) var editFrameCount = 0
 
   private let streamFactory: any RecordingStreamPreparing
   private let workspace: SessionWorkspaceStore
@@ -136,6 +141,10 @@ final class RecordingCoordinator: ObservableObject {
   private var stopReason: CaptureTerminationReason?
   private var consumerFailure: RecordingCoordinatorFailure?
   private var previewTask: Task<Void, Never>?
+  private var replacementTask: Task<Void, Never>?
+  private var latestEditRequest: UUID?
+  private var originalSequence: CapturedPNGSequence?
+  private var currentPreviewParameters: GIFEditParameters?
   private var previewExported = false
 
   init(
@@ -216,10 +225,15 @@ final class RecordingCoordinator: ObservableObject {
     default:
       return
     }
+    await cancelPreviewReplacement()
     do {
       try await workspace.discard(id)
       sessionID = nil
       previewExported = false
+      editParameters = nil
+      currentPreviewParameters = nil
+      originalSequence = nil
+      editFrameCount = 0
       state = .idle
     } catch {
       if case .preparingPreview(_, let snapshot) = state {
@@ -240,8 +254,29 @@ final class RecordingCoordinator: ObservableObject {
     }
   }
 
+  func updateTrim(startIndex: Int, endIndexExclusive: Int) {
+    guard var parameters = editParameters else { return }
+    parameters.frameRange = GIFFrameRange(
+      startIndex: startIndex, endIndexExclusive: endIndexExclusive)
+    requestPreviewUpdate(parameters)
+  }
+
+  func updatePlaybackSpeed(_ speed: Double) {
+    guard var parameters = editParameters else { return }
+    parameters.playbackSpeed = (speed * 10).rounded() / 10
+    requestPreviewUpdate(parameters)
+  }
+
+  func updateLoopMode(_ loopMode: GIFLoopMode) {
+    guard var parameters = editParameters else { return }
+    parameters.loopMode = loopMode
+    requestPreviewUpdate(parameters)
+  }
+
   func copyPreview() async {
-    guard case .previewReady(_, _, let gif) = state else { return }
+    guard !isPreviewUpdateInProgress,
+      case .previewReady(_, _, let gif) = state
+    else { return }
     previewAction = .copying
     do {
       try await clipboard.writeGIF(at: gif.url)
@@ -253,7 +288,9 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func savePreview() async {
-    guard case .previewReady(_, _, let gif) = state else { return }
+    guard !isPreviewUpdateInProgress,
+      case .previewReady(_, _, let gif) = state
+    else { return }
     previewAction = .saving
     do {
       switch try await fileSaver.saveGIF(at: gif.url) {
@@ -277,6 +314,7 @@ final class RecordingCoordinator: ObservableObject {
     default:
       return false
     }
+    if discardUnexported { await cancelPreviewReplacement() }
     do {
       if previewExported, case .previewReady = state {
         try await workspace.closePreviewAfterExport(id)
@@ -287,6 +325,10 @@ final class RecordingCoordinator: ObservableObject {
       }
       sessionID = nil
       previewExported = false
+      editParameters = nil
+      currentPreviewParameters = nil
+      originalSequence = nil
+      editFrameCount = 0
       previewAction = .idle
       state = .idle
       return true
@@ -415,38 +457,176 @@ final class RecordingCoordinator: ObservableObject {
     var reservation: PreviewOutputReservation?
     do {
       let sequence = try await workspace.pngSequence(for: sessionID)
+      originalSequence = sequence
+      editFrameCount = sequence.frames.count
+      let initialParameters = GIFEditParameters(
+        frameRange: GIFFrameRange(startIndex: 0, endIndexExclusive: sequence.frames.count),
+        playbackSpeed: 1,
+        loopMode: .forever
+      )
+      editParameters = initialParameters
+      currentPreviewParameters = initialParameters
+      let edited = try GIFEditModel.apply(initialParameters, to: sequence)
       try Task.checkCancellation()
       let output = try await workspace.reservePreviewOutput(for: sessionID)
       reservation = output
-      let encoded = try await gifEncoder.encode(sequence, to: output)
-      try Task.checkCancellation()
-      guard encoded.url == output.url,
-        encoded.frameCount == sequence.frames.count,
-        encoded.width > 0, encoded.height > 0,
-        encoded.durationCentiseconds > 0,
-        encoded.delaysCentiseconds.count == encoded.frameCount,
-        encoded.delaysCentiseconds.allSatisfy({ $0 > 0 }),
-        encoded.fileBytes > 0
-      else { throw OriginalGIFEncodingError.invalidOutput }
-      let actual = try GIFMetadataInspector().inspect(encoded.url)
-      guard actual == encoded, actual.fileBytes <= output.maximumBytes else {
-        throw OriginalGIFEncodingError.invalidOutput
-      }
-      let committed = try await workspace.commitPreviewOutput(for: sessionID)
+      let encoded = try await gifEncoder.encode(
+        edited.sequence, loopMode: edited.loopMode, to: output)
+      try validate(encoded, sequence: edited.sequence, loopMode: edited.loopMode, output: output)
+      let committed = try await workspace.commitPreviewOutput(for: sessionID, reservation: output)
       state = .previewReady(sessionID, committed, encoded)
     } catch let error as OriginalGIFEncodingError where error == .cancelled {
-      if reservation != nil { try? await workspace.abandonPreviewOutput(for: sessionID) }
+      if let reservation {
+        try? await workspace.abandonPreviewOutput(for: sessionID, reservation: reservation)
+      }
       previewAction = .cancelled
       state = .captured(sessionID, snapshot)
     } catch is CancellationError {
-      if reservation != nil { try? await workspace.abandonPreviewOutput(for: sessionID) }
+      if let reservation {
+        try? await workspace.abandonPreviewOutput(for: sessionID, reservation: reservation)
+      }
       state = .captured(sessionID, snapshot)
     } catch {
-      if reservation != nil { try? await workspace.abandonPreviewOutput(for: sessionID) }
+      if let reservation {
+        try? await workspace.abandonPreviewOutput(for: sessionID, reservation: reservation)
+      }
       previewAction = .failed
       state = .captured(sessionID, snapshot)
     }
     previewTask = nil
+  }
+
+  private func requestPreviewUpdate(_ parameters: GIFEditParameters) {
+    guard !isPreviewActionInProgress,
+      case .previewReady(let id, _, _) = state,
+      let originalSequence,
+      parameters != editParameters,
+      parameters.frameRange.startIndex >= 0,
+      parameters.frameRange.endIndexExclusive <= originalSequence.frames.count,
+      parameters.frameRange.startIndex < parameters.frameRange.endIndexExclusive,
+      parameters.playbackSpeed >= 0.5,
+      parameters.playbackSpeed <= 2,
+      (parameters.playbackSpeed * 10).rounded() == parameters.playbackSpeed * 10
+    else { return }
+    editParameters = parameters
+    previewExported = false
+    previewAction = .idle
+    isPreviewUpdateInProgress = true
+    let request = UUID()
+    latestEditRequest = request
+    if replacementTask != nil {
+      replacementTask?.cancel()
+    } else {
+      startPreviewReplacement(for: id)
+    }
+  }
+
+  private func startPreviewReplacement(for id: RecordingSessionID) {
+    guard let request = latestEditRequest,
+      let parameters = editParameters,
+      replacementTask == nil
+    else { return }
+    replacementTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      await self.replacePreview(id: id, parameters: parameters, request: request)
+      if self.latestEditRequest != request {
+        self.replacementTask = nil
+        self.startPreviewReplacement(for: id)
+      } else {
+        self.replacementTask = nil
+      }
+    }
+  }
+
+  private func replacePreview(
+    id: RecordingSessionID,
+    parameters: GIFEditParameters,
+    request: UUID
+  ) async {
+    guard latestEditRequest == request, !Task.isCancelled,
+      let originalSequence
+    else { return }
+    var reservation: PreviewOutputReservation?
+    do {
+      let edited = try GIFEditModel.apply(parameters, to: originalSequence)
+      let output = try await workspace.reservePreviewOutput(for: id)
+      reservation = output
+      try Task.checkCancellation()
+      let encoded = try await gifEncoder.encode(
+        edited.sequence, loopMode: edited.loopMode, to: output)
+      try validate(encoded, sequence: edited.sequence, loopMode: edited.loopMode, output: output)
+      try Task.checkCancellation()
+      let committed = try await workspace.commitPreviewOutput(for: id, reservation: output)
+      guard latestEditRequest == request, !Task.isCancelled else {
+        try? await workspace.removeEditedPreviewOutput(for: id, at: output.url)
+        return
+      }
+      state = .previewReady(id, committed, encoded)
+      currentPreviewParameters = parameters
+      // publishing the validated output must not fail because an obsolete file could not be pruned.
+      // the workspace keeps those bytes accounted and removes them when the session closes.
+      try? await workspace.keepEditedPreviewOutput(for: id, at: output.url)
+      if latestEditRequest == request {
+        let currentSnapshot = try await workspace.snapshot(for: id)
+        guard latestEditRequest == request else { return }
+        state = .previewReady(id, currentSnapshot, encoded)
+        isPreviewUpdateInProgress = false
+        previewAction = .updated
+      }
+    } catch is CancellationError {
+      if let reservation {
+        try? await workspace.abandonPreviewOutput(for: id, reservation: reservation)
+      }
+      finishPreviewUpdate(request, action: .cancelled)
+    } catch let error as OriginalGIFEncodingError where error == .cancelled {
+      if let reservation {
+        try? await workspace.abandonPreviewOutput(for: id, reservation: reservation)
+      }
+      finishPreviewUpdate(request, action: .cancelled)
+    } catch {
+      if let reservation {
+        try? await workspace.abandonPreviewOutput(for: id, reservation: reservation)
+      }
+      finishPreviewUpdate(request, action: .updateFailed)
+    }
+  }
+
+  private func finishPreviewUpdate(_ request: UUID, action: PreviewAction) {
+    guard latestEditRequest == request else { return }
+    latestEditRequest = nil
+    isPreviewUpdateInProgress = false
+    previewAction = action
+    editParameters = currentPreviewParameters
+    replacementTask = nil
+  }
+
+  private func cancelPreviewReplacement() async {
+    latestEditRequest = nil
+    replacementTask?.cancel()
+    await replacementTask?.value
+    replacementTask = nil
+    isPreviewUpdateInProgress = false
+  }
+
+  private func validate(
+    _ encoded: EncodedGIF,
+    sequence: CapturedPNGSequence,
+    loopMode: GIFLoopMode,
+    output: PreviewOutputReservation
+  ) throws {
+    guard encoded.url == output.url,
+      encoded.frameCount == sequence.frames.count,
+      encoded.width > 0, encoded.height > 0,
+      encoded.durationCentiseconds > 0,
+      encoded.delaysCentiseconds.count == encoded.frameCount,
+      encoded.delaysCentiseconds.allSatisfy({ $0 > 0 }),
+      encoded.fileBytes > 0,
+      encoded.loopsForever == (loopMode == .forever)
+    else { throw OriginalGIFEncodingError.invalidOutput }
+    let actual = try GIFMetadataInspector().inspect(encoded.url)
+    guard actual == encoded, actual.fileBytes <= output.maximumBytes else {
+      throw OriginalGIFEncodingError.invalidOutput
+    }
   }
 
   private func removeSessionIfPresent() async {

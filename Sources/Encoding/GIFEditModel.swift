@@ -11,9 +11,9 @@ enum GIFLoopMode: Sendable, Equatable {
 }
 
 struct GIFEditParameters: Sendable, Equatable {
-  let frameRange: GIFFrameRange
-  let playbackSpeed: Double
-  let loopMode: GIFLoopMode
+  var frameRange: GIFFrameRange
+  var playbackSpeed: Double
+  var loopMode: GIFLoopMode
 }
 
 struct EditedGIFSequence: Sendable, Equatable {

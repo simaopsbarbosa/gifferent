@@ -33,6 +33,23 @@ final class OriginalGIFEncoderTests: XCTestCase {
     XCTAssertGreaterThan(result.fileBytes, 0)
   }
 
+  func testOnceModeOmitsLoopExtensionAndMetadataReportsFinitePlayback() async throws {
+    let directory = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let frame = directory.appendingPathComponent("frame.png")
+    try png(color: [255, 0, 0, 255]).write(to: frame)
+    let output = directory.appendingPathComponent("once.gif")
+    let result = try await ImageIOOriginalGIFEncoder().encode(
+      CapturedPNGSequence(frames: [CapturedPNGFrame(url: frame, timestamp: 0)]),
+      loopMode: .once,
+      to: PreviewOutputReservation(url: output, maximumBytes: 10_000)
+    )
+
+    XCTAssertFalse(result.loopsForever)
+    XCTAssertEqual(try GIFMetadataInspector().inspect(output), result)
+  }
+
   func testCumulativeRoundingPreservesDurationForRegularAndIrregularTimestamps() throws {
     XCTAssertEqual(
       try ImageIOOriginalGIFEncoder.frameDelaysCentiseconds(
