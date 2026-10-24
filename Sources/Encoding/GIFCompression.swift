@@ -92,10 +92,10 @@ enum GIFCompressionScale: Int, CaseIterable, Identifiable, Sendable {
 struct GIFCompressionSettings: Equatable, Sendable {
   var destination: GIFCompressionDestination = .github
   var scale: GIFCompressionScale = .original
-  var diffusionPercent = 35
+  var qualityPercent = 90
 
   var isValid: Bool {
-    (0...100).contains(diffusionPercent) && diffusionPercent.isMultiple(of: 5)
+    (1...100).contains(qualityPercent)
   }
 }
 

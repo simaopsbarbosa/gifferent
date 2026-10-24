@@ -50,6 +50,8 @@
 		A00000000000000000000081 /* RecordingSettings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000082 /* RecordingSettings.swift */; };
 		A00000000000000000000083 /* RecordingSettingsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000084 /* RecordingSettingsTests.swift */; };
 		A00000000000000000000085 /* GIFCompression.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000086 /* GIFCompression.swift */; };
+		A00000000000000000000090 /* GifskiCLICompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000091 /* GifskiCLICompressor.swift */; };
+		A00000000000000000000092 /* GifskiCLICompressorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* GifskiCLICompressorTests.swift */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -116,6 +118,8 @@
 		A00000000000000000000082 /* RecordingSettings.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingSettings.swift; sourceTree = "<group>"; };
 		A00000000000000000000084 /* RecordingSettingsTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingSettingsTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000086 /* GIFCompression.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFCompression.swift; sourceTree = "<group>"; };
+		A00000000000000000000091 /* GifskiCLICompressor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GifskiCLICompressor.swift; sourceTree = "<group>"; };
+		A00000000000000000000093 /* GifskiCLICompressorTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GifskiCLICompressorTests.swift; sourceTree = "<group>"; };
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -197,6 +201,7 @@
 				A00000000000000000000069 /* OriginalGIFEncoderTests.swift */,
 				A00000000000000000000073 /* GIFEditModelTests.swift */,
 				A00000000000000000000078 /* ExperimentalImageMagickCompressorTests.swift */,
+				A00000000000000000000093 /* GifskiCLICompressorTests.swift */,
 			);
 			name = gifferentTests;
 			path = gifferentTests;
@@ -302,6 +307,7 @@
 				A00000000000000000000071 /* GIFEditModel.swift */,
 				A00000000000000000000077 /* ExperimentalImageMagickCompressor.swift */,
 				A00000000000000000000086 /* GIFCompression.swift */,
+				A00000000000000000000091 /* GifskiCLICompressor.swift */,
 			);
 			name = Encoding;
 			path = Encoding;
@@ -481,6 +487,7 @@
 				A00000000000000000000067 /* OriginalGIFEncoderTests.swift in Sources */,
 				A00000000000000000000072 /* GIFEditModelTests.swift in Sources */,
 				A0000000000000000000007A /* ExperimentalImageMagickCompressorTests.swift in Sources */,
+				A00000000000000000000092 /* GifskiCLICompressorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -511,6 +518,7 @@
 				A00000000000000000000070 /* GIFEditModel.swift in Sources */,
 				A00000000000000000000079 /* ExperimentalImageMagickCompressor.swift in Sources */,
 				A00000000000000000000085 /* GIFCompression.swift in Sources */,
+				A00000000000000000000090 /* GifskiCLICompressor.swift in Sources */,
 				A00000000000000000000049 /* RecordingCoordinator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

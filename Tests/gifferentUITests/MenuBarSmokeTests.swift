@@ -230,6 +230,13 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(discord.label.contains("20 MB published maximum"), discord.label)
 
     XCTAssertTrue(previewWindow.staticTexts["compression-unavailable-status"].exists)
+    let quality = previewWindow.sliders["compression-quality-slider"]
+    XCTAssertTrue(quality.exists)
+    XCTAssertEqual(quality.label, "gifski quality")
+    XCTAssertTrue(previewWindow.staticTexts["compression-quality-value"].exists)
+    XCTAssertTrue(
+      waitForValue(containing: "90", in: previewWindow.staticTexts["compression-quality-value"])
+    )
     XCTAssertFalse(previewWindow.buttons["compress-preview-button"].exists)
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["save-preview-button"]))

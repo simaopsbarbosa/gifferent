@@ -43,10 +43,10 @@ final class RecordingCoordinatorTests: XCTestCase {
       clipboard: clipboard
     )
 
-    XCTAssertEqual(coordinator.compressionSettings.diffusionPercent, 35)
+    XCTAssertEqual(coordinator.compressionSettings.qualityPercent, 90)
     coordinator.selectCompressionDestination(.discord)
     coordinator.selectCompressionScale(.original)
-    coordinator.setCompressionDiffusion(40)
+    coordinator.setCompressionQuality(40)
     coordinator.startCompression()
     await waitForCompression(coordinator)
 
@@ -57,7 +57,7 @@ final class RecordingCoordinatorTests: XCTestCase {
     let receivedSettings = await compressor.lastSettings()
     XCTAssertEqual(
       receivedSettings,
-      GIFCompressionSettings(destination: .discord, scale: .original, diffusionPercent: 40)
+      GIFCompressionSettings(destination: .discord, scale: .original, qualityPercent: 40)
     )
     let compressedSnapshot = try await fixture.workspace.snapshot(for: sessionID)
     XCTAssertGreaterThan(compressedSnapshot.temporaryBytes, originalBytes)
@@ -229,10 +229,11 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(GIFCompressionDestination.discord.limitResearchDate, "2026-10-24")
     XCTAssertEqual(GIFCompressionSettings().destination, .github)
     XCTAssertEqual(GIFCompressionSettings().scale, .original)
-    XCTAssertEqual(GIFCompressionSettings().diffusionPercent, 35)
+    XCTAssertEqual(GIFCompressionSettings().qualityPercent, 90)
     XCTAssertEqual(GIFCompressionScale.allCases.map(\.rawValue), [100, 75, 50, 25])
-    XCTAssertTrue(GIFCompressionSettings(diffusionPercent: 100).isValid)
-    XCTAssertFalse(GIFCompressionSettings(diffusionPercent: 37).isValid)
+    XCTAssertTrue(GIFCompressionSettings(qualityPercent: 100).isValid)
+    XCTAssertTrue(GIFCompressionSettings(qualityPercent: 1).isValid)
+    XCTAssertFalse(GIFCompressionSettings(qualityPercent: 0).isValid)
   }
 
   func testDiagnosticsKeepBoundedTransportCountsAndMeasureThroughPreviewReady() async throws {

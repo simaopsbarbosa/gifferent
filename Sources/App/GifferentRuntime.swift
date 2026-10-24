@@ -60,6 +60,7 @@ final class GifferentRuntime: ObservableObject {
       maximumSessionBytes: Self.recordingWorkspaceQuotaBytes,
       minimumFreeBytes: 64 * 1_024 * 1_024
     )
+    let compressor = GifskiCLICompressor.availableInMainBundle()
     #if DEBUG
       if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
         let fixtureFactory = FixtureRecordingStreamFactory()
@@ -67,19 +68,22 @@ final class GifferentRuntime: ObservableObject {
         recordingCoordinator = RecordingCoordinator(
           streamFactory: fixtureFactory,
           workspace: workspace,
+          compressor: compressor,
           clipboard: UITestGIFClipboardWriter(),
           fileSaver: UITestGIFSavePanelSaver()
         )
       } else {
         recordingCoordinator = RecordingCoordinator(
           streamFactory: ScreenCaptureRecordingStreamFactory(sourceService: service),
-          workspace: workspace
+          workspace: workspace,
+          compressor: compressor
         )
       }
     #else
       recordingCoordinator = RecordingCoordinator(
         streamFactory: ScreenCaptureRecordingStreamFactory(sourceService: service),
-        workspace: workspace
+        workspace: workspace,
+        compressor: compressor
       )
     #endif
     recordingStateObservation = recordingCoordinator.$state.sink { [weak self] state in

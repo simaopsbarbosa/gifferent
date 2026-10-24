@@ -364,11 +364,11 @@ final class RecordingCoordinator: ObservableObject {
     compressionSettings.scale = scale
   }
 
-  func setCompressionDiffusion(_ percent: Int) {
+  func setCompressionQuality(_ percent: Int) {
     guard !isCompressionInProgress, compressedPreview == nil,
-      (0...100).contains(percent), percent.isMultiple(of: 5)
+      (1...100).contains(percent)
     else { return }
-    compressionSettings.diffusionPercent = percent
+    compressionSettings.qualityPercent = percent
   }
 
   func startCompression() {
