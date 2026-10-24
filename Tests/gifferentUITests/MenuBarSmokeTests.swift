@@ -142,7 +142,7 @@ final class MenuBarSmokeTests: XCTestCase {
 
     let selectionWindow = app.windows["capture selection"]
     XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
-    selectionWindow.buttons["region"].click()
+    selectionWindow.buttons["draw a region on this display"].click()
 
     let regionStart = selectionWindow.coordinate(withNormalizedOffset: CGVector(dx: 0.32, dy: 0.32))
     let regionEnd = selectionWindow.coordinate(withNormalizedOffset: CGVector(dx: 0.52, dy: 0.48))
@@ -188,7 +188,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
     let selectionWindow = app.windows["capture selection"]
     XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
-    selectionWindow.buttons["select a window"].click()
+    selectionWindow.descendants(matching: .any)
+      .matching(identifier: "select-window-menu").firstMatch.click()
     let fixtureWindow = app.menuItems["gifferent fixture · fixture window"]
     XCTAssertTrue(fixtureWindow.waitForExistence(timeout: 5))
     fixtureWindow.click()
