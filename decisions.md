@@ -75,6 +75,7 @@
 
 - benchmark candidates are 24, 18, 12, and 8 fps across original, 75%, 50%, and 25% resolution, at Gifski quality 90. the approved quality-90 full-size 24 fps output is the comparison baseline.
 - until the architect reviews the representative animated samples, keep the active automatic search at 24 fps and do not claim that reduced resolution or frame rate meets the approved quality floor. review all scales at 24 fps, all rates at original scale, and the joint 25%/8 fps corner before enabling those candidates.
+- the [representative visual review](Benchmarks/reviews/size-search-quality-floor-2026-10-24/index.html) is ready. it includes seven new animated points per profile, with exact 10-second timing and loop checks passing for the full measured matrix. no visual pass judgment has been recorded yet.
 
 ## confirmed by the architect on 2026-10-20
 
