@@ -97,6 +97,8 @@ the [visual encoder review](reviews/gifski-magick-35-2026-10-24/index.html) pair
 
 the complete available Gifski, ImageMagick, and ImageIO path comparison across all four profiles, including 35% ImageMagick diffusion, is documented in [gifski-magick-35-full-matrix-2026-10-24.md](gifski-magick-35-full-matrix-2026-10-24.md). `imageio-gifsicle` was unavailable because Gifsicle was not installed. the report includes raw result locations and measurement limits; it makes no quality or encoder-selection claim.
 
+a focused [Gifski quality sweep](reviews/gifski-quality-sweep-2026-10-24/index.html) compares settings 70, 80, 90, and 100 on the mostly-static and high-motion fixtures. the [evidence note](reviews/gifski-quality-sweep-2026-10-24/README.md) records size, wall time, provenance, and limits; it makes no quality-floor judgment or setting selection.
+
 expanded static frame samples for Gifski, optimized and unoptimized ImageMagick at 35% diffusion, and the app ImageIO path across all four profiles are in the [visual matrix review](reviews/encoder-visual-matrix-2026-10-24/index.html), with hashes and limitations in its [review notes](reviews/encoder-visual-matrix-2026-10-24/README.md). these snapshots are evidence collection only; still frames do not establish temporal flicker or select an encoder.
 
 the equal-work ImageMagick and legacy ImageIO results across all four synthetic profiles are summarized in [equalized-encoder-matrix-2026-10-24.md](equalized-encoder-matrix-2026-10-24.md). the report includes fixture checksums, exact commands, timing and output-size measurements, and validation limits; no visual-quality or release-selection claim is made.
