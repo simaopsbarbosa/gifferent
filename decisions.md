@@ -71,6 +71,11 @@
 - the current resolution choice is the maximum size the automatic destination search may use. search that size and smaller choices only; do not upscale above the user's selection.
 - sampled frame rates and reduced resolutions still need animated visual review against the approved quality floor before those combinations are accepted in the automatic candidate set.
 
+## Size-search visual candidates pending review on 2026-10-24
+
+- benchmark candidates are 24, 18, 12, and 8 fps across original, 75%, 50%, and 25% resolution, at Gifski quality 90. the approved quality-90 full-size 24 fps output is the comparison baseline.
+- until the architect reviews the representative animated samples, keep the active automatic search at 24 fps and do not claim that reduced resolution or frame rate meets the approved quality floor. review all scales at 24 fps, all rates at original scale, and the joint 25%/8 fps corner before enabling those candidates.
+
 ## confirmed by the architect on 2026-10-20
 
 - macOS 14+, direct notarized download, menu bar only, background hotkeys, native SwiftUI UI.
