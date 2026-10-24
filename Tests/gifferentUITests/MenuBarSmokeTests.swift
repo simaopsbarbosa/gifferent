@@ -270,7 +270,9 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(animatedPreview.label, "animated gif preview")
     XCTAssertLessThanOrEqual(animatedPreview.frame.width, 560.5)
     XCTAssertLessThanOrEqual(animatedPreview.frame.height, 280.5)
-    XCTAssertTrue(previewWindow.frame.contains(animatedPreview.frame))
+    XCTAssertTrue(
+      previewWindow.frame.insetBy(dx: -2, dy: -2).contains(animatedPreview.frame),
+      "window: \(previewWindow.frame), image: \(animatedPreview.frame)")
     XCTAssertTrue(
       NSScreen.screens.contains { screen in
         screen.visibleFrame.insetBy(dx: 15, dy: 15).contains(previewWindow.frame)

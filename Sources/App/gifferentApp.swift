@@ -259,7 +259,7 @@ private struct GIFPreviewView: View {
               coordinator: coordinator,
               snapshot: snapshot,
               gif: gif,
-              previewWidth: min(560, max(0, geometry.size.width - 36))
+              previewWidth: min(558, max(0, geometry.size.width - 36))
             )
             .frame(width: max(0, geometry.size.width - 36))
             .padding(18)

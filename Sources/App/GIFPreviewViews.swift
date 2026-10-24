@@ -22,7 +22,7 @@ struct GIFPreviewReadyView: View {
         .frame(
           width: previewWidth,
           height: min(
-            280,
+            278,
             previewWidth * CGFloat(displayedGIF.height) / CGFloat(max(1, displayedGIF.width))
           )
         )
