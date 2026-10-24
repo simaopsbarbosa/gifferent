@@ -30,4 +30,6 @@ bash Scripts/test-ui.sh
 ```
 
 the build and test scripts write logs and `.xcresult` bundles under `.build/ci/`. UI tests need a macOS session that permits Xcode automation. deterministic UI tests use synthetic capture frames and injected clipboard and save adapters without requesting screen access. actual menu bar clicking, screen permission, shortcut delivery, overlay interaction, animated paste in destination apps, and release checks remain acceptance gates in [delivery-plan.md](delivery-plan.md).
+
+for a reliable local Screen Recording permission check, choose an Apple Development team in Xcode's signing settings and build with `bash Scripts/build.sh`. unsigned or ad hoc builds may lose the permission association after a rebuild. after enabling access in System Settings, quit and reopen gifferent before checking again. CI intentionally builds without signing because it does not exercise live screen capture.
 # gifferent
