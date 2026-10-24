@@ -269,6 +269,24 @@ class CleanupTests(unittest.TestCase):
             ["/tmp/imageio_encode", "24", "output.gif", "frame-0.png", "frame-1.png"],
         )
 
+    def test_imageio_app_command_invokes_the_app_candidate_wrapper(self):
+        command = command_for(
+            "imageio-app",
+            {"imageio-app": {"path": "/tmp/imageio_app_encode"}},
+            24,
+            [Path("frame-0.png"), Path("frame-1.png")],
+            Path("output.gif"),
+        )
+        self.assertEqual(
+            command,
+            ["/tmp/imageio_app_encode", "24", "output.gif", "frame-0.png", "frame-1.png"],
+        )
+
+    def test_imageio_app_path_requires_its_compiled_candidate_binary(self):
+        availability = path_availability("imageio-app", {"imageio-app": {"available": False}})
+        self.assertFalse(availability["available"])
+        self.assertEqual(availability["missing_tools"], ["imageio-app"])
+
     def test_gifski_command_pins_quality_and_preserves_frame_order(self):
         command = command_for(
             "gifski",

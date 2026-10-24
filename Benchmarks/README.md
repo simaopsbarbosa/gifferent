@@ -57,12 +57,20 @@ on the [reference Mac](environment.md), run one command from the repository root
 python3 Benchmarks/run_encoder_benchmark.py --output Benchmarks/outputs/reference-640x360-01 --frames 240 --width 640 --height 360 --runs 7
 ```
 
-the runner creates the requested synthetic fixture once, records one first-invocation sample and seven warm samples per available path, and alternates path order. the five paths are `gifski`, `magick` with `-layers Optimize`, `magick-unoptimized`, the ImageIO baseline, and ImageIO followed by `gifsicle --optimize=3`. it discovers `gifski`, `magick`, and `gifsicle` from `PATH`, then compiles the benchmark-only ImageIO helper with `xcrun swiftc`. missing or unbuildable tools are reported as unavailable in `summary.json`; the raw report records path requirements and missing tools. no tool is installed by the runner.
+the runner creates the requested synthetic fixture once, records one first-invocation sample and seven warm samples per available path, and alternates path order. paths are `gifski`, `magick` with `-layers Optimize`, `magick-unoptimized`, the legacy ImageIO helper, the app's `ImageIOOriginalGIFEncoder` via `imageio-app`, and ImageIO followed by `gifsicle --optimize=3`. it discovers `gifski`, `magick`, and `gifsicle` from `PATH`, and compiles both ImageIO helpers with `xcrun swiftc`. missing or unbuildable tools are reported as unavailable in `summary.json`; the raw report records path requirements and missing tools. no tool is installed by the runner.
 
-to name all five paths explicitly, use:
+to benchmark the actual app candidate in isolation, run:
 
 ```sh
-python3 Benchmarks/run_encoder_benchmark.py --fixture Benchmarks/generated/mixed-640x360 --output Benchmarks/outputs/mixed-matrix-01 --runs 7 --candidates gifski magick magick-unoptimized imageio imageio-gifsicle
+python3 Benchmarks/run_encoder_benchmark.py --fixture Benchmarks/generated/mixed-640x360 --output Benchmarks/outputs/mixed-imageio-app-01 --runs 7 --candidates imageio-app
+```
+
+`imageio-app` compiles `SessionWorkspaceStore.swift` and `OriginalGIFEncoder.swift` with a benchmark-only CLI wrapper. it does not run the full application or capture pipeline. `summary.json` records the build duration and binary/source checksums separately. sample elapsed time includes helper process launch, PNG decode, GIF encode, output validation, and cleanup, but excludes compilation and fixture generation. the wrapper supplies deterministic timestamps from the fixture's frame index and rate, and uses the app's cumulative-centisecond schedule and 512 mib output cap. to reuse one build across profile runs, pass its path with `--imageio-app-binary`; the legacy `imageio` row remains separate.
+
+to name all six paths explicitly, use:
+
+```sh
+python3 Benchmarks/run_encoder_benchmark.py --fixture Benchmarks/generated/mixed-640x360 --output Benchmarks/outputs/mixed-matrix-01 --runs 7 --candidates gifski magick magick-unoptimized imageio imageio-app imageio-gifsicle
 ```
 
 `gifski` pins quality 90 explicitly and `--no-sort` to preserve manifest order. the existing `magick` path retains its optimized command; `magick-unoptimized` runs the same input and delay configuration without `-layers Optimize`. ImageMagick's `-loop 0` follows the input frames so it applies to the output animation. the ImageIO→Gifsicle path runs as two stages, writes its intermediate GIF inside the per-run temporary workspace, and includes both stages in elapsed time and the total timeout. each successful final GIF is retained under `gifs/` for visual review.
@@ -72,3 +80,5 @@ all paths must pass GIF structure, dimensions, frame count, exact per-frame cent
 run the harness checks with `python3 -m unittest discover -s Benchmarks -p 'test_encoder_benchmark.py' -v`. for a quick real-encoder smoke test, use a new output directory with `--frames 6 --width 320 --height 180 --runs 1`; it does not provide a valid performance comparison.
 
 the runner measures offline encoding and optimization. it does not measure screen capture, streaming encode, stop-to-preview latency, or visual quality. the ImageIO helper is a native comparison path, not the approved bundled CLI. this harness does not yet automate dither/quality setting sweeps or visual-quality scoring. GIF timing is quantized to centiseconds; each frame's delay must match the fixture schedule derived by rounding cumulative frame boundaries to the nearest centisecond, cumulative duration must be within 20 ms, and the output must loop forever. the high-motion gradient/cursor profile is the recommended first visual review for the later quality-floor gate because it stresses gradients, motion, and temporal dithering; also review static UI/text separately for legibility. workspace size is sampled every 20 ms and can miss short-lived files. memory uses macOS `/usr/bin/time -l` when allowed, then sampled `ps` as a fallback; a short run or restricted host can yield `null`. the tool binary and build still need an exact license, dependency, architecture, signature, and source audit before packaging. no result from this harness alone selects a release encoder.
+
+the first full four-profile run of the app candidate, with commands, checksums, results, and limitations, is documented in [imageio-app-2026-10-24.md](imageio-app-2026-10-24.md). its raw reports and GIFs remain in ignored output directories on the benchmark machine.

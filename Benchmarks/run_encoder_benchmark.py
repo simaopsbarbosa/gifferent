@@ -20,7 +20,7 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parent
-CANDIDATES = ("gifski", "magick", "magick-unoptimized", "imageio", "imageio-gifsicle")
+CANDIDATES = ("gifski", "magick", "magick-unoptimized", "imageio", "imageio-app", "imageio-gifsicle")
 RSS_PATTERN = re.compile(r"(\d+)\s+maximum resident set size")
 CPU_PATTERN = re.compile(r"([\d.]+)\s+real\s+([\d.]+)\s+user\s+([\d.]+)\s+sys")
 
@@ -167,16 +167,18 @@ def environment():
         "platform": platform.platform(),
         "machine": platform.machine(),
         "mac_model": capture(["sysctl", "-n", "hw.model"]),
+        "chip": capture(["sysctl", "-n", "machdep.cpu.brand_string"]),
         "memory_bytes": capture(["sysctl", "-n", "hw.memsize"]),
         "os_version": capture(["sw_vers"]),
         "power_settings": capture(["pmset", "-g", "custom"]),
+        "thermal_status": capture(["pmset", "-g", "therm"]),
         "xcode": capture(["xcodebuild", "-version"]),
         "git_commit": capture(["git", "rev-parse", "HEAD"]),
-        "thermal_state": "not sampled; record manually before interpreting results",
+        "thermal_state": "see pmset -g therm output; sample start and end status manually",
     }
 
 
-def discover(output):
+def discover(output, imageio_app_binary=None):
     found = {}
     for name in ("gifski", "magick", "gifsicle"):
         executable = shutil.which(name)
@@ -196,6 +198,41 @@ def discover(output):
             found["imageio"].update({"available": True, "path": str(tool), "sha256": digest(tool), "architectures": capture(["lipo", "-archs", str(tool)]), "linked_libraries": capture(["otool", "-L", str(tool)])})
     else:
         found["imageio"]["reason"] = "xcrun unavailable"
+    app_sources = [
+        ROOT / ".." / "Sources" / "Recording" / "SessionWorkspaceStore.swift",
+        ROOT / ".." / "Sources" / "Encoding" / "OriginalGIFEncoder.swift",
+        ROOT / "imageio_app_encode.swift",
+    ]
+    found["imageio-app"] = {
+        "available": False,
+        "sources": [str(path.resolve()) for path in app_sources],
+        "source_sha256": {path.name: digest(path) for path in app_sources},
+    }
+    if imageio_app_binary is not None:
+        binary = imageio_app_binary.resolve()
+        if binary.is_file():
+            found["imageio-app"].update({"available": True, "path": str(binary), "prebuilt_binary": True, "compile_elapsed_seconds": 0.0, "sha256": digest(binary), "architectures": capture(["lipo", "-archs", str(binary)]), "linked_libraries": capture(["otool", "-L", str(binary)])})
+        else:
+            found["imageio-app"]["reason"] = f"missing prebuilt binary: {binary}"
+    elif swiftc:
+        tool = output / "tools" / "imageio_app_encode"
+        started = time.perf_counter()
+        compilation = capture([
+            swiftc,
+            "swiftc",
+            "-module-cache-path",
+            str(output / "tools" / "module-cache-app"),
+            *map(str, app_sources),
+            "-o",
+            str(tool),
+        ])
+        found["imageio-app"]["compile_elapsed_seconds"] = time.perf_counter() - started
+        found["imageio-app"]["prebuilt_binary"] = False
+        found["imageio-app"]["compile"] = compilation
+        if compilation.get("exit_code") == 0 and tool.exists():
+            found["imageio-app"].update({"available": True, "path": str(tool), "sha256": digest(tool), "architectures": capture(["lipo", "-archs", str(tool)]), "linked_libraries": capture(["otool", "-L", str(tool)])})
+    else:
+        found["imageio-app"]["reason"] = "xcrun unavailable"
     return found
 
 
@@ -205,6 +242,7 @@ def path_availability(name, tools):
         "magick": ("magick",),
         "magick-unoptimized": ("magick",),
         "imageio": ("imageio",),
+        "imageio-app": ("imageio-app",),
         "imageio-gifsicle": ("imageio", "gifsicle"),
     }[name]
     missing = [tool for tool in required if not tools.get(tool, {}).get("available", "path" in tools.get(tool, {}))]
@@ -406,6 +444,7 @@ def main():
         help="synthetic scene profile for a generated fixture",
     )
     parser.add_argument("--runs", type=int, default=7, help="warm runs per candidate after one cold run")
+    parser.add_argument("--imageio-app-binary", type=Path, help="reuse a previously compiled app candidate helper")
     parser.add_argument("--timeout", type=float, default=180, help="total seconds allowed per benchmark path")
     parser.add_argument("--candidates", nargs="+", choices=CANDIDATES, default=CANDIDATES)
     args = parser.parse_args()
@@ -437,7 +476,7 @@ def main():
     if len(frames) != manifest["frame_count"]:
         raise ValueError("fixture frame count differs from manifest")
     fps = manifest["fps"]
-    tools = discover(args.output)
+    tools = discover(args.output, args.imageio_app_binary)
     availability = {name: path_availability(name, tools) for name in CANDIDATES}
     time_probe = capture(["/usr/bin/time", "-l", "/usr/bin/true"])
     use_system_time = time_probe.get("exit_code") == 0
