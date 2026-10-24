@@ -26,7 +26,7 @@ if documents conflict, stop dependent work and ask the architect. the most recen
 - use SwiftUI for all product UI. use AppKit only for macOS capabilities SwiftUI cannot provide cleanly, such as overlay windows, global hotkeys, cursor geometry, or clipboard integration. keep bridges small and testable.
 - use public macOS APIs. support macOS 14 and later. the initial release is a notarized direct download and a menu bar app.
 - the project's chosen license is AGPL-3.0-or-later. verify every bundled dependency and CLI's license obligations before inclusion; add the full license text and required notices when the source repository and distributable are assembled.
-- treat the approved brand image and its usage rules as a release requirement. the loop-frame direction and warm orange accent are selected, but final artwork is still awaiting architect review; do not silently substitute a generic icon.
+- treat the architect-approved static orange mark and its usage rules as a release requirement. use the production SVG assets in `Brand/mark-light.svg` and `Brand/mark-dark.svg`; keep optional motion and sound out unless the architect approves them.
 - screen pixels stay on the device. no cloud compression or screen-content telemetry. any future external transfer requires a new explicit product decision.
 - keep the app responsive during capture and encoding. perform expensive work away from the main actor, bound memory and temporary disk use, and handle cancellation and cleanup.
 - keep capture, selection, recording, encoding, optimization, export, and UI state behind clear interfaces so alternatives can be benchmarked without rewriting the app.
