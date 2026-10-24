@@ -168,11 +168,12 @@ private struct GIFEditControls: View {
   }
 }
 
+@MainActor
 private struct GIFTimelineControl: View {
   let frameCount: Int
   let startIndex: Int
   let endIndexExclusive: Int
-  let onChange: (Int, Int) -> Void
+  let onChange: @MainActor (Int, Int) -> Void
 
   var body: some View {
     GeometryReader { geometry in
@@ -193,31 +194,31 @@ private struct GIFTimelineControl: View {
           .frame(width: max(4, endX - startX), height: 4)
           .offset(x: startX)
 
-        handle(
+        GIFTimelineHandle(
           identifier: "trim-start-handle",
           label: "trim start",
           index: start,
+          frameCount: frameCount,
           lastIndex: max(0, min(lastIndex, end - 1)),
           minimumIndex: 0,
           x: startX,
           trackWidth: trackWidth,
-          currentRange: start..<(end + 1)
-        ) { value in
-          onChange(value, endIndexExclusive)
-        }
+          currentRange: start..<(end + 1),
+          onMove: { value in onChange(value, endIndexExclusive) }
+        )
 
-        handle(
+        GIFTimelineHandle(
           identifier: "trim-end-handle",
           label: "trim end",
           index: end,
+          frameCount: frameCount,
           lastIndex: lastIndex,
           minimumIndex: min(lastIndex, max(0, start + 1)),
           x: endX,
           trackWidth: trackWidth,
-          currentRange: start..<(end + 1)
-        ) { value in
-          onChange(startIndex, value + 1)
-        }
+          currentRange: start..<(end + 1),
+          onMove: { value in onChange(startIndex, value + 1) }
+        )
       }
       .frame(maxWidth: .infinity, maxHeight: .infinity)
       .coordinateSpace(name: "gif-timeline")
@@ -226,49 +227,57 @@ private struct GIFTimelineControl: View {
     .accessibilityElement(children: .contain)
   }
 
-  private func handle(
-    identifier: String,
-    label: String,
-    index: Int,
-    lastIndex: Int,
-    minimumIndex: Int,
-    x: CGFloat,
-    trackWidth: CGFloat,
-    currentRange: Range<Int>,
-    onMove: @escaping (Int) -> Void
-  ) -> some View {
+  private func fraction(_ index: Int, lastIndex: Int) -> CGFloat {
+    guard lastIndex > 0 else { return 0 }
+    return CGFloat(index) / CGFloat(lastIndex)
+  }
+}
+
+@MainActor
+private struct GIFTimelineHandle: View {
+  let identifier: String
+  let label: String
+  let index: Int
+  let frameCount: Int
+  let lastIndex: Int
+  let minimumIndex: Int
+  let x: CGFloat
+  let trackWidth: CGFloat
+  let currentRange: Range<Int>
+  let onMove: @MainActor (Int) -> Void
+
+  var body: some View {
     Circle()
       .fill(Color.accentColor)
       .frame(width: 18, height: 18)
       .position(x: x, y: 16)
       .gesture(
         DragGesture(minimumDistance: 0, coordinateSpace: .named("gif-timeline"))
-          .onChanged { value in
-            let normalized = min(max((value.location.x - 12) / trackWidth, 0), 1)
-            let moved = Int((normalized * CGFloat(max(0, frameCount - 1))).rounded())
-            onMove(min(max(moved, minimumIndex), lastIndex))
-          }
+          .onChanged { value in move(to: value.location.x) }
       )
       .accessibilityElement()
       .accessibilityLabel(label)
       .accessibilityValue("frame \(index + 1) of \(frameCount)")
       .accessibilityIdentifier(identifier)
       .accessibilityAddTraits(.isButton)
-      .accessibilityAdjustableAction { direction in
-        let changed: Int
-        switch direction {
-        case .increment: changed = min(index + 1, lastIndex)
-        case .decrement: changed = max(index - 1, minimumIndex)
-        @unknown default: changed = index
-        }
-        onMove(changed)
-      }
+      .accessibilityAdjustableAction(adjust)
       .help("selected frames \(currentRange.lowerBound + 1) to \(currentRange.upperBound)")
   }
 
-  private func fraction(_ index: Int, lastIndex: Int) -> CGFloat {
-    guard lastIndex > 0 else { return 0 }
-    return CGFloat(index) / CGFloat(lastIndex)
+  private func move(to locationX: CGFloat) {
+    let normalized = min(max((locationX - 12) / trackWidth, 0), 1)
+    let moved = Int((normalized * CGFloat(max(0, frameCount - 1))).rounded())
+    onMove(min(max(moved, minimumIndex), lastIndex))
+  }
+
+  private func adjust(_ direction: AccessibilityAdjustmentDirection) {
+    let changed: Int
+    switch direction {
+    case .increment: changed = min(index + 1, lastIndex)
+    case .decrement: changed = max(index - 1, minimumIndex)
+    @unknown default: changed = index
+    }
+    onMove(changed)
   }
 }
 
