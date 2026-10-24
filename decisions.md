@@ -26,12 +26,6 @@
 - playback speed uses a continuous slider from 0.5× to 2× in 0.1× steps, centered at 1×.
 - the real-Mac animated clipboard paste acceptance test covers GitHub only. other destinations are outside this first-release clipboard compatibility gate.
 
-## static brand mark approved on 2026-10-24
-
-- approve the static orange mark in [the production-mark review](Brand/Studies/production-mark-review/index.html): compact orbit 03, breathing-room treatment 02, a 0.7 px curve-to-tip gap at 16 px, and `#D45D21` direction tips on a monochrome frame and loop.
-- use the light and dark SVG production assets at `Brand/mark-light.svg` and `Brand/mark-dark.svg`. keep the mark static; the optional motion study and sound are not approved.
-- validate at real menu-bar sizes, materials, and accessibility settings on supported macOS versions before release.
-
 ## recording preferences and warnings confirmed on 2026-10-24
 
 - put the configurable cursor-inclusion setting in a separate “recording settings…” window reachable from the menu. include the cursor by default; let the user turn it off.
@@ -46,6 +40,12 @@
 - after reviewing the detail round, proceed with treatment 02, breathing room, toward final-art approval. the architect flagged its possible 16 px break for review; this does not approve final artwork, color, motion, or sound.
 - after reviewing the final-art sheet, adjust the 16 px gap and continue palette exploration with warm orange `#D45D21`. this does not approve the exact gap, final mark, or palette; both remain provisional pending another accessible comparison and architect review.
 - after reviewing the measured gap comparison, carry the 0.7 px gap at 16 px into palette and final-art exploration. this selects a study direction only; the final mark and exact palette remain unapproved.
+
+## static brand mark approved on 2026-10-24
+
+- this approval supersedes the provisional states recorded during brand exploration: use the static orange mark in [the production-mark review](Brand/Studies/production-mark-review/index.html), compact orbit 03, breathing-room treatment 02, a 0.7 px curve-to-tip gap at 16 px, and `#D45D21` direction tips on a monochrome frame and loop.
+- use the light and dark SVG production assets at `Brand/mark-light.svg` and `Brand/mark-dark.svg`. keep the mark static; the optional motion study and sound are not approved.
+- validate at real menu-bar sizes, materials, and accessibility settings on supported macOS versions before release.
 
 ## compression behavior confirmed on 2026-10-24
 

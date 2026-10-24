@@ -64,9 +64,8 @@ the architect approved the static orange mark shown in the [production-mark revi
 
 all examples are provisional until tested for clarity in the real UI. keep prose lowercase except proper names and exact technical identifiers. do not add decorative copy to fill space.
 
-## pending brand decisions
+## remaining brand work
 
 - validate the approved static mark against real macOS menu-bar materials and accessibility settings.
-- keep orange `#D45D21` on the direction tips; frame and loop adapt to light and dark appearance.
 - decide whether to develop the optional motion concept; sound remains open.
 - choose whether sound resembles a soft click, a light digital pop, or another direction.
