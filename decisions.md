@@ -70,10 +70,9 @@
 
 ## questions to resolve before affected implementation
 
-1. **brand asset:** develop loop-frame sketches with a warm orange accent. the exact artwork, orange values, motion signature, and sound palette still need architect review.
-2. **bundled tool license:** the candidate-level engineering screen is recorded in [the encoder license audit](Benchmarks/encoder-license-audit.md). exact source, dependency, and binary audits remain required before packaging; Gifsicle's distribution terms remain unresolved for this app bundle.
-3. **encoder selection and search evidence:** finish quality, performance, resource, and distribution evidence for the full candidate matrix before selecting an encoder or size-goal search settings. the initial representative animations hold against the quality floor; broader candidate evidence remains open.
-4. **clipboard representation:** verify the chosen pasteboard representations by pasting an animated GIF into GitHub on a real Mac. a successful local pasteboard write alone does not establish destination compatibility.
+1. **bundled tool license:** the candidate-level engineering screen is recorded in [the encoder license audit](Benchmarks/encoder-license-audit.md). exact source, dependency, and binary audits remain required before packaging; Gifsicle's distribution terms remain unresolved for this app bundle.
+2. **encoder selection and search evidence:** finish quality, performance, resource, and distribution evidence for the full candidate matrix before selecting an encoder or size-goal search settings. the initial representative animations hold against the quality floor; broader candidate evidence remains open.
+3. **clipboard representation:** verify the chosen pasteboard representations by pasting an animated GIF into GitHub on a real Mac. a successful local pasteboard write alone does not establish destination compatibility.
 
 ## research notes, not product decisions
 
