@@ -536,6 +536,32 @@ final class RecordingCoordinatorTests: XCTestCase {
     }
   }
 
+  func testWindowTerminationCallbackKeepsExportablePartialPreview() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let stream = FakeRecordingStream(framesOnStart: [validFrame(at: 1)])
+    let factory = FakeRecordingStreamFactory(stream: stream)
+    let clipboard = RecordingTestClipboard()
+    let coordinator = RecordingCoordinator(
+      streamFactory: factory,
+      workspace: fixture.workspace,
+      clipboard: clipboard
+    )
+
+    await coordinator.start(target: .window(42), showsCursor: false)
+    factory.reportTermination(.windowUnavailable)
+    await waitForPreview(coordinator)
+
+    guard case .previewReady(_, let snapshot, let gif) = coordinator.state else {
+      return XCTFail("expected partial preview after window termination")
+    }
+    XCTAssertEqual(snapshot.stopReason, .windowUnavailable)
+    XCTAssertTrue(snapshot.isPartialResult)
+    XCTAssertTrue(FileManager.default.fileExists(atPath: gif.url.path))
+    await coordinator.copyPreview()
+    XCTAssertEqual(clipboard.urls, [gif.url])
+  }
+
   func testPermissionLossAndStreamFailureAreErrorsEvenWithFrames() async throws {
     for reason in [CaptureTerminationReason.permissionLost, .streamFailed] {
       let fixture = makeFixture()
@@ -978,6 +1004,7 @@ private actor GatedEditGIFEncoder: OriginalGIFEncoding {
 private final class FakeRecordingStreamFactory: RecordingStreamPreparing {
   private let streams: [FakeRecordingStream]
   private(set) var prepareCalls = 0
+  private var onTermination: (@MainActor (CaptureTerminationReason) -> Void)?
 
   convenience init(stream: FakeRecordingStream) { self.init(streams: [stream]) }
 
@@ -986,11 +1013,16 @@ private final class FakeRecordingStreamFactory: RecordingStreamPreparing {
   func prepare(
     target: RecordingTarget,
     showsCursor: Bool,
-    onTermination _: @escaping @MainActor (CaptureTerminationReason) -> Void
+    onTermination: @escaping @MainActor (CaptureTerminationReason) -> Void
   ) async throws -> any RecordingCaptureSession {
     let stream = streams[min(prepareCalls, streams.count - 1)]
     prepareCalls += 1
+    self.onTermination = onTermination
     return stream
+  }
+
+  func reportTermination(_ reason: CaptureTerminationReason) {
+    onTermination?(reason)
   }
 }
 
