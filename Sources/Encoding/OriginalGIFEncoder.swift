@@ -1,0 +1,318 @@
+import CoreGraphics
+import Darwin
+import Foundation
+import ImageIO
+import UniformTypeIdentifiers
+
+enum OriginalGIFEncodingError: Error, Equatable {
+  case invalidSequence
+  case invalidTimestamp
+  case unrepresentableTiming
+  case invalidFrame
+  case inconsistentDimensions
+  case destinationCreationFailed
+  case encodingFailed
+  case outputSizeExceeded
+  case invalidOutput
+  case cancelled
+}
+
+struct EncodedGIF: Sendable, Equatable {
+  let url: URL
+  let width: Int
+  let height: Int
+  let frameCount: Int
+  let delaysCentiseconds: [Int]
+  let durationCentiseconds: Int
+  let loopsForever: Bool
+  let fileBytes: Int64
+}
+
+protocol OriginalGIFEncoding: Sendable {
+  /// run from an asynchronous caller; ImageIO work is dispatched away from the main actor.
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF
+}
+
+private final class GIFCancellationFlag: @unchecked Sendable {
+  private let lock = NSLock()
+  private var value = false
+
+  func cancel() {
+    lock.lock()
+    value = true
+    lock.unlock()
+  }
+
+  var isCancelled: Bool {
+    lock.lock()
+    defer { lock.unlock() }
+    return value
+  }
+}
+
+private final class CappedGIFDataConsumer {
+  let descriptor: Int32
+  let maximumBytes: Int64
+  private(set) var bytesWritten: Int64 = 0
+  private(set) var exceededLimit = false
+  private(set) var writeFailed = false
+
+  init(descriptor: Int32, maximumBytes: Int64) {
+    self.descriptor = descriptor
+    self.maximumBytes = maximumBytes
+  }
+
+  func putBytes(_ buffer: UnsafeRawPointer, count: Int) -> Int {
+    guard count >= 0,
+      Int64(count) <= maximumBytes - bytesWritten
+    else {
+      exceededLimit = true
+      return 0
+    }
+    var remaining = count
+    var cursor = buffer
+    while remaining > 0 {
+      let written = Darwin.write(descriptor, cursor, remaining)
+      guard written > 0 else {
+        writeFailed = true
+        return count - remaining
+      }
+      remaining -= written
+      cursor = cursor.advanced(by: written)
+    }
+    bytesWritten += Int64(count)
+    return count
+  }
+}
+
+struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
+  private let frameProgress: @Sendable (Int) -> Void
+
+  init(frameProgress: @escaping @Sendable (Int) -> Void = { _ in }) {
+    self.frameProgress = frameProgress
+  }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    let cancellation = GIFCancellationFlag()
+    return try await withTaskCancellationHandler {
+      try await Task.detached(priority: .utility) {
+        try encodeSynchronously(sequence, to: reservation, cancellation: cancellation)
+      }.value
+    } onCancel: {
+      cancellation.cancel()
+    }
+  }
+
+  private func encodeSynchronously(
+    _ sequence: CapturedPNGSequence,
+    to reservation: PreviewOutputReservation,
+    cancellation: GIFCancellationFlag
+  ) throws -> EncodedGIF {
+    var ownsOutput = false
+    do {
+      try checkCancellation(cancellation)
+      guard !sequence.frames.isEmpty, reservation.maximumBytes > 0,
+        !FileManager.default.fileExists(atPath: reservation.url.path)
+      else { throw OriginalGIFEncodingError.invalidSequence }
+      let delays = try Self.frameDelaysCentiseconds(for: sequence.frames.map(\.timestamp))
+      var dimensions: (width: Int, height: Int)?
+
+      let descriptor = open(
+        reservation.url.path,
+        O_WRONLY | O_CREAT | O_EXCL | O_NOFOLLOW,
+        S_IRUSR | S_IWUSR
+      )
+      guard descriptor >= 0 else { throw OriginalGIFEncodingError.destinationCreationFailed }
+      defer { _ = close(descriptor) }
+      ownsOutput = true
+
+      let consumerContext = CappedGIFDataConsumer(
+        descriptor: descriptor,
+        maximumBytes: reservation.maximumBytes
+      )
+      let contextPointer = Unmanaged.passUnretained(consumerContext).toOpaque()
+      defer { withExtendedLifetime(consumerContext) {} }
+      var callbacks = CGDataConsumerCallbacks(
+        putBytes: { info, buffer, count in
+          guard let info else { return 0 }
+          let context = Unmanaged<CappedGIFDataConsumer>.fromOpaque(info)
+            .takeUnretainedValue()
+          return context.putBytes(buffer, count: count)
+        },
+        releaseConsumer: nil
+      )
+      guard let consumer = CGDataConsumer(info: contextPointer, cbks: &callbacks) else {
+        throw OriginalGIFEncodingError.destinationCreationFailed
+      }
+      guard
+        let destination = CGImageDestinationCreateWithDataConsumer(
+          consumer, UTType.gif.identifier as CFString, sequence.frames.count,
+          [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary
+        )
+      else { throw OriginalGIFEncodingError.destinationCreationFailed }
+
+      for (index, frame) in sequence.frames.enumerated() {
+        try checkCancellation(cancellation)
+        guard let source = CGImageSourceCreateWithURL(frame.url as CFURL, nil),
+          CGImageSourceGetType(source) == UTType.png.identifier as CFString,
+          CGImageSourceGetCount(source) == 1,
+          let image = CGImageSourceCreateImageAtIndex(source, 0, nil)
+        else { throw OriginalGIFEncodingError.invalidFrame }
+        if let dimensions {
+          guard image.width == dimensions.width, image.height == dimensions.height else {
+            throw OriginalGIFEncodingError.inconsistentDimensions
+          }
+        } else {
+          dimensions = (image.width, image.height)
+        }
+
+        let delay = Double(delays[index]) / 100
+        let properties: [CFString: Any] = [
+          kCGImagePropertyGIFDictionary: [
+            kCGImagePropertyGIFDelayTime: delay,
+            kCGImagePropertyGIFUnclampedDelayTime: delay,
+          ]
+        ]
+        CGImageDestinationAddImage(destination, image, properties as CFDictionary)
+        frameProgress(index + 1)
+        try checkCancellation(cancellation)
+        if consumerContext.exceededLimit {
+          throw OriginalGIFEncodingError.outputSizeExceeded
+        }
+        if consumerContext.writeFailed { throw OriginalGIFEncodingError.encodingFailed }
+      }
+
+      try checkCancellation(cancellation)
+      let finalized = CGImageDestinationFinalize(destination)
+      if consumerContext.exceededLimit {
+        throw OriginalGIFEncodingError.outputSizeExceeded
+      }
+      if consumerContext.writeFailed { throw OriginalGIFEncodingError.encodingFailed }
+      guard finalized else {
+        throw OriginalGIFEncodingError.encodingFailed
+      }
+      try checkOutputSize(at: reservation.url, maximumBytes: reservation.maximumBytes)
+      return try validateOutput(
+        at: reservation.url,
+        dimensions: dimensions,
+        delays: delays,
+        maximumBytes: reservation.maximumBytes
+      )
+    } catch {
+      if ownsOutput { try? FileManager.default.removeItem(at: reservation.url) }
+      if cancellation.isCancelled { throw OriginalGIFEncodingError.cancelled }
+      throw error
+    }
+  }
+
+  static func frameDelaysCentiseconds(for timestamps: [TimeInterval]) throws -> [Int] {
+    guard !timestamps.isEmpty else { throw OriginalGIFEncodingError.invalidSequence }
+    guard timestamps.allSatisfy(\.isFinite), timestamps.allSatisfy({ $0 >= 0 }) else {
+      throw OriginalGIFEncodingError.invalidTimestamp
+    }
+    let nanoseconds = try timestamps.map { timestamp -> Int64 in
+      let value = timestamp * 1_000_000_000
+      guard value.isFinite, value < Double(Int64.max) else {
+        throw OriginalGIFEncodingError.invalidTimestamp
+      }
+      return Int64(value.rounded(.toNearestOrAwayFromZero))
+    }
+    for index in 1..<nanoseconds.count where nanoseconds[index] <= nanoseconds[index - 1] {
+      throw OriginalGIFEncodingError.invalidTimestamp
+    }
+
+    let finalInterval =
+      nanoseconds.count > 1
+      ? nanoseconds[nanoseconds.count - 1] - nanoseconds[nanoseconds.count - 2]
+      : 41_666_667
+    let duration = nanoseconds[nanoseconds.count - 1] - nanoseconds[0]
+    let (totalNanoseconds, overflow) = duration.addingReportingOverflow(finalInterval)
+    guard !overflow else { throw OriginalGIFEncodingError.invalidTimestamp }
+    var boundaries = nanoseconds.map { $0 - nanoseconds[0] }
+    boundaries.append(totalNanoseconds)
+    let rounded = try boundaries.map { boundary -> Int in
+      let (adjusted, roundingOverflow) = boundary.addingReportingOverflow(5_000_000)
+      guard !roundingOverflow else {
+        throw OriginalGIFEncodingError.invalidTimestamp
+      }
+      return Int(adjusted / 10_000_000)
+    }
+    let delays = zip(rounded, rounded.dropFirst()).map { $1 - $0 }
+    guard delays.allSatisfy({ $0 > 0 }) else {
+      throw OriginalGIFEncodingError.unrepresentableTiming
+    }
+    return delays
+  }
+
+  private func checkCancellation(_ flag: GIFCancellationFlag) throws {
+    if flag.isCancelled { throw OriginalGIFEncodingError.cancelled }
+  }
+
+  private func checkOutputSize(at url: URL, maximumBytes: Int64) throws {
+    var info = stat()
+    guard lstat(url.path, &info) == 0 else { return }
+    guard info.st_mode & S_IFMT == S_IFREG else {
+      throw OriginalGIFEncodingError.invalidOutput
+    }
+    guard Int64(info.st_size) <= maximumBytes else {
+      throw OriginalGIFEncodingError.outputSizeExceeded
+    }
+  }
+
+  private func validateOutput(
+    at url: URL,
+    dimensions expectedDimensions: (width: Int, height: Int)?,
+    delays expectedDelays: [Int],
+    maximumBytes: Int64
+  ) throws -> EncodedGIF {
+    guard let expectedDimensions,
+      let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+      CGImageSourceGetCount(source) == expectedDelays.count,
+      let globalProperties = CGImageSourceCopyProperties(source, nil) as? [CFString: Any],
+      let gifProperties = globalProperties[kCGImagePropertyGIFDictionary] as? [CFString: Any],
+      let loopCount = gifProperties[kCGImagePropertyGIFLoopCount] as? Int,
+      loopCount == 0
+    else { throw OriginalGIFEncodingError.invalidOutput }
+
+    var actualDelays: [Int] = []
+    for index in 0..<expectedDelays.count {
+      guard
+        let properties = CGImageSourceCopyPropertiesAtIndex(source, index, nil)
+          as? [CFString: Any],
+        let width = properties[kCGImagePropertyPixelWidth] as? Int,
+        let height = properties[kCGImagePropertyPixelHeight] as? Int,
+        width == expectedDimensions.width,
+        height == expectedDimensions.height,
+        let frameGIF = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any],
+        let delay = frameGIF[kCGImagePropertyGIFUnclampedDelayTime] as? Double
+          ?? frameGIF[kCGImagePropertyGIFDelayTime] as? Double,
+        delay.isFinite
+      else { throw OriginalGIFEncodingError.invalidOutput }
+      actualDelays.append(Int((delay * 100).rounded(.toNearestOrAwayFromZero)))
+    }
+    guard actualDelays == expectedDelays else {
+      throw OriginalGIFEncodingError.invalidOutput
+    }
+    try checkOutputSize(at: url, maximumBytes: maximumBytes)
+    var info = stat()
+    guard lstat(url.path, &info) == 0, info.st_size > 0 else {
+      throw OriginalGIFEncodingError.invalidOutput
+    }
+    return EncodedGIF(
+      url: url,
+      width: expectedDimensions.width,
+      height: expectedDimensions.height,
+      frameCount: actualDelays.count,
+      delaysCentiseconds: actualDelays,
+      durationCentiseconds: actualDelays.reduce(0, +),
+      loopsForever: true,
+      fileBytes: Int64(info.st_size)
+    )
+  }
+}

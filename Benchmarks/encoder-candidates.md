@@ -12,6 +12,8 @@ research snapshot: 2026-10-24. this is a shortlist and test design, not a tool s
 
 no release encoder is selected by this memo. measure gifski and ImageMagick as complete PNG-to-GIF paths; include ImageIO and ImageIO followed by Gifsicle as comparison paths, with the latter's distribution status unresolved. an existing `ffmpeg` on a developer machine is not a release dependency or measured candidate for this decision; do not enable optional FFmpeg support in the gifski build under evaluation.
 
+the app now has an isolated `OriginalGIFEncoding` interface and a native ImageIO candidate that consumes a stopped workspace's ordered PNG URLs and capture timestamps. it applies cumulative centisecond boundary rounding, uses the preceding capture interval for the final frame (or 1/24 second for one frame), and validates decoded dimensions, count, each delay, infinite looping, and reserved output size. this is only a testable implementation seam: recording does not call it, and it does not satisfy the encoder decision or visual quality gate. the offline harness remains the comparable path for candidate measurements; keep its schedule and this timing policy aligned when the app path is benchmarked.
+
 ## candidate discovery and invocation
 
 first record whether exploratory tools already exist; do not install or bundle them as part of this research:

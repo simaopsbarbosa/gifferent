@@ -38,6 +38,58 @@ final class SessionWorkspaceStoreTests: XCTestCase {
     XCTAssertTrue(FileManager.default.fileExists(atPath: exported.path))
   }
 
+  func testPNGSequenceRequiresStoppedSessionAndPreservesOrderedTimestamps() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 1_024 * 1_024,
+      minimumFreeBytes: 0
+    )
+    let id = try await store.start()
+    let first = try await store.appendFrame(pngFrame(), timestamp: 5.25, to: id)
+    let second = try await store.appendFrame(pngFrame(), timestamp: 5.29, to: id)
+    await assertThrowsSessionError(.invalidState) {
+      _ = try await store.pngSequence(for: id)
+    }
+    _ = try await store.stop(id, reason: .user)
+
+    let sequence = try await store.pngSequence(for: id)
+    XCTAssertEqual(sequence.frames.map(\.url), [first, second])
+    XCTAssertEqual(sequence.frames.map(\.timestamp), [5.25, 5.29])
+    let reservation = try await store.reservePreviewOutput(for: id)
+    await assertThrowsSessionError(.invalidState) {
+      _ = try await store.pngSequence(for: id)
+    }
+    try await store.abandonPreviewOutput(for: id)
+    _ = reservation
+  }
+
+  func testPNGSequenceRejectsMissingAndCorruptFrameFiles() async throws {
+    let base = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: base) }
+    let store = SessionWorkspaceStore(
+      rootDirectory: base.appendingPathComponent("sessions"),
+      maximumSessionBytes: 1_024 * 1_024,
+      minimumFreeBytes: 0
+    )
+    let missingID = try await store.start()
+    let missing = try await store.appendFrame(pngFrame(), timestamp: 1, to: missingID)
+    _ = try await store.stop(missingID, reason: .user)
+    try FileManager.default.removeItem(at: missing)
+    await assertThrowsSessionError(.missingFrame) {
+      _ = try await store.pngSequence(for: missingID)
+    }
+
+    let corruptID = try await store.start()
+    let corrupt = try await store.appendFrame(pngFrame(), timestamp: 1, to: corruptID)
+    _ = try await store.stop(corruptID, reason: .user)
+    try Data("corrupt".utf8).write(to: corrupt)
+    await assertThrowsSessionError(.corruptFrame) {
+      _ = try await store.pngSequence(for: corruptID)
+    }
+  }
+
   func testNoUsableFramesRemovesSession() async throws {
     let base = uniqueTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: base) }
@@ -289,6 +341,18 @@ final class SessionWorkspaceStoreTests: XCTestCase {
   private func uniqueTemporaryDirectory() -> URL {
     FileManager.default.temporaryDirectory.appendingPathComponent(
       UUID().uuidString, isDirectory: true)
+  }
+
+  private func pngFrame() throws -> Data {
+    try PNGFrameEncoder().encode(
+      RecordingFrame(
+        timestampNanoseconds: 1,
+        width: 1,
+        height: 1,
+        bytesPerRow: 4,
+        bgra: Data([0, 0, 255, 255])
+      )
+    )
   }
 }
 

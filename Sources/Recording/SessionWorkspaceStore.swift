@@ -1,5 +1,6 @@
 import Darwin
 import Foundation
+import ImageIO
 
 struct RecordingSessionID: Hashable, Sendable {
   let rawValue: UUID
@@ -25,6 +26,8 @@ enum SessionWorkspaceError: Error, Equatable {
   case insufficientDiskSpace
   case unavailableDiskSpace
   case invalidPreviewFile
+  case missingFrame
+  case corruptFrame
   case unsafeWorkspace
 }
 
@@ -46,6 +49,15 @@ struct PreviewOutputReservation: Sendable {
   let maximumBytes: Int64
 }
 
+struct CapturedPNGFrame: Sendable, Equatable {
+  let url: URL
+  let timestamp: TimeInterval
+}
+
+struct CapturedPNGSequence: Sendable, Equatable {
+  let frames: [CapturedPNGFrame]
+}
+
 actor SessionWorkspaceStore {
   private struct DirectoryIdentity: Equatable {
     let device: dev_t
@@ -56,6 +68,8 @@ actor SessionWorkspaceStore {
     let directory: URL
     let directoryIdentity: DirectoryIdentity
     var frameCount = 0
+    var frameURLs: [URL] = []
+    var frameTimestamps: [TimeInterval] = []
     var temporaryBytes: Int64 = 0
     var firstTimestamp: TimeInterval?
     var lastTimestamp: TimeInterval?
@@ -123,6 +137,8 @@ actor SessionWorkspaceStore {
     )
     try data.write(to: destination, options: .atomic)
     session.frameCount = frameNumber
+    session.frameURLs.append(destination)
+    session.frameTimestamps.append(timestamp)
     session.temporaryBytes += bytes
     session.firstTimestamp = session.firstTimestamp ?? timestamp
     session.lastTimestamp = timestamp
@@ -160,6 +176,37 @@ actor SessionWorkspaceStore {
     return PreviewOutputReservation(
       url: previewURL,
       maximumBytes: remaining
+    )
+  }
+
+  func pngSequence(for id: RecordingSessionID) throws -> CapturedPNGSequence {
+    guard let session = sessions[id] else { throw SessionWorkspaceError.unknownSession }
+    guard !session.isRecording, !session.previewReady, !session.previewReserved else {
+      throw SessionWorkspaceError.invalidState
+    }
+    try verify(session)
+    guard session.frameURLs.count == session.frameCount,
+      session.frameTimestamps.count == session.frameCount,
+      session.frameCount > 0
+    else { throw SessionWorkspaceError.missingFrame }
+
+    for url in session.frameURLs {
+      var info = stat()
+      guard lstat(url.path, &info) == 0,
+        info.st_mode & S_IFMT == S_IFREG,
+        info.st_size > 0
+      else { throw SessionWorkspaceError.missingFrame }
+      guard let source = CGImageSourceCreateWithURL(url as CFURL, nil),
+        CGImageSourceGetType(source) == "public.png" as CFString,
+        CGImageSourceGetCount(source) == 1,
+        CGImageSourceCreateImageAtIndex(source, 0, nil) != nil
+      else { throw SessionWorkspaceError.corruptFrame }
+    }
+
+    return CapturedPNGSequence(
+      frames: zip(session.frameURLs, session.frameTimestamps).map { url, timestamp in
+        CapturedPNGFrame(url: url, timestamp: timestamp)
+      }
     )
   }
 
