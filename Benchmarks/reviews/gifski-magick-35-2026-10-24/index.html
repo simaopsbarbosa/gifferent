@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>gif encoder visual review samples</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.5;
+    }
+    body {
+      margin: 0 auto;
+      max-width: 1360px;
+      padding: 24px;
+    }
+    h1, h2, p { margin-top: 0; }
+    .note {
+      border-left: 4px solid #d66b32;
+      margin: 20px 0 32px;
+      padding: 12px 16px;
+    }
+    .pair {
+      display: grid;
+      gap: 16px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      margin: 16px 0 40px;
+    }
+    figure { margin: 0; min-width: 0; }
+    figcaption { font-weight: 600; margin-bottom: 8px; }
+    img {
+      display: block;
+      height: auto;
+      max-width: 100%;
+      width: 640px;
+    }
+    .size, .muted { color: #777; font-size: 0.9rem; }
+    ul { padding-left: 1.25rem; }
+    @media (max-width: 900px) {
+      .pair { grid-template-columns: 1fr; }
+      body { padding: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>gif encoder visual review samples</h1>
+    <p>representative looping benchmark outputs at native 640×360 size. compare each pair at 1× playback.</p>
+    <aside class="note">
+      <strong>the controls are not equivalent.</strong> Gifski used quality 90; ImageMagick used 35% Floyd–Steinberg diffusion. these samples are for judging the approved quality floor, not for selecting an encoder.
+    </aside>
+
+    <section aria-labelledby="static-title">
+      <h2 id="static-title">mostly static ui</h2>
+      <div class="pair">
+        <figure>
+          <figcaption>Gifski 1.34.0</figcaption>
+          <img src="gifs/mostly-static-ui-gifski-1.34.0.gif" alt="looping mostly static user interface fixture encoded with Gifski 1.34.0">
+          <div class="size">15,311 bytes · 640×360</div>
+        </figure>
+        <figure>
+          <figcaption>ImageMagick 7.1.2-34 · optimized · 35% diffusion</figcaption>
+          <img src="gifs/mostly-static-ui-magick-35-percent.gif" alt="looping mostly static user interface fixture encoded with ImageMagick at 35 percent diffusion">
+          <div class="size">30,017 bytes · 640×360</div>
+        </figure>
+      </div>
+    </section>
+
+    <section aria-labelledby="motion-title">
+      <h2 id="motion-title">high motion, gradient, and cursor</h2>
+      <div class="pair">
+        <figure>
+          <figcaption>Gifski 1.34.0</figcaption>
+          <img src="gifs/high-motion-gifski-1.34.0.gif" alt="looping high motion gradient and cursor fixture encoded with Gifski 1.34.0">
+          <div class="size">5,792,443 bytes · 640×360</div>
+        </figure>
+        <figure>
+          <figcaption>ImageMagick 7.1.2-34 · optimized · 35% diffusion</figcaption>
+          <img src="gifs/high-motion-magick-35-percent.gif" alt="looping high motion gradient and cursor fixture encoded with ImageMagick at 35 percent diffusion">
+          <div class="size">9,524,098 bytes · 640×360</div>
+        </figure>
+      </div>
+    </section>
+
+    <section aria-labelledby="floor-title">
+      <h2 id="floor-title">please judge the approved quality floor</h2>
+      <ul>
+        <li>text remains legible at native size.</li>
+        <li>cursor edges stay clear.</li>
+        <li>gradients show no distracting banding or flicker.</li>
+        <li>differences visible only at 2× are acceptable.</li>
+      </ul>
+      <p class="muted">these are samples, not a final release test or encoder selection. see the README for SHA-256 provenance and links to the complete benchmark evidence.</p>
+    </section>
+  </main>
+</body>
+</html>
