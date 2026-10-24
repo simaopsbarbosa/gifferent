@@ -69,6 +69,14 @@ private struct GifferentMenuContent: View {
         .accessibilityLabel(selectionDescription)
     }
 
+    #if DEBUG
+      if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+        Text(runtime.recordingFrameFixtureState)
+          .accessibilityIdentifier("recording-frame-fixture-state")
+          .accessibilityLabel("recording frame fixture state")
+      }
+    #endif
+
     Divider()
 
     Button("select capture…") {
