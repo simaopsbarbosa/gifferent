@@ -239,36 +239,41 @@ private struct GIFCompressionDestinationButton: View {
   @ObservedObject var coordinator: RecordingCoordinator
   let destination: GIFCompressionDestination
 
+  private var buttonLabel: some View {
+    HStack(spacing: 6) {
+      Image(systemName: destination.systemImage)
+        .accessibilityIdentifier(
+          "compression-destination-symbol-\(destination.accessibilityID)")
+      Text(destination.buttonTitle)
+    }
+  }
+
+  private var accessibleLabel: String {
+    "\(destination.displayName), \(destination.targetLabel) target, "
+      + "\(destination.publishedMaximumLabel) published maximum"
+  }
+
+  private var helpText: String {
+    let maximum = "published maximum: \(destination.publishedMaximumLabel)"
+    let scope = "for \(destination.limitScopeDescription)"
+    return "target: \(destination.targetLabel) · \(maximum) \(scope) · "
+      + "checked \(destination.limitResearchDate)"
+  }
+
   var body: some View {
     Button {
       coordinator.selectCompressionDestination(destination)
     } label: {
-      HStack(spacing: 6) {
-        Image(systemName: destination.systemImage)
-          .accessibilityIdentifier(
-            "compression-destination-symbol-\(destination.accessibilityID)")
-        Text(
-          "\(destination.displayName) · \(destination.targetLabel) target · "
-            + "\(destination.publishedMaximumLabel) max"
-        )
-      }
+      buttonLabel
     }
     .buttonStyle(.bordered)
     .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
     .accessibilityIdentifier("compression-destination-\(destination.accessibilityID)")
-    .accessibilityLabel(
-      "\(destination.displayName), \(destination.targetLabel) target, "
-        + "\(destination.publishedMaximumLabel) published maximum"
-    )
+    .accessibilityLabel(accessibleLabel)
     .accessibilityAddTraits(
       coordinator.compressionSettings.destination == destination ? .isSelected : []
     )
-    .help(
-      "target: \(destination.targetLabel) · published maximum: "
-        + "\(destination.publishedMaximumLabel) for "
-        + "\(destination.limitScopeDescription) · "
-        + "checked \(destination.limitResearchDate)"
-    )
+    .help(helpText)
   }
 }
 

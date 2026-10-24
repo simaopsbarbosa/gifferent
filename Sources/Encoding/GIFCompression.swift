@@ -41,6 +41,12 @@ enum GIFCompressionDestination: CaseIterable, Identifiable, Sendable {
     }
   }
 
+  var buttonTitle: String {
+    let target = "\(targetLabel) target"
+    let maximum = "\(publishedMaximumLabel) max"
+    return "\(displayName) · \(target) · \(maximum)"
+  }
+
   var publishedMaximumLabel: String {
     switch self {
     case .github: "10 MB"
