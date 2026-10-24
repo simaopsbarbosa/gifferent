@@ -89,6 +89,8 @@ the first full four-profile run of the app candidate, with commands, checksums, 
 
 the official `gifski` 1.34.0 release was later compared with that app helper across the same four profiles. see [gifski-1.34.0-2026-10-24.md](gifski-1.34.0-2026-10-24.md) for release provenance, invocation settings, sample results, and limitations; raw measurements and one representative GIF per path/profile remain ignored on the benchmark machine.
 
+the pinned-source audit for the official [Gifski 1.34.0 release](gifski-1.34.0-build-audit-2026-10-24.md) is in progress; it records source and dependency provenance separately from performance or encoder selection.
+
 the equal-work ImageMagick and legacy ImageIO results across all four synthetic profiles are summarized in [equalized-encoder-matrix-2026-10-24.md](equalized-encoder-matrix-2026-10-24.md). the report includes fixture checksums, exact commands, timing and output-size measurements, and validation limits; no visual-quality or release-selection claim is made.
 
 a limited representative-frame visual spot check for the static-UI and high-motion profiles is available in [the equal-work review](reviews/equalized-encoder-2026-10-24/index.html), with provenance and limits in its [review notes](reviews/equalized-encoder-2026-10-24/README.md). optimized ImageMagick at 100% diffusion shows faint speckling in flat dark UI regions at native size, more visible at 2×; the architect reviewed the sample and confirmed that it holds against the approved floor. still frames do not establish flicker or temporal quality, and the review does not select an encoder.

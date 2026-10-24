@@ -30,7 +30,7 @@
 
 - put the configurable cursor-inclusion setting in a separate “recording settings…” window reachable from the menu. include the cursor by default; let the user turn it off.
 - warn once per recording after 30 seconds or when its session workspace reaches 75% of the 512 mib quota. keep recording, let the user dismiss the warning, and do not repeat it in that session.
-- warning presentation is still awaiting architect choice. the behavior is settled, but its visible surface must not interrupt normal Mac interaction or enter captured pixels.
+- show the non-modal warning in the menu-bar app with an explicit dismiss action. do not interrupt capture or include the warning in captured pixels.
 
 ## brand exploration confirmed on 2026-10-24
 

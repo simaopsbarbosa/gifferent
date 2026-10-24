@@ -1,6 +1,6 @@
 # encoder candidate research
 
-research snapshot: 2026-10-24. this is a shortlist and test design, not a tool selection, legal opinion, speed claim, or quality claim. no candidate CLI executable has been bundled. exploratory measurements now exist for the [native app ImageIO path](imageio-app-2026-10-24.md), the [Gifski path](gifski-1.34.0-2026-10-24.md), and the [equal-work ImageMagick and legacy ImageIO matrix](equalized-encoder-matrix-2026-10-24.md); each report states its comparability limits. pin an upstream tag and source commit before building or benchmarking a release candidate.
+research snapshot: 2026-10-24. this is a shortlist and test design, not a tool selection, legal opinion, speed claim, or quality claim. no candidate CLI executable has been bundled. exploratory measurements now exist for the [native app ImageIO path](imageio-app-2026-10-24.md), the [Gifski path](gifski-1.34.0-2026-10-24.md), and the [equal-work ImageMagick and legacy ImageIO matrix](equalized-encoder-matrix-2026-10-24.md); each report states its comparability limits. audit the exact upstream build inputs before selecting or distributing a release candidate.
 
 the distribution-license screen and required provenance evidence are summarized in [encoder license audit](encoder-license-audit.md). it is not legal advice or a release clearance; the exact source revision, build, dependencies, and binary still require review.
 
