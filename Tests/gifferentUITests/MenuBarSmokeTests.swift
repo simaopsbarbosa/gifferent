@@ -83,9 +83,10 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(previewWindow.staticTexts["preview-size"].exists)
     XCTAssertTrue(previewWindow.staticTexts["preview-duration"].exists)
     XCTAssertEqual(previewWindow.staticTexts["preview-dimensions"].value as? String, "16 by 16")
-    XCTAssertTrue(
-      app.descendants(matching: .any).matching(identifier: "animated-gif-view").firstMatch
-        .waitForExistence(timeout: 5))
+    let animatedPreview = previewWindow.images["animated-gif-preview"]
+    XCTAssertTrue(animatedPreview.waitForExistence(timeout: 5))
+    XCTAssertEqual(animatedPreview.elementType, .image)
+    XCTAssertEqual(animatedPreview.label, "animated gif preview")
 
     previewWindow.buttons["copy-preview-button"].click()
     XCTAssertTrue(waitForPreviewAction("copied", in: previewWindow))

@@ -206,8 +206,6 @@ private struct GIFPreviewView: View {
           AnimatedGIFView(url: gif.url)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
             .aspectRatio(CGFloat(gif.width) / CGFloat(gif.height), contentMode: .fit)
-            .accessibilityIdentifier("animated-gif-preview")
-            .accessibilityLabel("animated gif preview")
 
           HStack(spacing: 16) {
             metadata(
@@ -246,6 +244,8 @@ private struct GIFPreviewView: View {
                 coordinator.previewAction == .copying || coordinator.previewAction == .saving
               )
               .accessibilityIdentifier("discard-preview-button")
+            Button("close") { runtime.requestPreviewClose() }
+              .accessibilityIdentifier("close-preview-button")
           }
         }
         .padding(18)
@@ -325,7 +325,9 @@ private struct AnimatedGIFView: NSViewRepresentable {
     let view = NSImageView()
     view.imageScaling = .scaleProportionallyUpOrDown
     view.animates = true
-    view.setAccessibilityIdentifier("animated-gif-view")
+    view.setAccessibilityElement(true)
+    view.setAccessibilityRole(.image)
+    view.setAccessibilityIdentifier("animated-gif-preview")
     view.setAccessibilityLabel("animated gif preview")
     view.image = NSImage(contentsOf: url)
     context.coordinator.url = url
