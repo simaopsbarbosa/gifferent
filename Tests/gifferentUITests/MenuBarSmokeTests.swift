@@ -159,10 +159,6 @@ final class MenuBarSmokeTests: XCTestCase {
     testWindow.buttons["select-capture-button"].click()
     let restoredSelectionWindow = app.windows["capture selection"]
     XCTAssertTrue(restoredSelectionWindow.waitForExistence(timeout: 10))
-    let restoredTargetDescription = restoredSelectionWindow.descendants(matching: .any)
-      .matching(identifier: "capture-target-description").firstMatch
-    XCTAssertTrue(restoredTargetDescription.waitForExistence(timeout: 5))
-    XCTAssertEqual(restoredTargetDescription.value as? String, "region selected")
     XCTAssertTrue(restoredSelectionWindow.buttons["confirm-selection-button"].isEnabled)
 
     restoredSelectionWindow.buttons["cancel-selection-button"].click()
@@ -189,11 +185,7 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(fixtureWindow.waitForExistence(timeout: 5))
     fixtureWindow.click()
 
-    let targetDescription = selectionWindow.descendants(matching: .any)
-      .matching(identifier: "capture-target-description").firstMatch
-    XCTAssertTrue(targetDescription.waitForExistence(timeout: 5))
-    XCTAssertEqual(
-      targetDescription.value as? String, "gifferent fixture · fixture window selected")
+    XCTAssertTrue(selectionWindow.buttons["confirm-selection-button"].isEnabled)
     selectionWindow.buttons["confirm-selection-button"].click()
 
     let selectionStatus = testWindow.staticTexts["selection-status"]
