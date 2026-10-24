@@ -162,6 +162,9 @@ final class RecordingCoordinator: ObservableObject {
   @Published private(set) var isPreviewUpdateInProgress = false
   @Published private(set) var editFrameCount = 0
   @Published private(set) var recordingWorkspaceBytes: Int64 = 0
+  @Published private(set) var compressionSettings = GIFCompressionSettings()
+  @Published private(set) var compressionAction: GIFCompressionAction
+  @Published private(set) var compressedPreview: EncodedGIF?
 
   #if DEBUG
     func setRecordingWorkspaceBytesFixture(_ bytes: Int64) {
@@ -173,6 +176,7 @@ final class RecordingCoordinator: ObservableObject {
   private let workspace: SessionWorkspaceStore
   private let encoder: PNGFrameEncoder
   private let gifEncoder: any OriginalGIFEncoding
+  private let compressor: (any GIFCompressing)?
   private let clipboard: any GIFClipboardWriting
   private let fileSaver: any GIFSaving
   private let diagnosticsClock: any RecordingDiagnosticsClock
@@ -187,6 +191,8 @@ final class RecordingCoordinator: ObservableObject {
   private var consumerFailure: RecordingCoordinatorFailure?
   private var previewTask: Task<Void, Never>?
   private var replacementTask: Task<Void, Never>?
+  private var compressionTask: Task<Void, Never>?
+  private var compressionRequest: UUID?
   private var latestEditRequest: UUID?
   private var originalSequence: CapturedPNGSequence?
   private var currentPreviewParameters: GIFEditParameters?
@@ -199,6 +205,7 @@ final class RecordingCoordinator: ObservableObject {
     workspace: SessionWorkspaceStore,
     encoder: PNGFrameEncoder = PNGFrameEncoder(),
     gifEncoder: any OriginalGIFEncoding = ImageIOOriginalGIFEncoder(),
+    compressor: (any GIFCompressing)? = nil,
     clipboard: any GIFClipboardWriting = NSPasteboardGIFWriter(),
     fileSaver: any GIFSaving = SavePanelGIFSaver(),
     diagnosticsClock: any RecordingDiagnosticsClock = SystemRecordingDiagnosticsClock()
@@ -207,6 +214,8 @@ final class RecordingCoordinator: ObservableObject {
     self.workspace = workspace
     self.encoder = encoder
     self.gifEncoder = gifEncoder
+    self.compressor = compressor
+    compressionAction = compressor == nil ? .unavailable : .idle
     self.clipboard = clipboard
     self.fileSaver = fileSaver
     self.diagnosticsClock = diagnosticsClock
@@ -286,6 +295,8 @@ final class RecordingCoordinator: ObservableObject {
       try await workspace.discard(id)
       sessionID = nil
       previewExported = false
+      compressedPreview = nil
+      compressionAction = isCompressionAvailable ? .idle : .unavailable
       editParameters = nil
       currentPreviewParameters = nil
       originalSequence = nil
@@ -300,7 +311,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   var isPreviewActionInProgress: Bool {
-    previewAction == .copying || previewAction == .saving
+    previewAction == .copying || previewAction == .saving || isCompressionInProgress
   }
 
   func retryPreviewEncoding() {
@@ -311,6 +322,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func updateTrim(startIndex: Int, endIndexExclusive: Int) {
+    guard compressedPreview == nil, !isCompressionInProgress else { return }
     guard var parameters = editParameters else { return }
     parameters.frameRange = GIFFrameRange(
       startIndex: startIndex, endIndexExclusive: endIndexExclusive)
@@ -318,20 +330,95 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func updatePlaybackSpeed(_ speed: Double) {
+    guard compressedPreview == nil, !isCompressionInProgress else { return }
     guard var parameters = editParameters else { return }
     parameters.playbackSpeed = (speed * 10).rounded() / 10
     requestPreviewUpdate(parameters)
   }
 
   func updateLoopMode(_ loopMode: GIFLoopMode) {
+    guard compressedPreview == nil, !isCompressionInProgress else { return }
     guard var parameters = editParameters else { return }
     parameters.loopMode = loopMode
     requestPreviewUpdate(parameters)
   }
 
+  var isCompressionAvailable: Bool { compressor != nil }
+
+  var isCompressionInProgress: Bool { compressionAction == .compressing }
+
+  var displayedPreviewGIF: EncodedGIF? {
+    guard case .previewReady(_, _, let original) = state else { return nil }
+    return compressedPreview ?? original
+  }
+
+  func selectCompressionDestination(_ destination: GIFCompressionDestination) {
+    guard !isCompressionInProgress, compressedPreview == nil else { return }
+    compressionSettings.destination = destination
+  }
+
+  func selectCompressionScale(_ scale: GIFCompressionScale) {
+    guard !isCompressionInProgress, compressedPreview == nil else { return }
+    compressionSettings.scale = scale
+  }
+
+  func setCompressionDiffusion(_ percent: Int) {
+    guard !isCompressionInProgress, compressedPreview == nil,
+      (0...100).contains(percent), percent.isMultiple(of: 5)
+    else { return }
+    compressionSettings.diffusionPercent = percent
+  }
+
+  func startCompression() {
+    guard !isPreviewUpdateInProgress, !isPreviewActionInProgress,
+      compressionTask == nil, compressedPreview == nil,
+      case .previewReady(_, _, let source) = state,
+      let compressor
+    else { return }
+    guard compressionSettings.isValid else {
+      compressionAction = .failed
+      return
+    }
+    let request = UUID()
+    compressionRequest = request
+    compressionAction = .compressing
+    previewExported = false
+    let settings = compressionSettings
+    compressionTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      await self.performCompression(
+        source: source, settings: settings, compressor: compressor, request: request)
+    }
+  }
+
+  func cancelCompression() async {
+    guard let compressionTask else { return }
+    compressionTask.cancel()
+    await compressionTask.value
+  }
+
+  func backToOriginalPreview() async {
+    guard !isCompressionInProgress,
+      compressedPreview != nil,
+      case .previewReady(let id, _, let original) = state
+    else { return }
+    do {
+      if let compressedPreview {
+        try await workspace.removeCompressedPreviewOutput(for: id, at: compressedPreview.url)
+      }
+      self.compressedPreview = nil
+      previewExported = false
+      let snapshot = try await workspace.snapshot(for: id)
+      compressionAction = isCompressionAvailable ? .idle : .unavailable
+      state = .previewReady(id, snapshot, original)
+    } catch {
+      compressionAction = .failed
+    }
+  }
+
   func copyPreview() async {
-    guard !isPreviewUpdateInProgress,
-      case .previewReady(_, _, let gif) = state
+    guard !isPreviewUpdateInProgress, !isPreviewActionInProgress,
+      let gif = displayedPreviewGIF
     else { return }
     previewAction = .copying
     do {
@@ -344,8 +431,8 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func savePreview() async {
-    guard !isPreviewUpdateInProgress,
-      case .previewReady(_, _, let gif) = state
+    guard !isPreviewUpdateInProgress, !isPreviewActionInProgress,
+      let gif = displayedPreviewGIF
     else { return }
     previewAction = .saving
     do {
@@ -381,6 +468,8 @@ final class RecordingCoordinator: ObservableObject {
       }
       sessionID = nil
       previewExported = false
+      compressedPreview = nil
+      compressionAction = isCompressionAvailable ? .idle : .unavailable
       editParameters = nil
       currentPreviewParameters = nil
       originalSequence = nil
@@ -522,6 +611,8 @@ final class RecordingCoordinator: ObservableObject {
     state = .preparingPreview(sessionID, snapshot)
     previewAction = .idle
     previewExported = false
+    compressedPreview = nil
+    compressionAction = isCompressionAvailable ? .idle : .unavailable
     var reservation: PreviewOutputReservation?
     do {
       let sequence = try await workspace.pngSequence(for: sessionID)
@@ -565,6 +656,75 @@ final class RecordingCoordinator: ObservableObject {
       state = .captured(sessionID, snapshot)
     }
     previewTask = nil
+  }
+
+  private func performCompression(
+    source: EncodedGIF,
+    settings: GIFCompressionSettings,
+    compressor: any GIFCompressing,
+    request: UUID
+  ) async {
+    guard let sessionID,
+      compressionRequest == request,
+      case .previewReady(let currentID, _, let original) = state,
+      currentID == sessionID,
+      source == original
+    else {
+      finishCompression(request, action: .cancelled)
+      return
+    }
+
+    var reservation: CompressedPreviewOutputReservation?
+    var committedURL: URL?
+    do {
+      let output = try await workspace.reserveCompressedPreviewOutput(
+        for: sessionID,
+        sourceURL: source.url,
+        maximumCacheBytes: 0
+      )
+      reservation = output
+      try Task.checkCancellation()
+      let compressed = try await compressor.compress(
+        source: source, settings: settings, to: output)
+      try await Task.detached(priority: .userInitiated) {
+        try validateCompressedGIFOutput(
+          compressed, source: source, settings: settings, reservation: output)
+      }.value
+      try Task.checkCancellation()
+      _ = try await workspace.commitCompressedPreviewOutput(for: sessionID, reservation: output)
+      reservation = nil
+      committedURL = output.url
+      try Task.checkCancellation()
+      try await workspace.keepCompressedPreviewOutput(for: sessionID, at: output.url)
+      try Task.checkCancellation()
+      let snapshot = try await workspace.snapshot(for: sessionID)
+      guard compressionRequest == request, !Task.isCancelled else {
+        try? await workspace.removeCompressedPreviewOutput(for: sessionID, at: output.url)
+        finishCompression(request, action: .cancelled)
+        return
+      }
+      compressedPreview = compressed
+      state = .previewReady(sessionID, snapshot, original)
+      compressionAction = .compressed
+      compressionTask = nil
+      compressionRequest = nil
+    } catch {
+      if let reservation {
+        try? await workspace.abandonCompressedPreviewOutput(
+          for: sessionID, reservation: reservation)
+      }
+      if let committedURL {
+        try? await workspace.removeCompressedPreviewOutput(for: sessionID, at: committedURL)
+      }
+      finishCompression(request, action: Task.isCancelled ? .cancelled : .failed)
+    }
+  }
+
+  private func finishCompression(_ request: UUID, action: GIFCompressionAction) {
+    guard compressionRequest == request else { return }
+    compressionAction = action
+    compressionTask = nil
+    compressionRequest = nil
   }
 
   private func requestPreviewUpdate(_ parameters: GIFEditParameters) {

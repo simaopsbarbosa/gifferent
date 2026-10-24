@@ -287,7 +287,7 @@ final class GifferentRuntime: ObservableObject {
 
   func requestPreviewClose() {
     guard !recordingCoordinator.isPreviewActionInProgress else {
-      status = "wait for export to finish before closing the preview"
+      status = "wait for compression or export to finish before closing the preview"
       return
     }
     Task {
@@ -306,7 +306,7 @@ final class GifferentRuntime: ObservableObject {
 
   func confirmPreviewDiscard() {
     guard !recordingCoordinator.isPreviewActionInProgress else {
-      status = "wait for export to finish before discarding the preview"
+      status = "wait for compression or export to finish before discarding the preview"
       return
     }
     isPreviewCloseConfirmationPresented = false
@@ -339,7 +339,7 @@ final class GifferentRuntime: ObservableObject {
 
   func requestDiscardPreview() {
     guard !recordingCoordinator.isPreviewActionInProgress else {
-      status = "wait for export to finish before discarding the preview"
+      status = "wait for compression or export to finish before discarding the preview"
       return
     }
     isPreviewCloseConfirmationPresented = true

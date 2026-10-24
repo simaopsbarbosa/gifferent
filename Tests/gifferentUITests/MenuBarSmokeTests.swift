@@ -197,6 +197,50 @@ final class MenuBarSmokeTests: XCTestCase {
     waitForStatus("selection ready", in: testWindow)
   }
 
+  func testCompressionTargetsAreVisibleAndUnavailableWithoutBackend() {
+    let app = XCUIApplication()
+    app.launchArguments.append("--ui-testing")
+    app.launch()
+
+    let testWindow = app.windows["gifferent test menu"]
+    XCTAssertTrue(testWindow.waitForExistence(timeout: 10))
+    testWindow.buttons["recording-action-button"].click()
+
+    let selectionWindow = app.windows["capture selection"]
+    XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
+    selectionWindow.buttons["select-display-button"].click()
+    selectionWindow.buttons["confirm-selection-button"].click()
+    waitForStatus("recording", in: testWindow)
+    testWindow.buttons["recording-action-button"].click()
+
+    let previewWindow = app.windows["gif preview"]
+    XCTAssertTrue(previewWindow.waitForExistence(timeout: 10))
+    XCTAssertTrue(waitForPreviewStatus("preview ready", in: previewWindow))
+
+    let github = previewWindow.buttons["compression-destination-github"]
+    XCTAssertTrue(github.exists)
+    XCTAssertTrue(github.label.contains("GitHub"), github.label)
+    XCTAssertTrue(github.label.contains("9 MB target"), github.label)
+    XCTAssertTrue(github.label.contains("10 MB max"), github.label)
+    let githubSymbol = previewWindow.descendants(matching: .any)
+      .matching(identifier: "compression-destination-symbol-github").firstMatch
+    XCTAssertTrue(githubSymbol.exists, "\(app.debugDescription)")
+
+    let discord = previewWindow.buttons["compression-destination-discord"]
+    XCTAssertTrue(discord.exists)
+    XCTAssertTrue(discord.label.contains("Discord"), discord.label)
+    XCTAssertTrue(discord.label.contains("18 MB target"), discord.label)
+    XCTAssertTrue(discord.label.contains("20 MB max"), discord.label)
+    let discordSymbol = previewWindow.descendants(matching: .any)
+      .matching(identifier: "compression-destination-symbol-discord").firstMatch
+    XCTAssertTrue(discordSymbol.exists, "\(app.debugDescription)")
+
+    XCTAssertTrue(previewWindow.staticTexts["compression-unavailable-status"].exists)
+    XCTAssertFalse(previewWindow.buttons["compress-preview-button"].exists)
+    XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
+    XCTAssertTrue(waitForEnabled(previewWindow.buttons["save-preview-button"]))
+  }
+
   func testUnexportedPreviewCanStayOpenOrBeDiscardedAfterConfirmation() {
     let app = XCUIApplication()
     app.launchArguments.append("--ui-testing")

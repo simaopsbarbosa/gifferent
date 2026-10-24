@@ -8,26 +8,50 @@ struct GIFPreviewReadyView: View {
   let snapshot: RecordingSessionSnapshot
   let gif: EncodedGIF
 
+  private var displayedGIF: EncodedGIF {
+    coordinator.displayedPreviewGIF ?? gif
+  }
+
   var body: some View {
     VStack(spacing: 14) {
       Text("preview ready")
         .accessibilityIdentifier("preview-status")
         .accessibilityValue("preview ready")
-      AnimatedGIFView(url: gif.url)
+      AnimatedGIFView(url: displayedGIF.url)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .aspectRatio(CGFloat(gif.width) / CGFloat(gif.height), contentMode: .fit)
+        .aspectRatio(CGFloat(displayedGIF.width) / CGFloat(displayedGIF.height), contentMode: .fit)
 
-      GIFEditControls(coordinator: coordinator)
+      if coordinator.compressedPreview == nil {
+        GIFEditControls(coordinator: coordinator)
+          .disabled(coordinator.isCompressionInProgress)
+        GIFCompressionControls(coordinator: coordinator)
+      } else {
+        VStack(alignment: .leading, spacing: 8) {
+          Text("compressed for \(coordinator.compressionSettings.destination.displayName)")
+            .accessibilityIdentifier("compression-preview-status")
+          Text(compressionTargetMessage)
+            .font(.caption)
+            .foregroundStyle(.secondary)
+          Button("back to original") {
+            Task { await coordinator.backToOriginalPreview() }
+          }
+          .accessibilityIdentifier("back-to-original-button")
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+      }
 
       HStack(spacing: 16) {
         metadata(
           "file size",
-          value: ByteCountFormatter.string(fromByteCount: gif.fileBytes, countStyle: .file),
+          value: ByteCountFormatter.string(
+            fromByteCount: displayedGIF.fileBytes, countStyle: .file),
           id: "preview-size"
         )
-        metadata("duration", value: duration(gif.durationCentiseconds), id: "preview-duration")
         metadata(
-          "dimensions", value: "\(gif.width) by \(gif.height)", id: "preview-dimensions")
+          "duration", value: duration(displayedGIF.durationCentiseconds), id: "preview-duration")
+        metadata(
+          "dimensions", value: "\(displayedGIF.width) by \(displayedGIF.height)",
+          id: "preview-dimensions")
       }
 
       if snapshot.isPartialResult {
@@ -60,7 +84,15 @@ struct GIFPreviewReadyView: View {
 
   private var exportIsDisabled: Bool {
     coordinator.previewAction == .copying || coordinator.previewAction == .saving
-      || coordinator.isPreviewUpdateInProgress
+      || coordinator.isPreviewUpdateInProgress || coordinator.isCompressionInProgress
+  }
+
+  private var compressionTargetMessage: String {
+    let destination = coordinator.compressionSettings.destination
+    let output = ByteCountFormatter.string(fromByteCount: displayedGIF.fileBytes, countStyle: .file)
+    return displayedGIF.fileBytes <= destination.targetBytes
+      ? "\(output) · under the \(destination.targetLabel) target"
+      : "\(output) · above the \(destination.targetLabel) target"
   }
 
   private var actionMessage: String {
@@ -168,6 +200,124 @@ private struct GIFEditControls: View {
 
   private func selectOnce() {
     coordinator.updateLoopMode(.once)
+  }
+}
+
+@MainActor
+private struct GIFCompressionControls: View {
+  @ObservedObject var coordinator: RecordingCoordinator
+
+  var body: some View {
+    VStack(alignment: .leading, spacing: 8) {
+      Text("compression")
+        .font(.caption)
+        .foregroundStyle(.secondary)
+
+      HStack(spacing: 8) {
+        ForEach(GIFCompressionDestination.allCases) { destination in
+          Button {
+            coordinator.selectCompressionDestination(destination)
+          } label: {
+            HStack(spacing: 6) {
+              Image(systemName: destination.systemImage)
+                .accessibilityIdentifier(
+                  "compression-destination-symbol-\(destination.accessibilityID)")
+              Text(
+                "\(destination.displayName) · \(destination.targetLabel) target · "
+                  + "\(destination.publishedMaximumLabel) max"
+              )
+            }
+          }
+          .buttonStyle(.bordered)
+          .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+          .accessibilityIdentifier("compression-destination-\(destination.accessibilityID)")
+          .accessibilityLabel(
+            "\(destination.displayName), \(destination.targetLabel) target, "
+              + "\(destination.publishedMaximumLabel) published maximum"
+          )
+          .accessibilityAddTraits(
+            coordinator.compressionSettings.destination == destination
+              ? .isSelected : []
+          )
+          .help(
+            "target: \(destination.targetLabel) · published maximum: "
+              + "\(destination.publishedMaximumLabel) for "
+              + "\(destination.limitScopeDescription) · "
+              + "checked \(destination.limitResearchDate)"
+          )
+        }
+      }
+
+      HStack(spacing: 8) {
+        Text("size")
+        Picker(
+          "size",
+          selection: Binding(
+            get: { coordinator.compressionSettings.scale },
+            set: { coordinator.selectCompressionScale($0) }
+          )
+        ) {
+          ForEach(GIFCompressionScale.allCases) { scale in
+            Text(scale.label).tag(scale)
+          }
+        }
+        .labelsHidden()
+        .pickerStyle(.segmented)
+        .accessibilityIdentifier("compression-scale-picker")
+        .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+      }
+
+      HStack {
+        Text("dithering")
+        Slider(
+          value: Binding(
+            get: { Double(coordinator.compressionSettings.diffusionPercent) },
+            set: { coordinator.setCompressionDiffusion(Int($0.rounded())) }
+          ),
+          in: 0...100,
+          step: 5
+        )
+        .accessibilityLabel("dithering strength")
+        .accessibilityIdentifier("compression-diffusion-slider")
+        Text("\(coordinator.compressionSettings.diffusionPercent)%")
+          .accessibilityIdentifier("compression-diffusion-value")
+      }
+      .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+
+      if coordinator.isCompressionAvailable {
+        if coordinator.isCompressionInProgress {
+          HStack {
+            ProgressView()
+              .controlSize(.small)
+              .accessibilityLabel("compressing gif")
+            Text("compressing gif")
+              .accessibilityIdentifier("compression-action-status")
+            Button("cancel") { Task { await coordinator.cancelCompression() } }
+              .accessibilityIdentifier("cancel-compression-button")
+          }
+        } else {
+          Button("compress") { coordinator.startCompression() }
+            .accessibilityIdentifier("compress-preview-button")
+            .disabled(coordinator.isPreviewUpdateInProgress || coordinator.compressedPreview != nil)
+        }
+      } else {
+        Text("compression unavailable until a verified local backend is provided")
+          .font(.caption)
+          .accessibilityIdentifier("compression-unavailable-status")
+      }
+
+      switch coordinator.compressionAction {
+      case .failed:
+        Text("could not compress gif; original preview kept")
+          .accessibilityIdentifier("compression-action-status")
+      case .cancelled:
+        Text("compression cancelled; original preview kept")
+          .accessibilityIdentifier("compression-action-status")
+      case .unavailable, .idle, .compressing, .compressed:
+        EmptyView()
+      }
+    }
+    .frame(maxWidth: .infinity, alignment: .leading)
   }
 }
 
