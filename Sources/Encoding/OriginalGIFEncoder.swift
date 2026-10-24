@@ -387,8 +387,16 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
       (loopMode == .forever && loopCount == 0)
         || (loopMode == .once && loopCount == nil)
     else {
+      let outputData = try? Data(contentsOf: url)
+      let netscapeLoopExtension = Data("NETSCAPE2.0".utf8)
+      let animationExtensionsLoopExtension = Data("ANIMEXTS1.0".utf8)
+      let containsLoopExtension =
+        outputData.map {
+          $0.range(of: netscapeLoopExtension) != nil
+            || $0.range(of: animationExtensionsLoopExtension) != nil
+        } ?? false
       print(
-        "gif output validation failed at loop metadata: mode=\(loopMode), loopCount=\(String(describing: loopCount)), gifProperties=\(gifProperties)"
+        "gif output validation failed at loop metadata: mode=\(loopMode), loopCount=\(String(describing: loopCount)), containsLoopExtension=\(containsLoopExtension), gifProperties=\(gifProperties)"
       )
       throw OriginalGIFEncodingError.invalidOutput
     }
