@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		A00000000000000000000087 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000088 /* Assets.xcassets */; };
 		0E4EEAC639BB613FE8693F5B /* gifferentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */; };
 		18A3DD66F086C88BED0CC4CC /* MenuBarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8280944F649D87921ECE18EA /* MenuBarSmokeTests.swift */; };
 		791857B04814FECFF2C7738E /* FoundationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65197CF250A3B835861EEADE /* FoundationTests.swift */; };
@@ -208,7 +209,14 @@
 				7124CE2B8C64C1E739E4E078 /* Frameworks */,
 				B85EEE5F45021D0C24CDB424 /* Sources */,
 				22B3A887A5B11C2C39B78B53 /* Tests */,
+				A00000000000000000000088 /* Assets.xcassets */,
 			);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000088 /* Assets.xcassets */ = {
+			isa = PBXFileReference;
+			lastKnownFileType = folder.assetcatalog;
+			path = Assets.xcassets;
 			sourceTree = "<group>";
 		};
 		7124CE2B8C64C1E739E4E078 /* Frameworks */ = {
@@ -437,6 +445,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A00000000000000000000087 /* Assets.xcassets in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

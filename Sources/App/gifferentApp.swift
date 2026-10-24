@@ -6,8 +6,16 @@ struct GifferentApp: App {
   @NSApplicationDelegateAdaptor(GifferentAppDelegate.self) private var appDelegate
 
   var body: some Scene {
-    MenuBarExtra("gifferent") {
+    MenuBarExtra {
       GifferentMenuContent(runtime: .shared)
+    } label: {
+      Image("MenuBarMark")
+        .resizable()
+        .interpolation(.high)
+        .renderingMode(.original)
+        .frame(width: 16, height: 16)
+        .accessibilityLabel("gifferent")
+        .accessibilityIdentifier("menu-bar-mark")
     }
   }
 }
