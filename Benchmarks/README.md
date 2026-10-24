@@ -95,6 +95,8 @@ the [four-profile Gifski 1.34.0 vs ImageMagick comparison](gifski-magick-35-2026
 
 the [visual encoder review](reviews/gifski-magick-35-2026-10-24/index.html) pairs native-size animated examples from the mostly-static and high-motion profiles. the architect confirmed that both reviewed samples hold against the approved quality floor. settings are not equivalent and the examples do not select an encoder; provenance and sample checksums are in the review's README.
 
+the complete available Gifski, ImageMagick, and ImageIO path comparison across all four profiles, including 35% ImageMagick diffusion, is documented in [gifski-magick-35-full-matrix-2026-10-24.md](gifski-magick-35-full-matrix-2026-10-24.md). `imageio-gifsicle` was unavailable because Gifsicle was not installed. the report includes raw result locations and measurement limits; it makes no quality or encoder-selection claim.
+
 the equal-work ImageMagick and legacy ImageIO results across all four synthetic profiles are summarized in [equalized-encoder-matrix-2026-10-24.md](equalized-encoder-matrix-2026-10-24.md). the report includes fixture checksums, exact commands, timing and output-size measurements, and validation limits; no visual-quality or release-selection claim is made.
 
 a separate [ImageMagick cache resource audit](imagemagick-cache-resource-audit-2026-10-24.md) exercised the experimental compression command on the high-motion fixture. it could not complete within a 500 mib cache cap; the existing session quota cannot hold that fixture plus the observed cache and output reservation. this is an exploratory installed build, not a pinned candidate, and it does not select an encoder.
