@@ -231,13 +231,16 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
       guard let consumer = CGDataConsumer(info: contextPointer, cbks: &callbacks) else {
         throw OriginalGIFEncodingError.destinationCreationFailed
       }
-      let gifProperties: [CFString: Any] =
-        loopMode == .forever
-        ? [kCGImagePropertyGIFLoopCount: 0] : [:]
+      var destinationProperties: [CFString: Any] = [:]
+      if loopMode == .forever {
+        destinationProperties[kCGImagePropertyGIFDictionary] = [
+          kCGImagePropertyGIFLoopCount: 0
+        ]
+      }
       guard
         let destination = CGImageDestinationCreateWithDataConsumer(
           consumer, UTType.gif.identifier as CFString, sequence.frames.count,
-          [kCGImagePropertyGIFDictionary: gifProperties] as CFDictionary
+          destinationProperties as CFDictionary
         )
       else { throw OriginalGIFEncodingError.destinationCreationFailed }
 
