@@ -74,6 +74,29 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(restoredSnapshot.temporaryBytes, originalBytes)
   }
 
+  func testDestinationStartsSizeSearchAndReportsResultWhileKeepingOriginal() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let compressor = FakeGIFCompressor()
+    let (coordinator, _, original, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace, compressor: compressor)
+
+    coordinator.startSizeSearch(for: .github)
+    await waitForCompression(coordinator)
+
+    XCTAssertEqual(coordinator.compressionAction, .compressed)
+    XCTAssertEqual(coordinator.compressionSettings.destination, .github)
+    XCTAssertTrue(FileManager.default.fileExists(atPath: original.url.path))
+    XCTAssertNotEqual(coordinator.displayedPreviewGIF?.url, original.url)
+    let summary = try XCTUnwrap(coordinator.sizeSearchSummary)
+    XCTAssertEqual(summary.fileBytes, original.fileBytes)
+    XCTAssertEqual(summary.targetBytes, GIFCompressionDestination.github.targetBytes)
+    XCTAssertTrue(summary.reachedTarget)
+    XCTAssertEqual(summary.attempts, 4)
+    XCTAssertEqual(summary.settings.scale, .original)
+    XCTAssertEqual(summary.settings.qualityPercent, 90)
+  }
+
   func testCompressionFailureKeepsOriginalAndCleansReservation() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }

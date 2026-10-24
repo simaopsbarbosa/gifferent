@@ -56,7 +56,8 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
       throw GifskiCompressionError.invalidSource
     }
     guard inspectedSource == source,
-      let fps = Self.constantFrameRate(for: source.delaysCentiseconds)
+      let sample = try? GIFFrameSampler.sample(
+        delaysCentiseconds: source.delaysCentiseconds, frameRate: settings.frameRate)
     else { throw GifskiCompressionError.unrepresentableTiming }
 
     let expectedWidth = settings.scale.expectedDimension(source.width)
@@ -100,6 +101,7 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
       try Self.decodePNGFrames(
         source: source,
         scale: settings.scale,
+        sourceIndices: sample.sourceIndices,
         in: workingDirectory,
         maximumBytes: Self.maximumFrameWorkspaceBytes
       )
@@ -122,7 +124,7 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
     let arguments = Self.arguments(
       frameURLs: frames,
       outputToStandardOutput: true,
-      fps: fps,
+      fps: settings.frameRate.label,
       qualityPercent: settings.qualityPercent,
       width: expectedWidth,
       height: expectedHeight,
@@ -145,6 +147,8 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
         controller.cancel()
       }
       try Task.checkCancellation()
+      try Self.setFinalFrameDelay(
+        in: temporaryURL, centiseconds: sample.expectedDelaysCentiseconds.last ?? 0)
       try FileManager.default.moveItem(at: temporaryURL, to: reservation.url)
       movedOutput = true
       let output = try GIFMetadataInspector().inspect(reservation.url)
@@ -207,9 +211,102 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
     return formattedRate
   }
 
+  /// corrects Gifski's rounded final frame duration so the total remains exact to the source GIF.
+  static func setFinalFrameDelay(in url: URL, centiseconds: Int) throws {
+    guard (1...65_535).contains(centiseconds) else {
+      throw GifskiCompressionError.unrepresentableTiming
+    }
+    guard let handle = FileHandle(forUpdatingAtPath: url.path),
+      let fileSize = try? handle.seekToEnd(), fileSize >= 14
+    else { throw GifskiCompressionError.invalidOutput }
+    defer { try? handle.close() }
+    try handle.seek(toOffset: 0)
+
+    var offset: UInt64 = 0
+    func readByte() throws -> UInt8 {
+      guard offset < fileSize,
+        let byte = try handle.read(upToCount: 1)?.first
+      else { throw GifskiCompressionError.invalidOutput }
+      offset += 1
+      return byte
+    }
+    func readBytes(_ count: Int) throws -> Data {
+      guard count >= 0, UInt64(count) <= fileSize - offset,
+        let bytes = try handle.read(upToCount: count), bytes.count == count
+      else { throw GifskiCompressionError.invalidOutput }
+      offset += UInt64(count)
+      return bytes
+    }
+    func skip(_ count: UInt64) throws {
+      guard count <= fileSize - offset else { throw GifskiCompressionError.invalidOutput }
+      offset += count
+      try handle.seek(toOffset: offset)
+    }
+    func skipSubBlocks(initialBlockSize: Bool) throws {
+      if initialBlockSize {
+        let count = UInt64(try readByte())
+        try skip(count)
+      }
+      while true {
+        let count = UInt64(try readByte())
+        if count == 0 { return }
+        try skip(count)
+      }
+    }
+
+    let header = try readBytes(6)
+    guard header.elementsEqual("GIF87a".utf8) || header.elementsEqual("GIF89a".utf8) else {
+      throw GifskiCompressionError.invalidOutput
+    }
+    let screen = try readBytes(7)
+    let packed = screen[4]
+    if packed & 0x80 != 0 { try skip(UInt64(3 * (1 << (Int(packed & 0x07) + 1)))) }
+    var delayOffsets: [UInt64] = []
+    var pendingDelayOffset: UInt64?
+    while offset < fileSize {
+      let introducer = try readByte()
+      switch introducer {
+      case 0x3B:
+        guard offset == fileSize, let delayOffset = delayOffsets.last else {
+          throw GifskiCompressionError.invalidOutput
+        }
+        try handle.seek(toOffset: delayOffset)
+        try handle.write(
+          contentsOf: Data([
+            UInt8(centiseconds & 0xff), UInt8((centiseconds >> 8) & 0xff),
+          ]))
+        try handle.synchronize()
+        return
+      case 0x21:
+        let label = try readByte()
+        if label == 0xF9 {
+          guard try readByte() == 4 else { throw GifskiCompressionError.invalidOutput }
+          try skip(1)
+          pendingDelayOffset = offset
+          try skip(2)
+          try skip(2)
+        } else {
+          try skipSubBlocks(initialBlockSize: label == 0xFF)
+        }
+      case 0x2C:
+        let descriptor = try readBytes(9)
+        let imagePacked = descriptor[8]
+        if imagePacked & 0x80 != 0 { try skip(UInt64(3 * (1 << (Int(imagePacked & 0x07) + 1)))) }
+        try skip(1)
+        try skipSubBlocks(initialBlockSize: false)
+        if let pendingDelayOffset { delayOffsets.append(UInt64(pendingDelayOffset)) }
+        pendingDelayOffset = nil
+      default:
+        throw GifskiCompressionError.invalidOutput
+      }
+    }
+    throw GifskiCompressionError.invalidOutput
+  }
+
   static func decodePNGFrames(
     source: EncodedGIF,
     scale: GIFCompressionScale,
+    sourceIndices: [Int]? = nil,
     in directory: URL,
     maximumBytes: Int64
   ) throws -> [URL] {
@@ -217,9 +314,13 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
       let imageSource = CGImageSourceCreateWithURL(source.url as CFURL, nil),
       CGImageSourceGetCount(imageSource) == source.frameCount
     else { throw GifskiCompressionError.invalidSource }
+    let indices = sourceIndices ?? Array(0..<source.frameCount)
+    guard !indices.isEmpty, indices.allSatisfy({ $0 >= 0 && $0 < source.frameCount }) else {
+      throw GifskiCompressionError.invalidSource
+    }
     var frames: [URL] = []
     var totalBytes: Int64 = 0
-    for index in 0..<source.frameCount {
+    for (outputIndex, index) in indices.enumerated() {
       try Task.checkCancellation()
       guard
         let decoded = CGImageSourceCreateImageAtIndex(
@@ -231,7 +332,7 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
         decoded.width == source.width, decoded.height == source.height,
         let scaled = makeScaledImage(decoded, scale: scale)
       else { throw GifskiCompressionError.invalidFrame }
-      let url = directory.appendingPathComponent(String(format: "frame-%08d.png", index))
+      let url = directory.appendingPathComponent(String(format: "frame-%08d.png", outputIndex))
       let remainingBytes = maximumBytes - totalBytes
       guard remainingBytes > 0 else {
         throw GifskiCompressionError.frameWorkspaceLimitExceeded
@@ -273,7 +374,7 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
       totalBytes = nextBytes
       frames.append(url)
     }
-    guard frames.count == source.frameCount else { throw GifskiCompressionError.invalidFrame }
+    guard frames.count == indices.count else { throw GifskiCompressionError.invalidFrame }
     return frames
   }
 

@@ -165,6 +165,8 @@ final class RecordingCoordinator: ObservableObject {
   @Published private(set) var compressionSettings = GIFCompressionSettings()
   @Published private(set) var compressionAction: GIFCompressionAction
   @Published private(set) var compressedPreview: EncodedGIF?
+  @Published private(set) var sizeSearchProgress: GIFSizeSearchProgress?
+  @Published private(set) var sizeSearchSummary: GIFSizeSearchSummary?
 
   #if DEBUG
     func setRecordingWorkspaceBytesFixture(_ bytes: Int64) {
@@ -298,6 +300,8 @@ final class RecordingCoordinator: ObservableObject {
       previewExported = false
       originalPreviewExportedBeforeCompression = nil
       compressedPreview = nil
+      sizeSearchProgress = nil
+      sizeSearchSummary = nil
       compressionAction = isCompressionAvailable ? .idle : .unavailable
       editParameters = nil
       currentPreviewParameters = nil
@@ -384,12 +388,41 @@ final class RecordingCoordinator: ObservableObject {
     let request = UUID()
     compressionRequest = request
     compressionAction = .compressing
+    sizeSearchProgress = nil
+    sizeSearchSummary = nil
     originalPreviewExportedBeforeCompression = previewExported
     let settings = compressionSettings
     compressionTask = Task { @MainActor [weak self] in
       guard let self else { return }
       await self.performCompression(
         source: source, settings: settings, compressor: compressor, request: request)
+    }
+  }
+
+  func startSizeSearch(for destination: GIFCompressionDestination) {
+    guard !isPreviewUpdateInProgress, !isPreviewActionInProgress,
+      compressionTask == nil, compressedPreview == nil,
+      case .previewReady(_, _, let source) = state,
+      let compressor
+    else { return }
+    compressionSettings.destination = destination
+    let settings = compressionSettings
+    let plan = GIFSizeSearchPlan(settings: settings)
+    guard !plan.candidates.isEmpty else {
+      compressionAction = .failed
+      return
+    }
+    let request = UUID()
+    compressionRequest = request
+    compressionAction = .compressing
+    sizeSearchProgress = GIFSizeSearchProgress(
+      attempt: 0, totalAttempts: plan.candidates.count, settings: settings)
+    sizeSearchSummary = nil
+    originalPreviewExportedBeforeCompression = previewExported
+    compressionTask = Task { @MainActor [weak self] in
+      guard let self else { return }
+      await self.performSizeSearch(
+        source: source, settings: settings, plan: plan, compressor: compressor, request: request)
     }
   }
 
@@ -409,6 +442,8 @@ final class RecordingCoordinator: ObservableObject {
         try await workspace.removeCompressedPreviewOutput(for: id, at: compressedPreview.url)
       }
       self.compressedPreview = nil
+      sizeSearchProgress = nil
+      sizeSearchSummary = nil
       previewExported = originalPreviewExportedBeforeCompression ?? false
       originalPreviewExportedBeforeCompression = nil
       let snapshot = try await workspace.snapshot(for: id)
@@ -473,6 +508,8 @@ final class RecordingCoordinator: ObservableObject {
       previewExported = false
       originalPreviewExportedBeforeCompression = nil
       compressedPreview = nil
+      sizeSearchProgress = nil
+      sizeSearchSummary = nil
       compressionAction = isCompressionAvailable ? .idle : .unavailable
       editParameters = nil
       currentPreviewParameters = nil
@@ -617,6 +654,8 @@ final class RecordingCoordinator: ObservableObject {
     previewExported = false
     originalPreviewExportedBeforeCompression = nil
     compressedPreview = nil
+    sizeSearchProgress = nil
+    sizeSearchSummary = nil
     compressionAction = isCompressionAvailable ? .idle : .unavailable
     var reservation: PreviewOutputReservation?
     do {
@@ -707,6 +746,7 @@ final class RecordingCoordinator: ObservableObject {
         return
       }
       compressedPreview = compressed
+      sizeSearchProgress = nil
       previewExported = false
       state = .previewReady(previewID, snapshot, original)
       compressionAction = .compressed
@@ -719,6 +759,92 @@ final class RecordingCoordinator: ObservableObject {
       }
       if let committedURL {
         try? await workspace.removeCompressedPreviewOutput(for: previewID, at: committedURL)
+      }
+      finishCompression(request, action: Task.isCancelled ? .cancelled : .failed)
+    }
+  }
+
+  private func performSizeSearch(
+    source: EncodedGIF,
+    settings: GIFCompressionSettings,
+    plan: GIFSizeSearchPlan,
+    compressor: any GIFCompressing,
+    request: UUID
+  ) async {
+    guard compressionRequest == request,
+      case .previewReady(let previewID, _, let original) = state,
+      source == original
+    else {
+      finishCompression(request, action: .cancelled)
+      return
+    }
+
+    var ownedURLs: Set<URL> = []
+    do {
+      let result = try await GIFSizeSearchEngine.search(
+        source: source,
+        settings: settings,
+        plan: plan,
+        compress: { [workspace] candidateSettings in
+          try Task.checkCancellation()
+          let reservation = try await workspace.reserveCompressedPreviewOutput(
+            for: previewID, sourceURL: source.url, maximumCacheBytes: 0)
+          do {
+            let output = try await compressor.compress(
+              source: source, settings: candidateSettings, to: reservation)
+            try await Task.detached(priority: .utility) {
+              try validateCompressedGIFOutput(
+                output, source: source, settings: candidateSettings, reservation: reservation)
+            }.value
+            try Task.checkCancellation()
+            _ = try await workspace.commitCompressedPreviewOutput(
+              for: previewID, reservation: reservation)
+            ownedURLs.insert(output.url)
+            return output
+          } catch {
+            try? await workspace.abandonCompressedPreviewOutput(
+              for: previewID, reservation: reservation)
+            throw error
+          }
+        },
+        discard: { [workspace] output in
+          guard ownedURLs.contains(output.url) else { return }
+          try? await workspace.removeCompressedPreviewOutput(for: previewID, at: output.url)
+          ownedURLs.remove(output.url)
+        },
+        onProgress: { [weak self] attempt, total, candidateSettings in
+          await MainActor.run {
+            guard let self, self.compressionRequest == request else { return }
+            self.sizeSearchProgress = GIFSizeSearchProgress(
+              attempt: attempt, totalAttempts: total, settings: candidateSettings)
+          }
+        }
+      )
+      try Task.checkCancellation()
+      try await workspace.keepCompressedPreviewOutput(for: previewID, at: result.gif.url)
+      ownedURLs.remove(result.gif.url)
+      let snapshot = try await workspace.snapshot(for: previewID)
+      guard compressionRequest == request, !Task.isCancelled else {
+        try? await workspace.removeCompressedPreviewOutput(for: previewID, at: result.gif.url)
+        finishCompression(request, action: .cancelled)
+        return
+      }
+      compressedPreview = result.gif
+      previewExported = false
+      sizeSearchSummary = GIFSizeSearchSummary(
+        fileBytes: result.gif.fileBytes,
+        targetBytes: settings.destination.targetBytes,
+        settings: result.settings,
+        reachedTarget: result.reachedTarget,
+        attempts: result.attempts
+      )
+      state = .previewReady(previewID, snapshot, original)
+      compressionAction = .compressed
+      compressionTask = nil
+      compressionRequest = nil
+    } catch {
+      for url in ownedURLs {
+        try? await workspace.removeCompressedPreviewOutput(for: previewID, at: url)
       }
       finishCompression(request, action: Task.isCancelled ? .cancelled : .failed)
     }

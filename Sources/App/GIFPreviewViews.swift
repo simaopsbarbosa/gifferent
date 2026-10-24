@@ -32,6 +32,7 @@ struct GIFPreviewReadyView: View {
           Text(compressionTargetMessage)
             .font(.caption)
             .foregroundStyle(.secondary)
+            .accessibilityIdentifier("compression-target-status")
           Button("back to original") {
             Task { await coordinator.backToOriginalPreview() }
           }
@@ -90,6 +91,14 @@ struct GIFPreviewReadyView: View {
   private var compressionTargetMessage: String {
     let destination = coordinator.compressionSettings.destination
     let output = ByteCountFormatter.string(fromByteCount: displayedGIF.fileBytes, countStyle: .file)
+    if let result = coordinator.sizeSearchSummary {
+      let actual = ByteCountFormatter.string(fromByteCount: result.fileBytes, countStyle: .file)
+      let target = ByteCountFormatter.string(fromByteCount: result.targetBytes, countStyle: .file)
+      let settings =
+        "\(result.settings.scale.label), \(result.settings.frameRate.label) fps, quality \(result.settings.qualityPercent)"
+      let targetStatus = result.reachedTarget ? "target met" : "best attempt; target not met"
+      return "\(actual) of \(target) · \(settings) · \(targetStatus) · \(result.attempts) attempts"
+    }
     return displayedGIF.fileBytes <= destination.targetBytes
       ? "\(output) · under the \(destination.targetLabel) target"
       : "\(output) · above the \(destination.targetLabel) target"
@@ -214,6 +223,12 @@ private struct GIFCompressionControls: View {
         .foregroundStyle(.secondary)
       GIFCompressionDestinationControl(coordinator: coordinator)
       GIFCompressionScaleControl(coordinator: coordinator)
+      if GIFSizeSearchPlan(settings: coordinator.compressionSettings).candidates.isEmpty {
+        Text("automatic size search is unavailable at this resolution")
+          .font(.caption)
+          .foregroundStyle(.secondary)
+          .accessibilityIdentifier("compression-search-unavailable")
+      }
       GIFCompressionQualityControl(coordinator: coordinator)
       GIFCompressionActionControl(coordinator: coordinator)
     }
@@ -252,7 +267,14 @@ private struct GIFCompressionDestinationButton: View {
       + "\(destination.publishedMaximumLabel) published maximum"
   }
 
+  private var hasApprovedCandidates: Bool {
+    !GIFSizeSearchPlan(settings: coordinator.compressionSettings).candidates.isEmpty
+  }
+
   private var helpText: String {
+    guard hasApprovedCandidates else {
+      return "automatic size search is unavailable at this resolution"
+    }
     let maximum = "published maximum: \(destination.publishedMaximumLabel)"
     let scope = "for \(destination.limitScopeDescription)"
     return "target: \(destination.targetLabel) · \(maximum) \(scope) · "
@@ -261,12 +283,15 @@ private struct GIFCompressionDestinationButton: View {
 
   var body: some View {
     Button {
-      coordinator.selectCompressionDestination(destination)
+      coordinator.startSizeSearch(for: destination)
     } label: {
       buttonLabel
     }
     .buttonStyle(.bordered)
-    .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+    .disabled(
+      coordinator.isCompressionInProgress || coordinator.compressedPreview != nil
+        || !hasApprovedCandidates
+    )
     .accessibilityIdentifier("compression-destination-\(destination.accessibilityID)")
     .accessibilityLabel(accessibleLabel)
     .accessibilityAddTraits(
@@ -334,12 +359,28 @@ private struct GIFCompressionActionControl: View {
     Group {
       if coordinator.isCompressionAvailable {
         if coordinator.isCompressionInProgress {
-          HStack {
-            ProgressView()
-              .controlSize(.small)
-              .accessibilityLabel("compressing gif")
-            Text("compressing gif")
+          VStack(alignment: .leading, spacing: 6) {
+            if let progress = coordinator.sizeSearchProgress {
+              ProgressView(
+                value: Double(progress.attempt), total: Double(progress.totalAttempts)
+              )
+              .accessibilityLabel("size search progress")
+              .accessibilityValue("attempt \(progress.attempt) of \(progress.totalAttempts)")
+              Text(
+                "searching \(progress.attempt) of \(progress.totalAttempts) · "
+                  + "\(progress.settings.scale.label) · \(progress.settings.frameRate.label) fps · "
+                  + "quality \(progress.settings.qualityPercent)"
+              )
               .accessibilityIdentifier("compression-action-status")
+            } else {
+              HStack {
+                ProgressView()
+                  .controlSize(.small)
+                  .accessibilityLabel("compressing gif")
+                Text("compressing gif")
+                  .accessibilityIdentifier("compression-action-status")
+              }
+            }
             Button("cancel") { Task { await coordinator.cancelCompression() } }
               .accessibilityIdentifier("cancel-compression-button")
           }

@@ -66,16 +66,22 @@
 - after reviewing the animated [Gifski quality sweep](Benchmarks/reviews/gifski-quality-sweep-2026-10-24/index.html), the architect set quality 90 as the lowest value the automatic size search may use for now. the existing quality-90 animations remain the approved floor reference. keep the manual quality slider at 1–100; do not lower the automatic search floor without a later architect decision based on visual review.
 - the sweep records quality 70, 80, 90, and 100 outputs for mostly-static and high-motion profiles. its measurements are evidence, not approval of qualities below 90; three-run timings are indicative only.
 
-## Size-search resolution behavior confirmed on 2026-10-24
+## Size-search candidates approved on 2026-10-24
 
-- the current resolution choice is the maximum size the automatic destination search may use. search that size and smaller choices only; do not upscale above the user's selection.
-- sampled frame rates and reduced resolutions still need animated visual review against the approved quality floor before those combinations are accepted in the automatic candidate set.
+- the selected resolution is the maximum automatic search may use. approved scale/rate pairs are original at 24 fps, 75% at 24 fps, 50% at 24 fps, and original at 18 fps.
+- filter those pairs by the selected maximum: original permits all four; 75% permits 75%/24 and 50%/24; 50% permits only 50%/24. 18 fps is only approved at original scale.
+- exclude 25% and 12/8 fps from the automatic candidate set. do not infer approval for other scale/rate combinations.
+- keep quality at or above 90, try candidates serially, preserve exact edited duration and loop mode, and keep the original usable throughout the search.
+- the [representative visual review](Benchmarks/reviews/size-search-quality-floor-2026-10-24/index.html) records the samples that informed this decision. candidate-specific visual approval applies only to the points listed above.
 
-## Size-search visual candidates pending review on 2026-10-24
+## Superseded size-search candidate review on 2026-10-24
 
-- benchmark candidates are 24, 18, 12, and 8 fps across original, 75%, 50%, and 25% resolution, at Gifski quality 90. the approved quality-90 full-size 24 fps output is the comparison baseline.
-- until the architect reviews the representative animated samples, keep the active automatic search at 24 fps and do not claim that reduced resolution or frame rate meets the approved quality floor. review all scales at 24 fps, all rates at original scale, and the joint 25%/8 fps corner before enabling those candidates.
-- the [representative visual review](Benchmarks/reviews/size-search-quality-floor-2026-10-24/index.html) is ready. it includes seven new animated points per profile, with exact 10-second timing and loop checks passing for the full measured matrix. no visual pass judgment has been recorded yet.
+- the initial candidate matrix and 24-fps-only restriction below were superseded by the architect's approved candidate set in the preceding section. the review artifact remains benchmark evidence; only the explicitly approved scale/rate pairs are eligible.
+
+## bounded size-search implementation on 2026-10-24
+
+- destination buttons start a cancellable local search. the selected scale is the maximum; active candidates use only architect-approved scale/rate pairs at or below that scale. quality steps down from the selected value in five-point increments and always stops at 90, so the default 90 setting runs one quality attempt per eligible pair; the 100 setting runs three per pair.
+- sample source frames from cumulative GIF timing, preserve the full edited duration by adjusting the final output frame delay, and validate the expected sampled schedule and loop mode. run one candidate at a time, retain only the smallest candidate, and remove all other outputs on replacement, failure, or cancellation. the original GIF remains available throughout.
 
 ## confirmed by the architect on 2026-10-20
 

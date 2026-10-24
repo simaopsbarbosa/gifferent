@@ -56,8 +56,96 @@ final class GifskiCLICompressorTests: XCTestCase {
     XCTAssertNil(GifskiCLICompressor.constantFrameRate(for: [0, 0]))
   }
 
+  func testSizeSearchPlanRespectsSelectedScaleMaximumAndNeverBelowQualityNinety() {
+    let settings = GIFCompressionSettings(scale: .fiftyPercent, qualityPercent: 100)
+    let plan = GIFSizeSearchPlan(settings: settings)
+    XCTAssertEqual(plan.candidates.count, 3)
+    XCTAssertEqual(plan.candidates.map(\.qualityPercent), [100, 95, 90])
+    XCTAssertEqual(plan.candidates.map(\.scale), [.fiftyPercent, .fiftyPercent, .fiftyPercent])
+    XCTAssertTrue(plan.candidates.allSatisfy { $0.frameRate == .fps24 && $0.qualityPercent >= 90 })
+  }
+
+  func testSizeSearchPlanUsesOnlyApprovedScaleAndFrameRatePairs() {
+    let original = GIFSizeSearchPlan(
+      settings: GIFCompressionSettings(scale: .original, qualityPercent: 90))
+    XCTAssertEqual(
+      Set(original.candidates.map { "\($0.scale.rawValue)-\($0.frameRate.rawValue)" }),
+      Set(["100-24", "100-18", "75-24", "50-24"]))
+    let seventyFive = GIFSizeSearchPlan(
+      settings: GIFCompressionSettings(scale: .seventyFivePercent, qualityPercent: 90))
+    XCTAssertEqual(
+      Set(seventyFive.candidates.map { "\($0.scale.rawValue)-\($0.frameRate.rawValue)" }),
+      Set(["75-24", "50-24"]))
+    let fifty = GIFSizeSearchPlan(
+      settings: GIFCompressionSettings(scale: .fiftyPercent, qualityPercent: 90))
+    XCTAssertEqual(Set(fifty.candidates.map(\.frameRate)), [.fps24])
+    let twentyFive = GIFSizeSearchPlan(
+      settings: GIFCompressionSettings(scale: .twentyFivePercent, qualityPercent: 90))
+    XCTAssertTrue(twentyFive.candidates.isEmpty)
+    XCTAssertTrue(original.candidates.allSatisfy { $0.qualityPercent >= 90 })
+  }
+
+  func testFrameSamplerUsesCumulativeSourceTimingAndPreservesExactDuration() throws {
+    let sample = try GIFFrameSampler.sample(
+      delaysCentiseconds: [3, 8, 4], frameRate: .fps24)
+    XCTAssertEqual(sample.durationCentiseconds, 15)
+    XCTAssertEqual(sample.sourceIndices, [0, 1, 1])
+    XCTAssertEqual(sample.expectedDelaysCentiseconds, [4, 4, 7])
+    XCTAssertEqual(sample.expectedDelaysCentiseconds.reduce(0, +), 15)
+
+    let eighteenFPS = try GIFFrameSampler.sample(
+      delaysCentiseconds: [6, 6, 6], frameRate: .fps18)
+    XCTAssertEqual(eighteenFPS.sourceIndices, [0, 0, 1])
+    XCTAssertEqual(eighteenFPS.expectedDelaysCentiseconds.reduce(0, +), 18)
+  }
+
+  func testSamplerRejectsInvalidTimingAndImpossibleDuration() {
+    XCTAssertThrowsError(try GIFFrameSampler.sample(delaysCentiseconds: [], frameRate: .fps24))
+    XCTAssertThrowsError(try GIFFrameSampler.sample(delaysCentiseconds: [0], frameRate: .fps24))
+    XCTAssertThrowsError(
+      try GIFFrameSampler.sample(delaysCentiseconds: [65_536], frameRate: .fps24))
+  }
+
+  func testFinalFrameDelayPatchPreservesGIFAndSetsRequestedDuration() throws {
+    let fixture = try makeFixture(delaysCentiseconds: [4, 4, 7], loopsForever: true)
+    defer { try? FileManager.default.removeItem(at: fixture.directory) }
+
+    try GifskiCLICompressor.setFinalFrameDelay(in: fixture.source, centiseconds: 7)
+
+    let output = try GIFMetadataInspector().inspect(fixture.source)
+    XCTAssertEqual(output.delaysCentiseconds, [4, 4, 7])
+    XCTAssertEqual(output.durationCentiseconds, 15)
+    XCTAssertTrue(output.loopsForever)
+  }
+
+  func testSizeSearchKeepsSmallestCandidateUnderTargetAndDeletesOtherAttempts() async throws {
+    let settings = GIFCompressionSettings(scale: .original, qualityPercent: 100)
+    let plan = GIFSizeSearchPlan(settings: settings)
+    let source = EncodedGIF(
+      url: URL(fileURLWithPath: "/tmp/source.gif"), width: 32, height: 24,
+      frameCount: 1, delaysCentiseconds: [100], durationCentiseconds: 100,
+      loopsForever: true, fileBytes: 20_000_000)
+    let discarded = SearchDiscardRecorder()
+    let outputs = SearchOutputFactory(source: source, sizes: [9_500_000, 8_500_000, 8_000_000])
+    let result = try await GIFSizeSearchEngine.search(
+      source: source,
+      settings: settings,
+      plan: plan,
+      compress: { candidate in
+        await outputs.make(candidate)
+      },
+      discard: { output in await discarded.append(output.url) }
+    )
+
+    XCTAssertEqual(result.gif.fileBytes, 8_000_000)
+    XCTAssertTrue(result.reachedTarget)
+    XCTAssertEqual(result.attempts, 3)
+    let removed = await discarded.urls
+    XCTAssertEqual(removed.count, 2)
+  }
+
   func testFakeExecutableReceivesArgumentsAndProducesValidatedOutput() async throws {
-    let fixture = try makeFixture(delayCentiseconds: 5, loopsForever: true)
+    let fixture = try makeFixture(delaysCentiseconds: [4, 4, 7], loopsForever: true)
     defer { try? FileManager.default.removeItem(at: fixture.directory) }
     let argumentsFile = fixture.directory.appendingPathComponent("arguments.txt")
     let executable = try fakeExecutable(
@@ -77,14 +165,14 @@ final class GifskiCLICompressorTests: XCTestCase {
     XCTAssertEqual(
       args.prefix(13),
       [
-        "--fps", "20", "--quality", "77", "--width", "32", "--height", "24",
+        "--fps", "24", "--quality", "77", "--width", "32", "--height", "24",
         "--repeat", "0", "--no-sort", "--quiet", "--output",
       ])
     XCTAssertEqual(args[13], "-")
     XCTAssertEqual(args.count, 17)
     XCTAssertEqual(compressed.url, destination)
-    XCTAssertEqual(compressed.frameCount, fixture.metadata.frameCount)
-    XCTAssertEqual(compressed.delaysCentiseconds, fixture.metadata.delaysCentiseconds)
+    XCTAssertEqual(compressed.frameCount, 3)
+    XCTAssertEqual(compressed.delaysCentiseconds, [4, 4, 7])
     XCTAssertEqual(compressed.loopsForever, fixture.metadata.loopsForever)
     XCTAssertEqual(compressed.width, fixture.metadata.width)
     XCTAssertTrue(FileManager.default.fileExists(atPath: destination.path))
@@ -137,7 +225,7 @@ final class GifskiCLICompressorTests: XCTestCase {
   }
 
   func testOneShotLoopMetadataIsValidatedAndOutputIsRetained() async throws {
-    let fixture = try makeFixture(delayCentiseconds: 5, loopsForever: false)
+    let fixture = try makeFixture(delaysCentiseconds: [4, 4, 7], loopsForever: false)
     defer { try? FileManager.default.removeItem(at: fixture.directory) }
     let executable = try fakeExecutable(in: fixture.directory, body: "cat '\(fixture.source.path)'")
     let destination = fixture.directory.appendingPathComponent("compressed.gif")
@@ -244,7 +332,7 @@ final class GifskiCLICompressorTests: XCTestCase {
       throw XCTSkip("pinned Gifski 1.34.0 fixture executable is unavailable")
     }
     for loopsForever in [true, false] {
-      let fixture = try makeFixture(delayCentiseconds: 7, loopsForever: loopsForever)
+      let fixture = try makeFixture(delaysCentiseconds: [7, 7, 7], loopsForever: loopsForever)
       defer { try? FileManager.default.removeItem(at: fixture.directory) }
       let destination = fixture.directory.appendingPathComponent("compressed.gif")
       let result = try await GifskiCLICompressor(executableURL: executable).compress(
@@ -252,8 +340,8 @@ final class GifskiCLICompressorTests: XCTestCase {
         settings: GIFCompressionSettings(qualityPercent: 90),
         to: reservation(fixture, destination: destination, maximumBytes: 5_000_000)
       )
-      XCTAssertEqual(result.frameCount, fixture.metadata.frameCount)
-      XCTAssertEqual(result.delaysCentiseconds, fixture.metadata.delaysCentiseconds)
+      XCTAssertEqual(result.frameCount, 5)
+      XCTAssertEqual(result.delaysCentiseconds, [4, 4, 5, 4, 4])
       XCTAssertEqual(result.loopsForever, loopsForever)
     }
   }
@@ -371,4 +459,31 @@ final class GifskiCLICompressorTests: XCTestCase {
       try await Task.sleep(for: .milliseconds(10))
     }
   }
+}
+
+private actor SearchOutputFactory {
+  private let source: EncodedGIF
+  private let sizes: [Int64]
+  private var index = 0
+
+  init(source: EncodedGIF, sizes: [Int64]) {
+    self.source = source
+    self.sizes = sizes
+  }
+
+  func make(_ settings: GIFCompressionSettings) -> EncodedGIF {
+    defer { index += 1 }
+    return EncodedGIF(
+      url: URL(fileURLWithPath: "/tmp/candidate-\(index).gif"),
+      width: settings.scale.expectedDimension(source.width),
+      height: settings.scale.expectedDimension(source.height), frameCount: 1,
+      delaysCentiseconds: [100], durationCentiseconds: 100, loopsForever: true,
+      fileBytes: sizes[index])
+  }
+}
+
+private actor SearchDiscardRecorder {
+  private(set) var urls: [URL] = []
+
+  func append(_ url: URL) { urls.append(url) }
 }
