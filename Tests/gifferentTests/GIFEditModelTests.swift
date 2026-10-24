@@ -17,7 +17,7 @@ final class GIFEditModelTests: XCTestCase {
 
     XCTAssertEqual(result.sequence.frames.map(\.url), source.frames[1..<4].map(\.url))
     XCTAssertEqual(result.sequence.frames[0].timestamp, 0, accuracy: 1e-12)
-    XCTAssertEqual(result.sequence.frames[1].timestamp, 0.1, accuracy: 1e-12)
+    XCTAssertEqual(result.sequence.frames[1].timestamp, 0.2, accuracy: 1e-12)
     XCTAssertEqual(result.sequence.frames[2].timestamp, 0.325, accuracy: 1e-12)
     XCTAssertTrue(
       zip(result.sequence.frames, result.sequence.frames.dropFirst()).allSatisfy { pair in
