@@ -61,6 +61,11 @@
 - use Gifski 1.34.0 for backend integration and size-search prototyping. the search may vary resolution, sampled frame rate, and Gifski quality; Gifski owns palette generation. preserve the approved quality floor. this selection is conditional for direct distribution: the exact `gif-dispose` notice and complete bundled dependency/source obligations remain unresolved, so do not package or release the executable until those gates close.
 - the four-profile full matrix and its resource measurements are in [the benchmark report](Benchmarks/gifski-magick-35-full-matrix-2026-10-24.md). the existing two-profile animated review passed the floor at quality 90; the four-profile still review adds spatial checks but does not establish flicker or full-animation quality.
 
+## Quality-search floor confirmed on 2026-10-24
+
+- after reviewing the animated [Gifski quality sweep](Benchmarks/reviews/gifski-quality-sweep-2026-10-24/index.html), the architect set quality 90 as the lowest value the automatic size search may use for now. the existing quality-90 animations remain the approved floor reference. keep the manual quality slider at 1–100; do not lower the automatic search floor without a later architect decision based on visual review.
+- the sweep records quality 70, 80, 90, and 100 outputs for mostly-static and high-motion profiles. its measurements are evidence, not approval of qualities below 90; three-run timings are indicative only.
+
 ## confirmed by the architect on 2026-10-20
 
 - macOS 14+, direct notarized download, menu bar only, background hotkeys, native SwiftUI UI.
