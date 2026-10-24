@@ -79,6 +79,7 @@ struct CaptureSelectionOverlayView: View {
         .lineLimit(1)
         .truncationMode(.middle)
         .frame(maxWidth: 220)
+        .accessibilityElement(children: .ignore)
         .accessibilityLabel("capture target")
         .accessibilityValue(selectionDescription)
         .accessibilityIdentifier("capture-target-description")
