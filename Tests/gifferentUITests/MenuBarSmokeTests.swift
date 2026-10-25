@@ -4,10 +4,24 @@ import XCTest
 
 @MainActor
 final class MenuBarSmokeTests: XCTestCase {
+  private let exportDirectory = FileManager.default.temporaryDirectory
+    .appendingPathComponent("gifferent-ui-\(UUID().uuidString)", isDirectory: true)
+
+  override func setUpWithError() throws {
+    try super.setUpWithError()
+    try FileManager.default.createDirectory(at: exportDirectory, withIntermediateDirectories: true)
+  }
+
+  override func tearDownWithError() throws {
+    XCUIApplication().terminate()
+    try? FileManager.default.removeItem(at: exportDirectory)
+    try super.tearDownWithError()
+  }
+
   func testLaunchShowsIdleContentAndQuitAction() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -24,7 +38,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testShortcutSettingsOpenFromMenu() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -42,7 +56,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testRecordingSettingsAndWarningDoNotStopCapture() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -91,7 +105,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testWorkspaceWarningDoesNotStopCapture() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -124,7 +138,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testFixtureDisplaySelectionReturnsToMenu() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -146,7 +160,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testFixtureRegionSelectionAndCancellationRestoreLastSelection() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -184,7 +198,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testFixtureWindowSelectionCanBeConfirmed() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -212,7 +226,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testSelectedWindowLossOpensUsablePartialPreview() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -239,14 +253,15 @@ final class MenuBarSmokeTests: XCTestCase {
   }
 
   func testRecordingActionOpensPreviewAndKeepsExportAfterClose() throws {
-    let savedFixture = FileManager.default.temporaryDirectory
+    let savedFixture =
+      exportDirectory
       .appendingPathComponent("gifferent-preview-ui-save.gif")
     try? FileManager.default.removeItem(at: savedFixture)
     defer { try? FileManager.default.removeItem(at: savedFixture) }
 
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -345,7 +360,8 @@ final class MenuBarSmokeTests: XCTestCase {
     previewWindow.typeKey("s", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("saved", in: previewWindow))
     XCTAssertTrue(waitForFile(savedFixture))
-    let copiedFixture = FileManager.default.temporaryDirectory
+    let copiedFixture =
+      exportDirectory
       .appendingPathComponent("gifferent-preview-ui-copy.gif")
     defer { try? FileManager.default.removeItem(at: copiedFixture) }
     XCTAssertTrue(waitForFile(copiedFixture))
@@ -365,7 +381,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testCompressionTargetsAreVisibleAndUnavailableWithoutBackend() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -412,13 +428,15 @@ final class MenuBarSmokeTests: XCTestCase {
   func testDestinationCompressionExportsValidatedResultAndReturnsToOriginal() throws {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments = ["--ui-testing", "--ui-testing-compression=success"]
     app.launch()
     let preview = openFixturePreview(in: app)
-    let saved = FileManager.default.temporaryDirectory
+    let saved =
+      exportDirectory
       .appendingPathComponent("gifferent-preview-ui-save.gif")
-    let copied = FileManager.default.temporaryDirectory
+    let copied =
+      exportDirectory
       .appendingPathComponent("gifferent-preview-ui-copy.gif")
     defer {
       try? FileManager.default.removeItem(at: saved)
@@ -471,11 +489,12 @@ final class MenuBarSmokeTests: XCTestCase {
   func testDestinationMissShowsBestAttemptAndKeepsOriginalRecoverable() throws {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments = ["--ui-testing", "--ui-testing-compression=miss"]
     app.launch()
     let preview = openFixturePreview(in: app)
-    let saved = FileManager.default.temporaryDirectory
+    let saved =
+      exportDirectory
       .appendingPathComponent("gifferent-preview-ui-save.gif")
     defer { try? FileManager.default.removeItem(at: saved) }
     preview.typeKey("s", modifierFlags: .command)
@@ -513,11 +532,12 @@ final class MenuBarSmokeTests: XCTestCase {
     for mode in ["failure", "cancellable"] {
       let app = XCUIApplication()
       app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-        FileManager.default.temporaryDirectory.path
+        exportDirectory.path
       app.launchArguments = ["--ui-testing", "--ui-testing-compression=\(mode)"]
       app.launch()
       let preview = openFixturePreview(in: app)
-      let saved = FileManager.default.temporaryDirectory
+      let saved =
+        exportDirectory
         .appendingPathComponent("gifferent-preview-ui-save.gif")
       defer { try? FileManager.default.removeItem(at: saved) }
       preview.typeKey("s", modifierFlags: .command)
@@ -547,7 +567,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testUnexportedPreviewCanStayOpenOrBeDiscardedAfterConfirmation() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -582,7 +602,7 @@ final class MenuBarSmokeTests: XCTestCase {
   func testRecordingFrameFixtureShowsMovesAndHidesAccessibly() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
-      FileManager.default.temporaryDirectory.path
+      exportDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
