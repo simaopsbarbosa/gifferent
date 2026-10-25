@@ -29,6 +29,8 @@ the order below is a dependency graph, not a calendar. work within an iteration 
 
 the encoder benchmark, hotkey mechanism, and clipboard representation are experiments whose results determine implementation within their iterations. do not freeze a candidate because it appears in [architecture.md](architecture.md). if a proposed CLI cannot satisfy licensing or quality requirements, record the evidence and choose another compatible CLI before packaging. if the timing targets cannot be met without unacceptable quality or resource use, present measured options to the architect instead of silently weakening the targets.
 
+the focused completion checklist for editing and optimization (iteration 3) is in [iteration-4-implementation-plan.md](iteration-4-implementation-plan.md).
+
 ## decision gates and early risk work
 
 | gate | earliest affected work | resolution needed |

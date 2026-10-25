@@ -1,6 +1,8 @@
 import AppKit
 import Combine
+import ImageIO
 import SwiftUI
+import UniformTypeIdentifiers
 
 @MainActor
 final class GifferentRuntime: ObservableObject {
@@ -69,7 +71,7 @@ final class GifferentRuntime: ObservableObject {
         recordingCoordinator = RecordingCoordinator(
           streamFactory: fixtureFactory,
           workspace: workspace,
-          compressor: compressor,
+          compressor: UITestGIFCompressor.configured() ?? compressor,
           clipboard: UITestGIFClipboardWriter(),
           fileSaver: UITestGIFSavePanelSaver()
         )
@@ -632,9 +634,72 @@ struct SavePanelGIFSaver: GIFSaving {
   @MainActor
   private struct UITestGIFClipboardWriter: GIFClipboardWriting {
     func writeGIF(at url: URL) async throws {
-      guard FileManager.default.fileExists(atPath: url.path) else {
-        throw CocoaError(.fileReadNoSuchFile)
+      let destination = FileManager.default.temporaryDirectory
+        .appendingPathComponent("gifferent-preview-ui-copy.gif")
+      try? FileManager.default.removeItem(at: destination)
+      try FileManager.default.copyItem(at: url, to: destination)
+    }
+  }
+
+  private struct UITestGIFCompressor: GIFCompressing {
+    let outcome: String
+
+    static func configured() -> Self? {
+      let prefix = "--ui-testing-compression="
+      guard
+        let argument = ProcessInfo.processInfo.arguments.first(where: {
+          $0.hasPrefix(prefix)
+        })
+      else { return nil }
+      return Self(outcome: String(argument.dropFirst(prefix.count)))
+    }
+
+    func compress(
+      source: EncodedGIF,
+      settings: GIFCompressionSettings,
+      to reservation: CompressedPreviewOutputReservation
+    ) async throws -> EncodedGIF {
+      if outcome == "failure" { throw GifskiCompressionError.invalidOutput }
+      if outcome == "cancellable" {
+        try await Task.sleep(for: .seconds(60))
+        throw GifskiCompressionError.invalidOutput
       }
+      return try await Task.detached(priority: .utility) {
+        let sample = try GIFFrameSampler.sample(
+          delaysCentiseconds: source.delaysCentiseconds, frameRate: settings.frameRate)
+        guard let input = CGImageSourceCreateWithURL(source.url as CFURL, nil),
+          let destination = CGImageDestinationCreateWithURL(
+            reservation.url as CFURL, UTType.gif.identifier as CFString,
+            sample.sourceIndices.count, nil)
+        else { throw GifskiCompressionError.invalidOutput }
+        if source.loopsForever {
+          CGImageDestinationSetProperties(
+            destination,
+            [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFLoopCount: 0]] as CFDictionary)
+        }
+        let width = max(1, settings.scale.expectedDimension(source.width))
+        let height = max(1, settings.scale.expectedDimension(source.height))
+        for (index, sourceIndex) in sample.sourceIndices.enumerated() {
+          guard let image = CGImageSourceCreateImageAtIndex(input, sourceIndex, nil),
+            let context = CGContext(
+              data: nil, width: width, height: height, bitsPerComponent: 8,
+              bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+              bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)
+          else { throw GifskiCompressionError.invalidOutput }
+          context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+          guard let scaled = context.makeImage() else {
+            throw GifskiCompressionError.invalidOutput
+          }
+          let delay = Double(sample.expectedDelaysCentiseconds[index]) / 100
+          CGImageDestinationAddImage(
+            destination, scaled,
+            [kCGImagePropertyGIFDictionary: [kCGImagePropertyGIFDelayTime: delay]] as CFDictionary)
+        }
+        guard CGImageDestinationFinalize(destination) else {
+          throw GifskiCompressionError.invalidOutput
+        }
+        return try GIFMetadataInspector().inspect(reservation.url)
+      }.value
     }
   }
 

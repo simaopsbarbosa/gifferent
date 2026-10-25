@@ -978,12 +978,15 @@ final class RecordingCoordinator: ObservableObject {
     loopMode: GIFLoopMode,
     output: PreviewOutputReservation
   ) throws {
+    let expectedDelays = try ImageIOOriginalGIFEncoder.frameDelaysCentiseconds(
+      for: sequence.frames.map(\.timestamp), finalFrameDuration: sequence.finalFrameDuration)
     guard encoded.url == output.url,
       encoded.frameCount == sequence.frames.count,
       encoded.width > 0, encoded.height > 0,
       encoded.durationCentiseconds > 0,
       encoded.delaysCentiseconds.count == encoded.frameCount,
       encoded.delaysCentiseconds.allSatisfy({ $0 > 0 }),
+      encoded.delaysCentiseconds == expectedDelays,
       encoded.fileBytes > 0,
       encoded.loopsForever == (loopMode == .forever)
     else { throw OriginalGIFEncodingError.invalidOutput }

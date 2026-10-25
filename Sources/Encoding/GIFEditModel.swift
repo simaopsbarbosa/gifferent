@@ -55,7 +55,7 @@ enum GIFEditModel {
       throw GIFEditModelError.invalidTimestamps
     }
 
-    guard let firstTimestamp = timestamps.first else {
+    guard let firstTimestamp = timestamps.first, let lastTimestamp = timestamps.last else {
       throw GIFEditModelError.invalidFrameRange
     }
     var editedFrames: [CapturedPNGFrame] = []
@@ -72,8 +72,25 @@ enum GIFEditModel {
       previousTimestamp = editedTimestamp
     }
 
+    let lastSourceIndex = range.endIndexExclusive - 1
+    let finalInterval: TimeInterval
+    if range.endIndexExclusive < sequence.frames.count {
+      finalInterval = sequence.frames[range.endIndexExclusive].timestamp - lastTimestamp
+    } else if let duration = sequence.finalFrameDuration {
+      finalInterval = duration
+    } else if lastSourceIndex > 0 {
+      finalInterval = lastTimestamp - sequence.frames[lastSourceIndex - 1].timestamp
+    } else {
+      finalInterval = 1.0 / 24
+    }
+    let adjustedFinalInterval = finalInterval / parameters.playbackSpeed
+    guard adjustedFinalInterval.isFinite, adjustedFinalInterval > 0 else {
+      throw GIFEditModelError.invalidTimestamps
+    }
+
     return EditedGIFSequence(
-      sequence: CapturedPNGSequence(frames: editedFrames),
+      sequence: CapturedPNGSequence(
+        frames: editedFrames, finalFrameDuration: adjustedFinalInterval),
       loopMode: parameters.loopMode
     )
   }

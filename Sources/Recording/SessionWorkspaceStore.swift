@@ -84,6 +84,12 @@ struct CapturedPNGFrame: Sendable, Equatable {
 
 struct CapturedPNGSequence: Sendable, Equatable {
   let frames: [CapturedPNGFrame]
+  let finalFrameDuration: TimeInterval?
+
+  init(frames: [CapturedPNGFrame], finalFrameDuration: TimeInterval? = nil) {
+    self.frames = frames
+    self.finalFrameDuration = finalFrameDuration
+  }
 }
 
 actor SessionWorkspaceStore {

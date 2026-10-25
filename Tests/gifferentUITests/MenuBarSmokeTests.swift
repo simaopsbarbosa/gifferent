@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 import XCTest
 
 @MainActor
@@ -221,7 +222,7 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(waitForPreviewAction("copied", in: previewWindow))
   }
 
-  func testRecordingActionOpensPreviewAndKeepsExportAfterClose() {
+  func testRecordingActionOpensPreviewAndKeepsExportAfterClose() throws {
     let savedFixture = FileManager.default.temporaryDirectory
       .appendingPathComponent("gifferent-preview-ui-save.gif")
     try? FileManager.default.removeItem(at: savedFixture)
@@ -300,6 +301,12 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(previewWindow.buttons["loop-once-button"].exists)
     XCTAssertTrue(previewWindow.buttons["loop-forever-button"].exists)
 
+    let trimDestination = startHandle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+      .withOffset(CGVector(dx: (endHandle.frame.midX - startHandle.frame.midX) / 2, dy: 0))
+    endHandle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
+      .press(forDuration: 0.1, thenDragTo: trimDestination)
+    XCTAssertTrue(waitForValue(containing: "frame 2 of 3", in: endHandle))
+    XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
     previewWindow.buttons["loop-once-button"].click()
     XCTAssertTrue(waitForPreviewAction("gif updated", in: previewWindow))
     speedSlider.adjust(toNormalizedSliderPosition: 0.666)
@@ -320,6 +327,16 @@ final class MenuBarSmokeTests: XCTestCase {
     previewWindow.typeKey("s", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("saved", in: previewWindow))
     XCTAssertTrue(FileManager.default.fileExists(atPath: savedFixture.path))
+    let copiedFixture = FileManager.default.temporaryDirectory
+      .appendingPathComponent("gifferent-preview-ui-copy.gif")
+    defer { try? FileManager.default.removeItem(at: copiedFixture) }
+    XCTAssertEqual(try Data(contentsOf: copiedFixture), try Data(contentsOf: savedFixture))
+    let savedMetadata = try gifMetadata(at: savedFixture)
+    XCTAssertEqual(savedMetadata.frameCount, 2)
+    XCTAssertEqual(savedMetadata.durationCentiseconds, 6)
+    XCTAssertFalse(savedMetadata.loopsForever)
+    XCTAssertEqual(savedMetadata.width, 16)
+    XCTAssertEqual(savedMetadata.height, 16)
 
     previewWindow.buttons["close-preview-button"].click()
     XCTAssertFalse(previewWindow.waitForExistence(timeout: 5))
@@ -369,6 +386,93 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertFalse(previewWindow.buttons["compress-preview-button"].exists)
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["save-preview-button"]))
+  }
+
+  func testDestinationCompressionExportsValidatedResultAndReturnsToOriginal() throws {
+    let app = XCUIApplication()
+    app.launchArguments = ["--ui-testing", "--ui-testing-compression=success"]
+    app.launch()
+    let preview = openFixturePreview(in: app)
+    let saved = FileManager.default.temporaryDirectory
+      .appendingPathComponent("gifferent-preview-ui-save.gif")
+    let copied = FileManager.default.temporaryDirectory
+      .appendingPathComponent("gifferent-preview-ui-copy.gif")
+    defer {
+      try? FileManager.default.removeItem(at: saved)
+      try? FileManager.default.removeItem(at: copied)
+    }
+    preview.typeKey("s", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+    let originalBytes = try Data(contentsOf: saved)
+    let original = try gifMetadata(at: saved)
+
+    preview.sliders["compression-quality-slider"].adjust(toNormalizedSliderPosition: 1)
+    XCTAssertTrue(
+      waitForValue(containing: "100", in: preview.staticTexts["compression-quality-value"]))
+    preview.buttons["compression-destination-github"].click()
+    XCTAssertTrue(preview.buttons["back-to-original-button"].waitForExistence(timeout: 15))
+    let resultStatus = preview.staticTexts["compression-target-status"]
+    XCTAssertTrue(waitForText(containing: "target met", in: resultStatus))
+    XCTAssertTrue(waitForText(containing: "quality", in: resultStatus))
+    XCTAssertTrue(waitForText(containing: "fps", in: resultStatus))
+    XCTAssertTrue(waitForText(containing: "attempts", in: resultStatus))
+    XCTAssertTrue(waitForEnabled(preview.buttons["copy-preview-button"]))
+    try? FileManager.default.removeItem(at: copied)
+    try? FileManager.default.removeItem(at: saved)
+    preview.typeKey("c", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("copied", in: preview))
+    preview.typeKey("s", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+    XCTAssertTrue(waitForFile(saved))
+    XCTAssertEqual(try Data(contentsOf: copied), try Data(contentsOf: saved))
+    let compressed = try gifMetadata(at: saved)
+    XCTAssertEqual(compressed.durationCentiseconds, original.durationCentiseconds)
+    XCTAssertEqual(compressed.loopsForever, original.loopsForever)
+    XCTAssertGreaterThan(compressed.frameCount, 0)
+    XCTAssertLessThanOrEqual(compressed.width, original.width)
+    XCTAssertLessThanOrEqual(compressed.height, original.height)
+    XCTAssertLessThanOrEqual(try Data(contentsOf: saved).count, 9_000_000)
+
+    preview.buttons["back-to-original-button"].click()
+    XCTAssertTrue(preview.buttons["compress-preview-button"].waitForExistence(timeout: 5))
+    XCTAssertTrue(waitForEnabled(preview.buttons["save-preview-button"]))
+    try FileManager.default.removeItem(at: saved)
+    preview.typeKey("s", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+    XCTAssertTrue(waitForFile(saved))
+    XCTAssertEqual(try Data(contentsOf: saved), originalBytes)
+  }
+
+  func testCompressionFailureAndCancellationKeepOriginalExportUsable() throws {
+    for mode in ["failure", "cancellable"] {
+      let app = XCUIApplication()
+      app.launchArguments = ["--ui-testing", "--ui-testing-compression=\(mode)"]
+      app.launch()
+      let preview = openFixturePreview(in: app)
+      let saved = FileManager.default.temporaryDirectory
+        .appendingPathComponent("gifferent-preview-ui-save.gif")
+      defer { try? FileManager.default.removeItem(at: saved) }
+      preview.typeKey("s", modifierFlags: .command)
+      XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+      let original = try Data(contentsOf: saved)
+      preview.buttons["compression-destination-discord"].click()
+      if mode == "cancellable" {
+        let cancel = preview.buttons["cancel-compression-button"]
+        XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        cancel.click()
+      }
+      let expected = mode == "failure" ? "could not compress gif" : "compression cancelled"
+      XCTAssertTrue(
+        waitForText(containing: expected, in: preview.staticTexts["compression-action-status"]))
+      XCTAssertFalse(preview.buttons["back-to-original-button"].exists)
+      XCTAssertTrue(waitForEnabled(preview.buttons["save-preview-button"]))
+      try FileManager.default.removeItem(at: saved)
+      preview.typeKey("s", modifierFlags: .command)
+      XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+      XCTAssertTrue(waitForFile(saved))
+      XCTAssertEqual(try Data(contentsOf: saved), original)
+      app.terminate()
+    }
   }
 
   func testUnexportedPreviewCanStayOpenOrBeDiscardedAfterConfirmation() {
@@ -451,6 +555,62 @@ final class MenuBarSmokeTests: XCTestCase {
       Thread.sleep(forTimeInterval: 0.05)
     }
     XCTAssertFalse(frameWindow.exists, "\(app.debugDescription)")
+  }
+
+  private func openFixturePreview(in app: XCUIApplication) -> XCUIElement {
+    let menu = app.windows["gifferent test menu"]
+    XCTAssertTrue(menu.waitForExistence(timeout: 10))
+    menu.buttons["recording-action-button"].click()
+    let selection = app.windows["capture selection"]
+    XCTAssertTrue(selection.waitForExistence(timeout: 10))
+    selection.buttons["select-display-button"].click()
+    selection.buttons["confirm-selection-button"].click()
+    waitForStatus("recording", in: menu)
+    menu.buttons["recording-action-button"].click()
+    let preview = app.windows["gif preview"]
+    XCTAssertTrue(preview.waitForExistence(timeout: 10))
+    XCTAssertTrue(waitForPreviewStatus("preview ready", in: preview))
+    return preview
+  }
+
+  private func waitForFile(_ url: URL) -> Bool {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate { _, _ in FileManager.default.fileExists(atPath: url.path) },
+      object: nil)
+    return XCTWaiter.wait(for: [expectation], timeout: 5) == .completed
+  }
+
+  private func waitForText(containing text: String, in element: XCUIElement) -> Bool {
+    let expectation = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "label CONTAINS %@ OR value CONTAINS %@", text, text),
+      object: element)
+    return XCTWaiter.wait(for: [expectation], timeout: 10) == .completed
+  }
+
+  private func gifMetadata(at url: URL) throws -> (
+    frameCount: Int, durationCentiseconds: Int, loopsForever: Bool, width: Int, height: Int
+  ) {
+    let source = try XCTUnwrap(CGImageSourceCreateWithURL(url as CFURL, nil))
+    let properties = try XCTUnwrap(CGImageSourceCopyProperties(source, nil) as? [CFString: Any])
+    let gifProperties = properties[kCGImagePropertyGIFDictionary] as? [CFString: Any] ?? [:]
+    var duration = 0
+    var width = 0
+    var height = 0
+    for index in 0..<CGImageSourceGetCount(source) {
+      let frame = try XCTUnwrap(
+        CGImageSourceCopyPropertiesAtIndex(source, index, nil) as? [CFString: Any])
+      let gif = try XCTUnwrap(frame[kCGImagePropertyGIFDictionary] as? [CFString: Any])
+      let delay = try XCTUnwrap(
+        gif[kCGImagePropertyGIFUnclampedDelayTime] as? Double
+          ?? gif[kCGImagePropertyGIFDelayTime] as? Double)
+      duration += Int((delay * 100).rounded())
+      width = try XCTUnwrap(frame[kCGImagePropertyPixelWidth] as? Int)
+      height = try XCTUnwrap(frame[kCGImagePropertyPixelHeight] as? Int)
+    }
+    return (
+      CGImageSourceGetCount(source), duration,
+      (gifProperties[kCGImagePropertyGIFLoopCount] as? Int) == 0, width, height
+    )
   }
 
   private func waitForValue(
