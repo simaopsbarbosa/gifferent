@@ -6,6 +6,8 @@ import XCTest
 final class MenuBarSmokeTests: XCTestCase {
   func testLaunchShowsIdleContentAndQuitAction() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -21,6 +23,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testShortcutSettingsOpenFromMenu() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -37,6 +41,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testRecordingSettingsAndWarningDoNotStopCapture() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -84,6 +90,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testWorkspaceWarningDoesNotStopCapture() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -115,6 +123,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testFixtureDisplaySelectionReturnsToMenu() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -135,6 +145,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testFixtureRegionSelectionAndCancellationRestoreLastSelection() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -171,6 +183,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testFixtureWindowSelectionCanBeConfirmed() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -197,6 +211,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testSelectedWindowLossOpensUsablePartialPreview() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -229,6 +245,8 @@ final class MenuBarSmokeTests: XCTestCase {
     defer { try? FileManager.default.removeItem(at: savedFixture) }
 
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -326,10 +344,11 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(waitForPreviewAction("copied", in: previewWindow))
     previewWindow.typeKey("s", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("saved", in: previewWindow))
-    XCTAssertTrue(FileManager.default.fileExists(atPath: savedFixture.path))
+    XCTAssertTrue(waitForFile(savedFixture))
     let copiedFixture = FileManager.default.temporaryDirectory
       .appendingPathComponent("gifferent-preview-ui-copy.gif")
     defer { try? FileManager.default.removeItem(at: copiedFixture) }
+    XCTAssertTrue(waitForFile(copiedFixture))
     XCTAssertEqual(try Data(contentsOf: copiedFixture), try Data(contentsOf: savedFixture))
     let savedMetadata = try gifMetadata(at: savedFixture)
     XCTAssertEqual(savedMetadata.frameCount, 2)
@@ -345,6 +364,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testCompressionTargetsAreVisibleAndUnavailableWithoutBackend() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -390,6 +411,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testDestinationCompressionExportsValidatedResultAndReturnsToOriginal() throws {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments = ["--ui-testing", "--ui-testing-compression=success"]
     app.launch()
     let preview = openFixturePreview(in: app)
@@ -403,6 +426,7 @@ final class MenuBarSmokeTests: XCTestCase {
     }
     preview.typeKey("s", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+    XCTAssertTrue(waitForFile(saved))
     let originalBytes = try Data(contentsOf: saved)
     let original = try gifMetadata(at: saved)
 
@@ -424,6 +448,7 @@ final class MenuBarSmokeTests: XCTestCase {
     preview.typeKey("s", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("saved", in: preview))
     XCTAssertTrue(waitForFile(saved))
+    XCTAssertTrue(waitForFile(copied))
     XCTAssertEqual(try Data(contentsOf: copied), try Data(contentsOf: saved))
     let compressed = try gifMetadata(at: saved)
     XCTAssertEqual(compressed.durationCentiseconds, original.durationCentiseconds)
@@ -436,7 +461,48 @@ final class MenuBarSmokeTests: XCTestCase {
     preview.buttons["back-to-original-button"].click()
     XCTAssertTrue(preview.buttons["compress-preview-button"].waitForExistence(timeout: 5))
     XCTAssertTrue(waitForEnabled(preview.buttons["save-preview-button"]))
-    try FileManager.default.removeItem(at: saved)
+    try? FileManager.default.removeItem(at: saved)
+    preview.typeKey("s", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+    XCTAssertTrue(waitForFile(saved))
+    XCTAssertEqual(try Data(contentsOf: saved), originalBytes)
+  }
+
+  func testDestinationMissShowsBestAttemptAndKeepsOriginalRecoverable() throws {
+    let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
+    app.launchArguments = ["--ui-testing", "--ui-testing-compression=miss"]
+    app.launch()
+    let preview = openFixturePreview(in: app)
+    let saved = FileManager.default.temporaryDirectory
+      .appendingPathComponent("gifferent-preview-ui-save.gif")
+    defer { try? FileManager.default.removeItem(at: saved) }
+    preview.typeKey("s", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+    XCTAssertTrue(waitForFile(saved))
+    let originalBytes = try Data(contentsOf: saved)
+    let originalMetadata = try gifMetadata(at: saved)
+
+    preview.buttons["compression-destination-github"].click()
+    XCTAssertTrue(preview.buttons["back-to-original-button"].waitForExistence(timeout: 15))
+    let result = preview.staticTexts["compression-target-status"]
+    XCTAssertTrue(waitForText(containing: "best attempt; target not met", in: result))
+    XCTAssertTrue(waitForText(containing: "quality 90", in: result))
+    XCTAssertTrue(waitForText(containing: "fps", in: result))
+    XCTAssertTrue(waitForText(containing: "4 attempts", in: result))
+    try? FileManager.default.removeItem(at: saved)
+    preview.typeKey("s", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+    XCTAssertTrue(waitForFile(saved))
+    XCTAssertGreaterThan(try Data(contentsOf: saved).count, 9_000_000)
+    let bestAttempt = try gifMetadata(at: saved)
+    XCTAssertEqual(bestAttempt.durationCentiseconds, originalMetadata.durationCentiseconds)
+    XCTAssertEqual(bestAttempt.loopsForever, originalMetadata.loopsForever)
+
+    preview.buttons["back-to-original-button"].click()
+    XCTAssertTrue(preview.buttons["compress-preview-button"].waitForExistence(timeout: 5))
+    try? FileManager.default.removeItem(at: saved)
     preview.typeKey("s", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("saved", in: preview))
     XCTAssertTrue(waitForFile(saved))
@@ -446,6 +512,8 @@ final class MenuBarSmokeTests: XCTestCase {
   func testCompressionFailureAndCancellationKeepOriginalExportUsable() throws {
     for mode in ["failure", "cancellable"] {
       let app = XCUIApplication()
+      app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+        FileManager.default.temporaryDirectory.path
       app.launchArguments = ["--ui-testing", "--ui-testing-compression=\(mode)"]
       app.launch()
       let preview = openFixturePreview(in: app)
@@ -454,6 +522,7 @@ final class MenuBarSmokeTests: XCTestCase {
       defer { try? FileManager.default.removeItem(at: saved) }
       preview.typeKey("s", modifierFlags: .command)
       XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+      XCTAssertTrue(waitForFile(saved))
       let original = try Data(contentsOf: saved)
       preview.buttons["compression-destination-discord"].click()
       if mode == "cancellable" {
@@ -466,7 +535,7 @@ final class MenuBarSmokeTests: XCTestCase {
         waitForText(containing: expected, in: preview.staticTexts["compression-action-status"]))
       XCTAssertFalse(preview.buttons["back-to-original-button"].exists)
       XCTAssertTrue(waitForEnabled(preview.buttons["save-preview-button"]))
-      try FileManager.default.removeItem(at: saved)
+      try? FileManager.default.removeItem(at: saved)
       preview.typeKey("s", modifierFlags: .command)
       XCTAssertTrue(waitForPreviewAction("saved", in: preview))
       XCTAssertTrue(waitForFile(saved))
@@ -477,6 +546,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testUnexportedPreviewCanStayOpenOrBeDiscardedAfterConfirmation() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 
@@ -510,6 +581,8 @@ final class MenuBarSmokeTests: XCTestCase {
 
   func testRecordingFrameFixtureShowsMovesAndHidesAccessibly() {
     let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
+      FileManager.default.temporaryDirectory.path
     app.launchArguments.append("--ui-testing")
     app.launch()
 

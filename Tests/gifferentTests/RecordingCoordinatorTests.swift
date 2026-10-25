@@ -640,6 +640,52 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fixture.root.path), [])
   }
 
+  func testTruthfullyReportedWrongGIFTimingIsRejectedAndCapturedFramesRemainRetryable() async throws
+  {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let encoder = WrongTimingFirstGIFEncoder()
+    let coordinator = RecordingCoordinator(
+      streamFactory: FakeRecordingStreamFactory(
+        stream: FakeRecordingStream(framesOnStart: [
+          validFrame(at: 100_000_000), validFrame(at: 200_000_000), validFrame(at: 300_000_000),
+        ])),
+      workspace: fixture.workspace, gifEncoder: encoder)
+    await coordinator.start(target: .display(1), showsCursor: false)
+    await coordinator.stop()
+    await waitUntil(timeout: .seconds(5)) {
+      if case .captured = coordinator.state { coordinator.previewAction == .failed } else { false }
+    }
+    guard case .captured(let sessionID, let snapshot) = coordinator.state else {
+      return XCTFail("expected valid captured frames after rejecting the GIF timing")
+    }
+    XCTAssertEqual(snapshot.frameCount, 3)
+    let firstOutput = await encoder.firstOutput()
+    let wrongOutput = try XCTUnwrap(firstOutput)
+    XCTAssertEqual(wrongOutput.frameCount, 3)
+    XCTAssertEqual(wrongOutput.width, 1)
+    XCTAssertEqual(wrongOutput.height, 1)
+    XCTAssertTrue(wrongOutput.loopsForever)
+    XCTAssertEqual(wrongOutput.delaysCentiseconds, [5, 5, 5])
+    XCTAssertFalse(FileManager.default.fileExists(atPath: wrongOutput.url.path))
+    let retained = try await fixture.workspace.pngSequence(for: sessionID)
+    XCTAssertEqual(retained.frames.count, 3)
+    XCTAssertTrue(
+      retained.frames.allSatisfy { FileManager.default.fileExists(atPath: $0.url.path) })
+    let closedWithoutDiscard = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertFalse(closedWithoutDiscard)
+
+    coordinator.retryPreviewEncoding()
+    await waitForPreview(coordinator)
+    guard case .previewReady(_, _, let validOutput) = coordinator.state else {
+      return XCTFail("expected the retained capture to support a successful retry")
+    }
+    XCTAssertEqual(validOutput.delaysCentiseconds, [10, 10, 10])
+    let discarded = await coordinator.closePreview(discardUnexported: true)
+    XCTAssertTrue(discarded)
+    XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fixture.root.path), [])
+  }
+
   func testCopyFailureAndSaveCancellationKeepPreviewAndRequireDiscard() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
@@ -1099,6 +1145,37 @@ private actor FailFirstGIFEncoder: OriginalGIFEncoding {
       throw OriginalGIFEncodingError.encodingFailed
     }
     return try await ImageIOOriginalGIFEncoder().encode(sequence, to: reservation)
+  }
+}
+
+private actor WrongTimingFirstGIFEncoder: OriginalGIFEncoding {
+  private var recordedFirstOutput: EncodedGIF?
+
+  func firstOutput() -> EncodedGIF? { recordedFirstOutput }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    try await encode(sequence, loopMode: .forever, to: reservation)
+  }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    loopMode: GIFLoopMode,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    if recordedFirstOutput == nil {
+      let wrongTiming = CapturedPNGSequence(
+        frames: sequence.frames.map { CapturedPNGFrame(url: $0.url, timestamp: $0.timestamp / 2) },
+        finalFrameDuration: sequence.finalFrameDuration.map { $0 / 2 })
+      let actual = try await ImageIOOriginalGIFEncoder().encode(
+        wrongTiming, loopMode: loopMode, to: reservation)
+      recordedFirstOutput = try GIFMetadataInspector().inspect(actual.url)
+      return actual
+    }
+    return try await ImageIOOriginalGIFEncoder().encode(
+      sequence, loopMode: loopMode, to: reservation)
   }
 }
 

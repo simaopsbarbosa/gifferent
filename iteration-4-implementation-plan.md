@@ -11,10 +11,10 @@ this is an execution checklist, not a change to approved product behavior. keep 
 ## observed baseline
 
 - `GIFEditModel` and unit tests cover trim ranges, speed-adjusted timestamps, loop mode, and invalid timing.
-- preview UI acceptance exercises the trim handles, speed slider, loop controls, copy, and save. Its current assertions do not establish that a changed trim selection is applied to the actual encoded/exported GIF.
-- Gifski argument, timing, candidate-planning, size-search, cancellation, failure, and workspace cleanup tests already exist. Coordinator tests cover keeping the original and presenting a search result.
-- compression UI acceptance currently verifies destination labels, target sizes, quality default, and the unavailable-backend state. It does not traverse a successful end-to-end compression journey with a real encoder.
-- benchmark and visual-review artifacts exist, including quality and scale/rate studies. The review page for the initial scale/rate matrix explicitly says it does not approve candidates; the later approved candidate set in `decisions.md` is narrower. treat benchmark artifacts as evidence, not as proof that current implementation passes every approved candidate.
+- preview UI acceptance exercises the trim handles, speed slider, loop controls, copy, and save. its current assertions do not establish that a changed trim selection is applied to the actual encoded/exported GIF.
+- Gifski argument, timing, candidate-planning, size-search, cancellation, failure, and workspace cleanup tests already exist. coordinator tests cover keeping the original and presenting a search result.
+- compression UI acceptance currently verifies destination labels, target sizes, quality default, and the unavailable-backend state. it does not traverse a successful end-to-end compression journey with a real encoder.
+- benchmark and visual-review artifacts exist, including quality and scale/rate studies. the review page for the initial scale/rate matrix explicitly says it does not approve candidates; the later approved candidate set in `decisions.md` is narrower. treat benchmark artifacts as evidence, not as proof that current implementation passes every approved candidate.
 - the working tree has local changes. before implementation, inspect and preserve them; do not reset or overwrite them.
 
 ## work packages

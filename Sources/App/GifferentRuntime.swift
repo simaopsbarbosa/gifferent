@@ -631,10 +631,17 @@ struct SavePanelGIFSaver: GIFSaving {
 }
 
 #if DEBUG
+  private func uiTestExportDirectory() -> URL {
+    if let path = ProcessInfo.processInfo.environment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] {
+      return URL(fileURLWithPath: path, isDirectory: true)
+    }
+    return FileManager.default.temporaryDirectory
+  }
+
   @MainActor
   private struct UITestGIFClipboardWriter: GIFClipboardWriting {
     func writeGIF(at url: URL) async throws {
-      let destination = FileManager.default.temporaryDirectory
+      let destination = uiTestExportDirectory()
         .appendingPathComponent("gifferent-preview-ui-copy.gif")
       try? FileManager.default.removeItem(at: destination)
       try FileManager.default.copyItem(at: url, to: destination)
@@ -698,6 +705,24 @@ struct SavePanelGIFSaver: GIFSaving {
         guard CGImageDestinationFinalize(destination) else {
           throw GifskiCompressionError.invalidOutput
         }
+        if outcome == "miss" {
+          let handle = try FileHandle(forWritingTo: reservation.url)
+          defer { try? handle.close() }
+          let end = try handle.seekToEnd()
+          try handle.truncate(atOffset: end - 1)
+          try handle.seek(toOffset: end - 1)
+          try handle.write(contentsOf: Data([0x21, 0xfe]))
+          var block = Data([255])
+          block.append(Data(repeating: 0, count: 255))
+          var batch = Data()
+          for _ in 0..<256 { batch.append(block) }
+          var bytes = Int64(end + 1)
+          while bytes <= settings.destination.targetBytes {
+            try handle.write(contentsOf: batch)
+            bytes += Int64(batch.count)
+          }
+          try handle.write(contentsOf: Data([0, 0x3b]))
+        }
         return try GIFMetadataInspector().inspect(reservation.url)
       }.value
     }
@@ -706,7 +731,7 @@ struct SavePanelGIFSaver: GIFSaving {
   @MainActor
   private struct UITestGIFSavePanelSaver: GIFSaving {
     func saveGIF(at url: URL) async throws -> PreviewSaveResult {
-      let destination = FileManager.default.temporaryDirectory
+      let destination = uiTestExportDirectory()
         .appendingPathComponent("gifferent-preview-ui-save.gif")
       try? FileManager.default.removeItem(at: destination)
       try FileManager.default.copyItem(at: url, to: destination)
