@@ -722,7 +722,7 @@ final class RecordingCoordinator: ObservableObject {
       let output = try await workspace.reserveCompressedPreviewOutput(
         for: previewID,
         sourceURL: source.url,
-        maximumCacheBytes: 0
+        maximumCacheBytes: compressor.requiredCacheBytes
       )
       reservation = output
       try Task.checkCancellation()
@@ -788,7 +788,7 @@ final class RecordingCoordinator: ObservableObject {
         compress: { [workspace] candidateSettings in
           try Task.checkCancellation()
           let reservation = try await workspace.reserveCompressedPreviewOutput(
-            for: previewID, sourceURL: source.url, maximumCacheBytes: 0)
+            for: previewID, sourceURL: source.url, maximumCacheBytes: compressor.requiredCacheBytes)
           do {
             let output = try await compressor.compress(
               source: source, settings: candidateSettings, to: reservation)

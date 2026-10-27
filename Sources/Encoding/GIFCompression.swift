@@ -336,6 +336,9 @@ enum GIFCompressionAction: Equatable {
 }
 
 protocol GIFCompressing: Sendable {
+  /// temporary frame or cache bytes to reserve in addition to the output file.
+  var requiredCacheBytes: Int64 { get }
+
   /// writes a local replacement and returns its metadata.
   ///
   /// implementations must stop promptly on cancellation and keep output and cache use within
@@ -345,6 +348,10 @@ protocol GIFCompressing: Sendable {
     settings: GIFCompressionSettings,
     to reservation: CompressedPreviewOutputReservation
   ) async throws -> EncodedGIF
+}
+
+extension GIFCompressing {
+  var requiredCacheBytes: Int64 { 0 }
 }
 
 func validateCompressedGIFOutput(

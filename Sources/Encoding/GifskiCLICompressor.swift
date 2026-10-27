@@ -25,6 +25,7 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
   private static let maximumStandardErrorBytes = 64 * 1_024
 
   let executableURL: URL
+  var requiredCacheBytes: Int64 { Self.maximumFrameWorkspaceBytes }
 
   static func availableInMainBundle() -> GifskiCLICompressor? {
     guard let url = Bundle.main.url(forResource: "gifski", withExtension: nil),
@@ -75,12 +76,30 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
     guard Self.isPrivateDirectory(outputDirectory) else {
       throw GifskiCompressionError.invalidOutput
     }
+    let frameParentDirectory: URL
+    let maximumFrameBytes: Int64
+    if let cacheDirectory = reservation.cacheDirectory {
+      guard reservation.maximumCacheBytes > 0,
+        cacheDirectory.deletingLastPathComponent().standardizedFileURL
+          == outputDirectory.standardizedFileURL,
+        Self.isPrivateDirectory(cacheDirectory)
+      else { throw GifskiCompressionError.invalidOutput }
+      frameParentDirectory = cacheDirectory
+      maximumFrameBytes = min(reservation.maximumCacheBytes, Self.maximumFrameWorkspaceBytes)
+    } else {
+      guard reservation.maximumCacheBytes == 0 else {
+        throw GifskiCompressionError.invalidOutput
+      }
+      // standalone callers own their disk budget; app sessions supply a reserved cache directory.
+      frameParentDirectory = outputDirectory
+      maximumFrameBytes = Self.maximumFrameWorkspaceBytes
+    }
     var destinationInfo = stat()
     guard lstat(reservation.url.path, &destinationInfo) != 0, errno == ENOENT else {
       throw GifskiCompressionError.invalidOutput
     }
     let workingDirectory =
-      outputDirectory
+      frameParentDirectory
       .appendingPathComponent(".gifferent-gifski-\(UUID().uuidString)", isDirectory: true)
     do {
       try FileManager.default.createDirectory(
@@ -103,7 +122,7 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
         scale: settings.scale,
         sourceIndices: sample.sourceIndices,
         in: workingDirectory,
-        maximumBytes: Self.maximumFrameWorkspaceBytes
+        maximumBytes: maximumFrameBytes
       )
     }
     do {

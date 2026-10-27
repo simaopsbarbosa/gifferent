@@ -97,10 +97,67 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(summary.settings.qualityPercent, 90)
   }
 
+  func testCompressionAndSearchReserveCacheInsideCombinedSessionBudget() async throws {
+    for searchesDestination in [false, true] {
+      let maximumSessionBytes: Int64 = 4_096
+      let fixture = makeFixture(maximumBytes: maximumSessionBytes)
+      defer { try? FileManager.default.removeItem(at: fixture.base) }
+      let compressor = FakeGIFCompressor(requiredCacheBytes: 512)
+      let (coordinator, sessionID, original, originalBytes) = try await makeReadyCoordinator(
+        workspace: fixture.workspace, compressor: compressor)
+      if searchesDestination {
+        coordinator.startSizeSearch(for: .github)
+      } else {
+        coordinator.startCompression()
+      }
+      await waitForCompression(coordinator)
+      XCTAssertEqual(coordinator.compressionAction, .compressed)
+      let reservations = await compressor.reservations()
+      XCTAssertEqual(reservations.count, searchesDestination ? 4 : 1)
+      let first = try XCTUnwrap(reservations.first)
+      XCTAssertEqual(
+        first.maximumBytes + first.maximumCacheBytes, maximumSessionBytes - originalBytes)
+      for reservation in reservations {
+        XCTAssertEqual(reservation.maximumCacheBytes, 512)
+        let cache = try XCTUnwrap(reservation.cacheDirectory)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: cache.path))
+      }
+      let snapshot = try await fixture.workspace.snapshot(for: sessionID)
+      XCTAssertEqual(snapshot.temporaryBytes, originalBytes + original.fileBytes)
+      XCTAssertLessThanOrEqual(snapshot.temporaryBytes, maximumSessionBytes)
+    }
+  }
+
+  func testCompressionAndSearchRejectCacheBeyondRemainingSessionBudgetBeforeLaunch() async throws {
+    for searchesDestination in [false, true] {
+      let fixture = makeFixture(maximumBytes: 1_000)
+      defer { try? FileManager.default.removeItem(at: fixture.base) }
+      let compressor = FakeGIFCompressor(requiredCacheBytes: 1_000)
+      let (coordinator, sessionID, original, originalBytes) = try await makeReadyCoordinator(
+        workspace: fixture.workspace, compressor: compressor)
+      if searchesDestination {
+        coordinator.startSizeSearch(for: .github)
+      } else {
+        coordinator.startCompression()
+      }
+      await waitForCompression(coordinator)
+      XCTAssertEqual(coordinator.compressionAction, .failed)
+      XCTAssertEqual(coordinator.displayedPreviewGIF, original)
+      let reservations = await compressor.reservations()
+      XCTAssertTrue(reservations.isEmpty)
+      let snapshot = try await fixture.workspace.snapshot(for: sessionID)
+      XCTAssertEqual(snapshot.temporaryBytes, originalBytes)
+      assertNoCompressedOutputs(for: sessionID, in: fixture.root)
+      let directory = original.url.deletingLastPathComponent()
+      let contents = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+      XCTAssertFalse(contents.contains { $0.hasPrefix("compression-cache-") })
+    }
+  }
+
   func testCompressionFailureKeepsOriginalAndCleansReservation() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
-    let compressor = FakeGIFCompressor(outcome: .failure)
+    let compressor = FakeGIFCompressor(outcome: .failure, requiredCacheBytes: 512)
     let (coordinator, sessionID, original, originalBytes) = try await makeReadyCoordinator(
       workspace: fixture.workspace,
       compressor: compressor
@@ -170,7 +227,7 @@ final class RecordingCoordinatorTests: XCTestCase {
   func testCompressionCancellationKeepsOriginalAndCleansReservation() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
-    let compressor = FakeGIFCompressor(outcome: .cancellable)
+    let compressor = FakeGIFCompressor(outcome: .cancellable, requiredCacheBytes: 512)
     let (coordinator, sessionID, original, originalBytes) = try await makeReadyCoordinator(
       workspace: fixture.workspace,
       compressor: compressor
@@ -858,7 +915,9 @@ final class RecordingCoordinatorTests: XCTestCase {
       "gifferent-session-\(sessionID.rawValue.uuidString)", isDirectory: true)
     let contents =
       (try? FileManager.default.contentsOfDirectory(atPath: sessionDirectory.path)) ?? []
-    XCTAssertFalse(contents.contains { $0.hasPrefix("compressed-") }, file: file, line: line)
+    XCTAssertFalse(
+      contents.contains { $0.hasPrefix("compressed-") || $0.hasPrefix("compression-cache-") },
+      file: file, line: line)
   }
 
   private func validFrame(at timestamp: Int64) -> RecordingFrame {
@@ -910,17 +969,22 @@ private enum FakeGIFCompressionOutcome: Sendable {
 private enum FakeGIFCompressionFailure: Error { case expected }
 
 private actor FakeGIFCompressor: GIFCompressing {
+  nonisolated let requiredCacheBytes: Int64
   private let outcome: FakeGIFCompressionOutcome
   private var waiting = false
   private var receivedSettings: GIFCompressionSettings?
+  private var receivedReservations: [CompressedPreviewOutputReservation] = []
 
-  init(outcome: FakeGIFCompressionOutcome = .success) {
+  init(outcome: FakeGIFCompressionOutcome = .success, requiredCacheBytes: Int64 = 0) {
     self.outcome = outcome
+    self.requiredCacheBytes = requiredCacheBytes
   }
 
   func isWaiting() -> Bool { waiting }
 
   func lastSettings() -> GIFCompressionSettings? { receivedSettings }
+
+  func reservations() -> [CompressedPreviewOutputReservation] { receivedReservations }
 
   func compress(
     source: EncodedGIF,
@@ -928,6 +992,12 @@ private actor FakeGIFCompressor: GIFCompressing {
     to reservation: CompressedPreviewOutputReservation
   ) async throws -> EncodedGIF {
     receivedSettings = settings
+    receivedReservations.append(reservation)
+    if requiredCacheBytes > 0 {
+      guard let cache = reservation.cacheDirectory else { throw FakeGIFCompressionFailure.expected }
+      try Data(repeating: 0, count: Int(requiredCacheBytes))
+        .write(to: cache.appendingPathComponent("fixture-cache"))
+    }
     switch outcome {
     case .success:
       try FileManager.default.copyItem(at: source.url, to: reservation.url)

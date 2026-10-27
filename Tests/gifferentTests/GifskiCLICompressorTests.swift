@@ -542,6 +542,41 @@ final class GifskiCLICompressorTests: XCTestCase {
     }
   }
 
+  func testReservedFrameCacheIsUsedBoundedAndCleaned() async throws {
+    for maximumCacheBytes in [Int64(4_096), 1] {
+      let fixture = try makeFixture(delaysCentiseconds: [4, 4, 7], loopsForever: true)
+      defer { try? FileManager.default.removeItem(at: fixture.directory) }
+      let cache = fixture.directory.appendingPathComponent("reserved-cache", isDirectory: true)
+      try FileManager.default.createDirectory(
+        at: cache, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+      let arguments = fixture.directory.appendingPathComponent("arguments.txt")
+      let executable = try fakeExecutable(
+        in: fixture.directory,
+        body: "printf '%s\\n' \"$@\" > '\(arguments.path)'\ncat '\(fixture.source.path)'")
+      let destination = fixture.directory.appendingPathComponent("compressed.gif")
+      let compressor = GifskiCLICompressor(executableURL: executable)
+      XCTAssertEqual(compressor.requiredCacheBytes, 128 * 1_024 * 1_024)
+      let output = CompressedPreviewOutputReservation(
+        url: destination, maximumBytes: 100_000, sourceURL: fixture.source,
+        cacheDirectory: cache, maximumCacheBytes: maximumCacheBytes)
+      do {
+        _ = try await compressor.compress(
+          source: fixture.metadata, settings: GIFCompressionSettings(), to: output)
+        XCTAssertGreaterThan(maximumCacheBytes, 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.path))
+        let received = try String(contentsOf: arguments, encoding: .utf8)
+        XCTAssertTrue(received.contains(cache.path + "/.gifferent-gifski-"))
+      } catch let error as GifskiCompressionError {
+        XCTAssertEqual(maximumCacheBytes, 1)
+        XCTAssertEqual(error, .frameWorkspaceLimitExceeded)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: arguments.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+      }
+      XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: cache.path), [])
+      XCTAssertEqual(try temporaryDirectories(in: fixture.directory), [])
+    }
+  }
+
   func testPinnedRealGifskiCLIWhenPresent() async throws {
     let executable = URL(fileURLWithPath: "/private/tmp/gifski-target-1.34.0/release/gifski")
     guard FileManager.default.isExecutableFile(atPath: executable.path) else {
