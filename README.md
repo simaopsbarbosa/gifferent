@@ -21,6 +21,7 @@ the source license is [AGPL-3.0-or-later](LICENSE). [third-party notices](THIRD-
 use Xcode 26.2 (build 17C52) for the current foundation. open `gifferent.xcodeproj` with the shared `gifferent` scheme, or run:
 
 ```sh
+bash Scripts/ci-local.sh
 bash Scripts/check-toolchain.sh
 python3 Scripts/check-docs.py
 bash Scripts/format-check.sh
@@ -29,6 +30,8 @@ bash Scripts/build.sh
 bash Scripts/test-unit.sh
 bash Scripts/test-ui.sh
 ```
+
+`Scripts/ci-local.sh` runs the same quality and test commands as GitHub Actions. it stops at the first failure and stores build/test logs and `.xcresult` bundles under `.build/ci/`. if only a different Xcode version is installed, `GIFFERENT_SKIP_TOOLCHAIN_CHECK=1 bash Scripts/ci-local.sh` runs the remaining checks locally; that result may differ from CI.
 
 the build and test scripts write logs and `.xcresult` bundles under `.build/ci/`. UI tests need a macOS session that permits Xcode automation. deterministic UI tests use synthetic capture frames and injected clipboard and save adapters without requesting screen access. actual menu bar clicking, screen permission, shortcut delivery, overlay interaction, animated paste in destination apps, and release checks remain acceptance gates in [delivery-plan.md](delivery-plan.md).
 
