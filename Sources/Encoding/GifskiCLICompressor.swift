@@ -28,7 +28,7 @@ struct GifskiCLICompressor: GIFCompressing, Sendable {
   var requiredCacheBytes: Int64 { Self.maximumFrameWorkspaceBytes }
 
   static func availableInMainBundle() -> GifskiCLICompressor? {
-    guard let url = Bundle.main.url(forResource: "gifski", withExtension: nil),
+    guard let url = Bundle.main.url(forAuxiliaryExecutable: "gifski"),
       FileManager.default.isExecutableFile(atPath: url.path)
     else { return nil }
     return GifskiCLICompressor(executableURL: url)

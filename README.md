@@ -2,7 +2,7 @@
 
 a fast, native GIF maker for macOS. summon capture, record while using your Mac, then copy, save, or compress locally.
 
-the app and its test suite are being built in tested iterations. capture selection has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. recording writes a private temporary workspace and opens an animated GIF preview with metadata, trim, speed, loop, copy, and save. the Gifski adapter and bounded destination search have deterministic acceptance and local CLI checks; normal builds show compression as unavailable until the verified encoder is bundled. animated paste into GitHub and the remaining real-Mac/release gates still need acceptance.
+the app and its test suite are being built in tested iterations. capture selection has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. recording writes a private temporary workspace and opens an animated GIF preview with metadata, trim, speed, loop, copy, save, and local Gifski compression. the bundled Gifski 1.34.0 helper supports Apple Silicon and Intel; destination search uses the approved bounded settings. animated paste into GitHub and the remaining real-Mac/release gates still need acceptance.
 
 the source license is [AGPL-3.0-or-later](LICENSE). [third-party notices](THIRD-PARTY-NOTICES.md) track bundled dependencies and tools.
 
@@ -25,6 +25,7 @@ bash Scripts/ci-local.sh
 bash Scripts/check-toolchain.sh
 python3 Scripts/check-docs.py
 python3 Scripts/check-gifski-notices.py
+bash Scripts/build-gifski.sh
 bash Scripts/format-check.sh
 bash Scripts/lint.sh
 bash Scripts/build.sh

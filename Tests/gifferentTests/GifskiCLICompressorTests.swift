@@ -578,7 +578,7 @@ final class GifskiCLICompressorTests: XCTestCase {
   }
 
   func testPinnedRealGifskiCLIWhenPresent() async throws {
-    let executable = URL(fileURLWithPath: "/private/tmp/gifski-target-1.34.0/release/gifski")
+    let executable = Self.pinnedGifskiExecutable
     guard FileManager.default.isExecutableFile(atPath: executable.path) else {
       throw XCTSkip("pinned Gifski 1.34.0 fixture executable is unavailable")
     }
@@ -605,7 +605,7 @@ final class GifskiCLICompressorTests: XCTestCase {
   }
 
   func testPinnedRealGifskiPreservesCanonical24FPSCentisecondSchedule() async throws {
-    let executable = URL(fileURLWithPath: "/private/tmp/gifski-target-1.34.0/release/gifski")
+    let executable = Self.pinnedGifskiExecutable
     guard FileManager.default.isExecutableFile(atPath: executable.path) else {
       throw XCTSkip("pinned Gifski 1.34.0 fixture executable is unavailable")
     }
@@ -630,6 +630,13 @@ final class GifskiCLICompressorTests: XCTestCase {
         emittedDelaysCentiseconds: result.delaysCentiseconds,
         expectedDelaysCentiseconds: sample.expectedDelaysCentiseconds))
     XCTAssertTrue(result.loopsForever)
+  }
+
+  private static var pinnedGifskiExecutable: URL {
+    URL(fileURLWithPath: #filePath)
+      .deletingLastPathComponent()
+      .deletingLastPathComponent()
+      .appendingPathComponent("Vendor/Gifski-1.34.0/gifski")
   }
 
   private struct Fixture {

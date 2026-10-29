@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import hashlib
 import re
+import subprocess
 import sys
 from pathlib import Path
 import tomllib
@@ -83,4 +84,28 @@ for required in ("Jef Poskanzer", "Greg Roelofs", "Stefan Schneider", "Redistrib
 if not (BASE / "gifski" / "LICENSE").is_file():
     fail("missing upstream Gifski license")
 
-print("Gifski 1.34.0 notice inventory and pinned source checks pass")
+binary = ROOT / "Vendor" / "Gifski-1.34.0" / "gifski"
+binary_hash = hashlib.sha256(binary.read_bytes()).hexdigest()
+if binary_hash != "e2ca0614ce3803e1963d4b48923b25e8c20fc4070873a526f1e151b652a87df6":
+    fail(f"unexpected bundled Gifski binary hash: {binary_hash}")
+architectures = subprocess.run(
+    ["lipo", "-archs", str(binary)], check=True, capture_output=True, text=True
+).stdout.strip()
+if architectures != "x86_64 arm64":
+    fail(f"bundled Gifski has unexpected architectures: {architectures}")
+version = subprocess.run(
+    [str(binary), "--version"], check=True, capture_output=True, text=True
+).stdout.strip()
+if version != "gifski 1.34.0":
+    fail(f"bundled Gifski has unexpected version: {version}")
+linked_libraries = subprocess.run(
+    ["otool", "-L", str(binary)], check=True, capture_output=True, text=True
+).stdout.splitlines()[1:]
+for line in linked_libraries:
+    if not line.startswith("\t"):
+        continue  # fat binaries add a heading before each architecture's libraries.
+    library = line.strip().split(" ", 1)[0]
+    if not library.startswith(("/usr/lib/", "/System/Library/")):
+        fail(f"bundled Gifski has a non-system library dependency: {library}")
+
+print("Gifski 1.34.0 binary, dependency graph, and notice inventory checks pass")

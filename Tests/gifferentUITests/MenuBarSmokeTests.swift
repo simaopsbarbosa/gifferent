@@ -378,7 +378,7 @@ final class MenuBarSmokeTests: XCTestCase {
     waitForStatus("selection ready", in: testWindow)
   }
 
-  func testCompressionTargetsAreVisibleAndUnavailableWithoutBackend() {
+  func testCompressionTargetsAreVisibleAndBundledEncoderWorks() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
       exportDirectory.path
@@ -412,7 +412,7 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(discord.label.contains("18 MB target"), discord.label)
     XCTAssertTrue(discord.label.contains("20 MB published maximum"), discord.label)
 
-    XCTAssertTrue(previewWindow.staticTexts["compression-unavailable-status"].exists)
+    XCTAssertFalse(previewWindow.staticTexts["compression-unavailable-status"].exists)
     let quality = previewWindow.sliders["compression-quality-slider"]
     XCTAssertTrue(quality.exists)
     XCTAssertEqual(quality.label, "gifski quality")
@@ -420,7 +420,19 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(
       waitForValue(containing: "90", in: previewWindow.staticTexts["compression-quality-value"])
     )
-    XCTAssertFalse(previewWindow.buttons["compress-preview-button"].exists)
+    let compress = previewWindow.buttons["compress-preview-button"]
+    XCTAssertTrue(waitForEnabled(compress))
+
+    github.click()
+    XCTAssertTrue(previewWindow.buttons["back-to-original-button"].waitForExistence(timeout: 30))
+    XCTAssertTrue(
+      waitForText(
+        containing: "target met",
+        in: previewWindow.staticTexts["compression-target-status"]
+      )
+    )
+    previewWindow.buttons["back-to-original-button"].click()
+    XCTAssertTrue(waitForEnabled(previewWindow.buttons["compress-preview-button"]))
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["save-preview-button"]))
   }

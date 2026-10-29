@@ -1,5 +1,11 @@
 # gifski 1.34.0 source and build audit — 2026-10-24
 
+## bundled implementation update — 2026-10-29
+
+the pinned source was rebuilt with Rust 1.85.0 for `aarch64-apple-darwin` and `x86_64-apple-darwin`, then combined into the checked-in universal helper at `Vendor/Gifski-1.34.0/gifski`. its SHA-256 is `e2ca0614ce3803e1963d4b48923b25e8c20fc4070873a526f1e151b652a87df6`; it reports `gifski 1.34.0` and links only `/usr/lib/libiconv.2.dylib` and `/usr/lib/libSystem.B.dylib`. [`Scripts/build-gifski.sh`](../Scripts/build-gifski.sh) reproduces the two-target build, and [`Scripts/check-gifski-notices.py`](../Scripts/check-gifski-notices.py) checks the binary architecture, hash, version, linkage, dependency inventory, and notice files. Xcode embeds the helper in `Contents/MacOS` and embeds notices in `Contents/Resources/Gifski-1.34.0`.
+
+this activates local compression in normal app builds. this does not close the distribution gates below: the app still needs complete corresponding-source/build delivery review and a signed, notarized bundle verification.
+
 ## status
 
 this is provenance research for a benchmark candidate, not an encoder selection or quality result. the official [release page](https://github.com/ImageOptim/gifski/releases) identifies 1.34.0 as latest. GitHub's official [`main` manifest](https://github.com/ImageOptim/gifski/blob/main/Cargo.toml) reports 1.35.0, but its [release/tag refs](https://github.com/ImageOptim/gifski/releases) do not publish a 1.35.0 release; direct `git ls-remote` below returned no 1.35.0 ref. the 1.35.0 manifest is an unreleased development snapshot and is not this audit's source. the pinned 1.34.0 build and focused 35% ImageMagick comparisons are recorded here and in the [comparison report](gifski-magick-35-2026-10-24.md).

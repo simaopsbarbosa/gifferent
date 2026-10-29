@@ -52,6 +52,8 @@
 		A00000000000000000000087 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000088 /* Assets.xcassets */; };
 		A00000000000000000000090 /* GifskiCLICompressor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000091 /* GifskiCLICompressor.swift */; };
 		A00000000000000000000092 /* GifskiCLICompressorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000093 /* GifskiCLICompressorTests.swift */; };
+		F00000000000000000000001 /* Gifski CLI in Embed Helper Tools */ = {isa = PBXBuildFile; fileRef = F00000000000000000000003 /* gifski */; settings = {ATTRIBUTES = (CodeSignOnCopy, ); }; };
+		F00000000000000000000002 /* Gifski notices in Resources */ = {isa = PBXBuildFile; fileRef = F00000000000000000000004 /* Gifski-1.34.0 notices */; };
 		B36D6337D58625A3368F4353 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		CC393FB6386F51222714AC61 /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
 		E6B3BF668410C593F17CC99D /* Cocoa.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C9098AF55DC2ED2342D2F705 /* Cocoa.framework */; };
@@ -124,6 +126,8 @@
 		C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = gifferentApp.swift; sourceTree = "<group>"; };
 		C9098AF55DC2ED2342D2F705 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = Platforms/MacOSX.platform/Developer/SDKs/MacOSX15.0.sdk/System/Library/Frameworks/Cocoa.framework; sourceTree = DEVELOPER_DIR; };
 		DCB8D59C663FC63226BFA0F7 /* gifferent.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = gifferent.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F00000000000000000000003 /* gifski */ = {isa = PBXFileReference; lastKnownFileType = "compiled.mach-o.executable"; path = Vendor/Gifski-1.34.0/gifski; sourceTree = SOURCE_ROOT; };
+		F00000000000000000000004 /* Gifski-1.34.0 notices */ = {isa = PBXFileReference; lastKnownFileType = folder; path = ThirdPartyNotices/Gifski-1.34.0; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -214,6 +218,8 @@
 				B85EEE5F45021D0C24CDB424 /* Sources */,
 				22B3A887A5B11C2C39B78B53 /* Tests */,
 				A00000000000000000000088 /* Assets.xcassets */,
+				F00000000000000000000003 /* gifski */,
+				F00000000000000000000004 /* Gifski-1.34.0 notices */,
 			);
 			sourceTree = "<group>";
 		};
@@ -331,6 +337,7 @@
 				B0B7F1FF7E36BE6E0D88BC86 /* Sources */,
 				2C4B53AFDB8AFAB7CB96789E /* Frameworks */,
 				A2144E85F6F97DAA567E5DA2 /* Resources */,
+				F00000000000000000000005 /* Embed Helper Tools */,
 			);
 			buildRules = (
 			);
@@ -435,7 +442,19 @@
 			buildActionMask = 2147483647;
 			files = (
 				A00000000000000000000087 /* Assets.xcassets in Resources */,
+				F00000000000000000000002 /* Gifski notices in Resources */,
 			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		F00000000000000000000005 /* Embed Helper Tools */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 6;
+			files = (
+				F00000000000000000000001 /* Gifski CLI in Embed Helper Tools */,
+			);
+			name = "Embed Helper Tools";
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
