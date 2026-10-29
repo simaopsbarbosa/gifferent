@@ -34,7 +34,7 @@ this is a partial package-manifest inventory, not a mechanically verified active
 
 ## blockers
 
-- the cached `gif-dispose 5.0.1` crate declares `MIT OR Apache-2.0` but contains no license text. the tagged upstream tree also appears to omit it. resolve the applicable full license text and notices with the publisher or qualified counsel before distribution; do not infer permission from the manifest alone.
+- the cached `gif-dispose 5.0.1` crate declares `MIT OR Apache-2.0` but contains no license text. choose the declared Apache-2.0 option and include its canonical license text; do not use MIT without its required copyright notice. the final source and binary still need notice verification.
 - the Gifski crate packaging rules omit the top-level `LICENSE`. build and distribute from the matching tagged source repository and retain its AGPL license and publisher notices, rather than relying only on the crate archive.
 - the Gifski publisher documents historical pngquant notices. include the applicable notice material after confirming it against the exact source build.
 - the active transitive dependency graph and every transitive license have not been verified. the audit environment has no configured Rust toolchain; `cargo tree` could not run.

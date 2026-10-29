@@ -24,6 +24,7 @@ use Xcode 26.2 (build 17C52) for the current foundation. open `gifferent.xcodepr
 bash Scripts/ci-local.sh
 bash Scripts/check-toolchain.sh
 python3 Scripts/check-docs.py
+python3 Scripts/check-gifski-notices.py
 bash Scripts/format-check.sh
 bash Scripts/lint.sh
 bash Scripts/build.sh

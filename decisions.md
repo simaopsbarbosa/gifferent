@@ -58,7 +58,7 @@
 ## Gifski quality control approved on 2026-10-24
 
 - after reviewing the complete available-path benchmark, the architect approved replacing the ImageMagick diffusion slider with a Gifski quality slider from 1 to 100, defaulting to 90. use one-point slider steps and map the value directly to Gifski `--quality`.
-- use Gifski 1.34.0 for backend integration and size-search prototyping. the search may vary resolution, sampled frame rate, and Gifski quality; Gifski owns palette generation. preserve the approved quality floor. this selection is conditional for direct distribution: the exact `gif-dispose` notice and complete bundled dependency/source obligations remain unresolved, so do not package or release the executable until those gates close.
+- use Gifski 1.34.0 for backend integration and size-search prototyping. the search may vary resolution, sampled frame rate, and Gifski quality; Gifski owns palette generation. preserve the approved quality floor. for `gif-dispose` 5.0.1, use the declared Apache-2.0 option and include its canonical license text; this avoids relying on the absent MIT copyright placeholder. direct distribution remains gated on the complete dependency/notice and corresponding-source review, pinned build provenance, and final bundle verification. do not release the executable until those gates close.
 - the four-profile full matrix and its resource measurements are in [the benchmark report](Benchmarks/gifski-magick-35-full-matrix-2026-10-24.md). the existing two-profile animated review passed the floor at quality 90; the four-profile still review adds spatial checks but does not establish flicker or full-animation quality.
 
 ## Quality-search floor confirmed on 2026-10-24
@@ -99,7 +99,7 @@
 ## questions to resolve before affected implementation
 
 1. **bundled tool license:** the candidate-level engineering screen is recorded in [the encoder license audit](Benchmarks/encoder-license-audit.md). exact source, dependency, and binary audits remain required before packaging; Gifsicle's distribution terms remain unresolved for this app bundle.
-2. **encoder distribution:** Gifski 1.34.0 is approved for backend integration and search, but direct distribution remains blocked until its exact `gif-dispose` notice, complete dependency license/attribution texts, corresponding source obligations, pinned build provenance, and final bundle contents are verified. ImageMagick is not the release path; its measured time/resource costs and distributable dependency closure are recorded in the benchmark and package-evidence reports.
+2. **encoder distribution:** Gifski 1.34.0 is approved for backend integration and search. `gif-dispose` can use its manifest-declared Apache-2.0 option, documented in [package license evidence](Benchmarks/encoder-package-license-evidence-2026-10-24.md). direct distribution remains blocked until complete dependency license/attribution texts, corresponding source obligations, pinned build provenance, and final bundle contents are verified. ImageMagick is not the release path; its measured time/resource costs and distributable dependency closure are recorded in the benchmark and package-evidence reports.
 3. **clipboard representation:** verify the chosen pasteboard representations by pasting an animated GIF into GitHub on a real Mac. a successful local pasteboard write alone does not establish destination compatibility.
 
 ## research notes, not product decisions
