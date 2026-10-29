@@ -200,6 +200,90 @@ final class OriginalGIFEncoderTests: XCTestCase {
     XCTAssertFalse(FileManager.default.fileExists(atPath: output.path))
   }
 
+  func testEditedGIFPreservesTrimmedFrameContentSpeedAndLoopThroughEncoding() async throws {
+    let directory = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let colors: [[UInt8]] = [
+      [255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255],
+      [255, 255, 0, 255], [255, 0, 255, 255],
+    ]
+    let frames = try colors.enumerated().map { index, color in
+      let url = directory.appendingPathComponent("source-\(index).png")
+      try png(color: color).write(to: url)
+      return CapturedPNGFrame(url: url, timestamp: Double(index) * 0.04)
+    }
+    let source = CapturedPNGSequence(frames: frames)
+    let ranges = [0..<5, 1..<4, 4..<5]
+    for range in ranges {
+      for speed in [0.5, 1.0, 2.0] {
+        for loopMode in [GIFLoopMode.once, .forever] {
+          let edited = try GIFEditModel.apply(
+            GIFEditParameters(
+              frameRange: GIFFrameRange(
+                startIndex: range.lowerBound, endIndexExclusive: range.upperBound),
+              playbackSpeed: speed, loopMode: loopMode), to: source)
+          let output = directory.appendingPathComponent(UUID().uuidString + ".gif")
+          let result = try await ImageIOOriginalGIFEncoder().encode(
+            edited.sequence, loopMode: edited.loopMode,
+            to: PreviewOutputReservation(url: output, maximumBytes: 10_000))
+          let expectedDelay = Int(4 / speed)
+          XCTAssertEqual(result.frameCount, range.count)
+          XCTAssertEqual(
+            result.delaysCentiseconds, Array(repeating: expectedDelay, count: range.count))
+          XCTAssertEqual(result.durationCentiseconds, expectedDelay * range.count)
+          XCTAssertEqual(result.loopsForever, loopMode == .forever)
+          XCTAssertEqual(result.width, 1)
+          XCTAssertEqual(result.height, 1)
+          let imageSource = try XCTUnwrap(CGImageSourceCreateWithURL(output as CFURL, nil))
+          for (outputIndex, sourceIndex) in range.enumerated() {
+            let image = try XCTUnwrap(
+              CGImageSourceCreateImageAtIndex(imageSource, outputIndex, nil))
+            XCTAssertEqual(try rgbaPixel(image), colors[sourceIndex], "frame order/content changed")
+          }
+        }
+      }
+    }
+  }
+
+  func testTrimmedIrregularSequenceKeepsLastSelectedFramesOwnDuration() async throws {
+    let directory = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let frame = directory.appendingPathComponent("frame.png")
+    try png(color: [255, 0, 0, 255]).write(to: frame)
+    let source = CapturedPNGSequence(
+      frames: [0.0, 0.02, 0.07, 0.15].map {
+        CapturedPNGFrame(url: frame, timestamp: $0)
+      })
+    for (range, expectedDelays) in [(1..<3, [5, 8]), (2..<3, [8]), (3..<4, [8])] {
+      let edited = try GIFEditModel.apply(
+        GIFEditParameters(
+          frameRange: GIFFrameRange(
+            startIndex: range.lowerBound, endIndexExclusive: range.upperBound),
+          playbackSpeed: 1, loopMode: .once), to: source)
+      let result = try await ImageIOOriginalGIFEncoder().encode(
+        edited.sequence, loopMode: edited.loopMode,
+        to: PreviewOutputReservation(
+          url: directory.appendingPathComponent(UUID().uuidString + ".gif"), maximumBytes: 10_000))
+      XCTAssertEqual(result.delaysCentiseconds, expectedDelays)
+      XCTAssertEqual(result.durationCentiseconds, expectedDelays.reduce(0, +))
+    }
+  }
+
+  private func rgbaPixel(_ image: CGImage) throws -> [UInt8] {
+    var bytes = [UInt8](repeating: 0, count: 4)
+    try bytes.withUnsafeMutableBytes { storage in
+      let context = try XCTUnwrap(
+        CGContext(
+          data: storage.baseAddress, width: 1, height: 1, bitsPerComponent: 8,
+          bytesPerRow: 4, space: CGColorSpaceCreateDeviceRGB(),
+          bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+      context.draw(image, in: CGRect(x: 0, y: 0, width: 1, height: 1))
+    }
+    return bytes
+  }
+
   private func png(color: [UInt8]) throws -> Data {
     let frame = RecordingFrame(
       timestampNanoseconds: 1,

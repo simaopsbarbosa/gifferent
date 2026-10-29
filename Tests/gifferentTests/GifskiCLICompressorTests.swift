@@ -85,6 +85,15 @@ final class GifskiCLICompressorTests: XCTestCase {
     XCTAssertTrue(original.candidates.allSatisfy { $0.qualityPercent >= 90 })
   }
 
+  func testSizeSearchQualityStepsReachFloorFromNonMultipleOfFive() {
+    for (selected, expected) in [(99, [99, 94, 90]), (91, [91, 90]), (1, [90])] {
+      let plan = GIFSizeSearchPlan(
+        settings: GIFCompressionSettings(qualityPercent: selected),
+        frameRates: [.fps24], eligibleScales: [.original])
+      XCTAssertEqual(plan.candidates.map(\.qualityPercent), expected)
+    }
+  }
+
   func testFrameSamplerUsesCumulativeSourceTimingAndPreservesExactDuration() throws {
     let sample = try GIFFrameSampler.sample(
       delaysCentiseconds: [3, 8, 4], frameRate: .fps24)
@@ -120,6 +129,10 @@ final class GifskiCLICompressorTests: XCTestCase {
     XCTAssertThrowsError(try GIFFrameSampler.sample(delaysCentiseconds: [0], frameRate: .fps24))
     XCTAssertThrowsError(
       try GIFFrameSampler.sample(delaysCentiseconds: [65_536], frameRate: .fps24))
+    XCTAssertThrowsError(
+      try GIFFrameSampler.sample(delaysCentiseconds: [Int.max], frameRate: .fps24))
+    XCTAssertThrowsError(
+      try GIFFrameSampler.sample(delaysCentiseconds: [Int.max, 1], frameRate: .fps24))
   }
 
   func testFinalFrameDelayPatchPreservesGIFAndSetsRequestedDuration() throws {
@@ -173,6 +186,31 @@ final class GifskiCLICompressorTests: XCTestCase {
     XCTAssertFalse(missed.reachedTarget)
   }
 
+  @MainActor
+  func testDiscordSearchPreservesDestinationAndUsesItsTarget() async throws {
+    let settings = GIFCompressionSettings(destination: .discord, qualityPercent: 90)
+    let plan = GIFSizeSearchPlan(
+      settings: settings, frameRates: [.fps24], eligibleScales: [.original])
+    let source = EncodedGIF(
+      url: URL(fileURLWithPath: "/tmp/source.gif"), width: 32, height: 24,
+      frameCount: 1, delaysCentiseconds: [100], durationCentiseconds: 100,
+      loopsForever: true, fileBytes: 20_000_000)
+    let outputs = SearchOutputFactory(source: source, sizes: [17_000_000])
+    let result = try await GIFSizeSearchEngine.search(
+      source: source, settings: settings, plan: plan,
+      compress: { candidate in
+        XCTAssertEqual(candidate.destination, .discord)
+        return await outputs.make(candidate)
+      },
+      discard: { _ in },
+      onProgress: { _, _, candidate in
+        XCTAssertEqual(candidate.destination, .discord)
+      })
+    XCTAssertEqual(result.settings.destination, .discord)
+    XCTAssertTrue(result.reachedTarget)
+    XCTAssertEqual(result.gif.fileBytes, 17_000_000)
+  }
+
   func testSizeSearchCancellationDiscardsBestCandidateAndPropagatesCancellation() async throws {
     let settings = GIFCompressionSettings(scale: .original, qualityPercent: 100)
     let plan = GIFSizeSearchPlan(settings: settings)
@@ -213,6 +251,83 @@ final class GifskiCLICompressorTests: XCTestCase {
     }
     let discardedURLs = await discarded.urls
     XCTAssertEqual(discardedURLs, [bestURL])
+  }
+
+  @MainActor
+  func testSizeSearchFailureRemovesPreviouslyRetainedCandidateFromDisk() async throws {
+    for invalidMetadata in [false, true] {
+      let fixture = try makeFixture(delaysCentiseconds: [4, 4, 7], loopsForever: true)
+      defer { try? FileManager.default.removeItem(at: fixture.directory) }
+      let settings = GIFCompressionSettings(qualityPercent: 95)
+      let plan = GIFSizeSearchPlan(
+        settings: settings, frameRates: [.fps24], eligibleScales: [.original])
+      var attempt = 0
+      var written: [URL] = []
+      do {
+        _ = try await GIFSizeSearchEngine.search(
+          source: fixture.metadata, settings: settings, plan: plan,
+          compress: { _ in
+            attempt += 1
+            if attempt == 2, !invalidMetadata {
+              throw GifskiCompressionError.processFailed(7, "fixture failure")
+            }
+            let url = fixture.directory.appendingPathComponent("candidate-\(attempt).gif")
+            try FileManager.default.copyItem(at: fixture.source, to: url)
+            written.append(url)
+            let output = try GIFMetadataInspector().inspect(url)
+            guard attempt == 2 else { return output }
+            return EncodedGIF(
+              url: output.url, width: output.width, height: output.height,
+              frameCount: output.frameCount, delaysCentiseconds: output.delaysCentiseconds,
+              durationCentiseconds: output.durationCentiseconds + 1,
+              loopsForever: output.loopsForever, fileBytes: output.fileBytes)
+          },
+          discard: { output in try? FileManager.default.removeItem(at: output.url) })
+        XCTFail("expected failed search")
+      } catch let error as GifskiCompressionError {
+        XCTAssertEqual(
+          error, invalidMetadata ? .invalidOutput : .processFailed(7, "fixture failure"))
+      }
+      XCTAssertEqual(attempt, 2)
+      XCTAssertFalse(written.isEmpty)
+      XCTAssertTrue(written.allSatisfy { !FileManager.default.fileExists(atPath: $0.path) })
+      XCTAssertTrue(FileManager.default.fileExists(atPath: fixture.source.path))
+    }
+  }
+
+  func testCancellationWhileDiscardingFinalAttemptAlsoDiscardsBest() async throws {
+    let settings = GIFCompressionSettings(qualityPercent: 95)
+    let plan = GIFSizeSearchPlan(
+      settings: settings, frameRates: [.fps24], eligibleScales: [.original])
+    let source = EncodedGIF(
+      url: URL(fileURLWithPath: "/tmp/search-source.gif"), width: 32, height: 24,
+      frameCount: 1, delaysCentiseconds: [100], durationCentiseconds: 100,
+      loopsForever: true, fileBytes: 20_000_000)
+    let outputs = SearchOutputFactory(source: source, sizes: [8_000_000, 9_000_000])
+    let discarded = SearchDiscardRecorder()
+    let finalDiscardStarted = expectation(description: "final attempt is being discarded")
+    let search = Task {
+      try await GIFSizeSearchEngine.search(
+        source: source, settings: settings, plan: plan,
+        compress: { candidate in await outputs.make(candidate) },
+        discard: { output in
+          await discarded.append(output.url)
+          if output.url.lastPathComponent == "candidate-1.gif" {
+            finalDiscardStarted.fulfill()
+            try? await Task.sleep(for: .seconds(30))
+          }
+        })
+    }
+    await fulfillment(of: [finalDiscardStarted], timeout: 3)
+    search.cancel()
+    do {
+      _ = try await search.value
+      XCTFail("expected cancellation")
+    } catch is CancellationError {
+      // expected
+    }
+    let discardedURLs = await discarded.urls
+    XCTAssertEqual(discardedURLs.map(\.lastPathComponent), ["candidate-1.gif", "candidate-0.gif"])
   }
 
   func testFakeExecutableReceivesArgumentsAndProducesValidatedOutput() async throws {
@@ -309,6 +424,36 @@ final class GifskiCLICompressorTests: XCTestCase {
     XCTAssertEqual(try GIFMetadataInspector().inspect(destination), compressed)
   }
 
+  func testInvalidEncoderLoopDimensionsAndCadenceAreRejectedAndCleaned() async throws {
+    for mismatch in ["loop", "dimensions", "cadence"] {
+      let fixture = try makeFixture(delaysCentiseconds: [4, 4, 7], loopsForever: true)
+      defer { try? FileManager.default.removeItem(at: fixture.directory) }
+      let replacement = try makeFixture(
+        delaysCentiseconds: mismatch == "cadence" ? [5, 5, 5] : [4, 4, 7],
+        loopsForever: mismatch != "loop")
+      defer { try? FileManager.default.removeItem(at: replacement.directory) }
+      let executable = try fakeExecutable(
+        in: fixture.directory, body: "cat '\(replacement.source.path)'")
+      let destination = fixture.directory.appendingPathComponent("compressed.gif")
+      do {
+        _ = try await GifskiCLICompressor(executableURL: executable).compress(
+          source: fixture.metadata,
+          settings: GIFCompressionSettings(
+            scale: mismatch == "dimensions" ? .fiftyPercent : .original),
+          to: reservation(fixture, destination: destination, maximumBytes: 100_000))
+        XCTFail("expected invalid \(mismatch)")
+      } catch {
+        XCTAssertTrue(
+          (error as? GifskiCompressionError) == .invalidOutput
+            || (error as? OriginalGIFEncodingError) == .invalidOutput,
+          "unexpected error: \(error)")
+      }
+      XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+      XCTAssertEqual(try temporaryDirectories(in: fixture.directory), [])
+      XCTAssertEqual(try GIFMetadataInspector().inspect(fixture.source), fixture.metadata)
+    }
+  }
+
   func testProcessFailureBoundsStderrAndCleansOutputAndFrameWorkspace() async throws {
     let fixture = try makeFixture(delayCentiseconds: 5, loopsForever: true)
     defer { try? FileManager.default.removeItem(at: fixture.directory) }
@@ -394,6 +539,41 @@ final class GifskiCLICompressorTests: XCTestCase {
         source: fixture.metadata, scale: .original, in: working, maximumBytes: 1)
     ) { error in
       XCTAssertEqual(error as? GifskiCompressionError, .frameWorkspaceLimitExceeded)
+    }
+  }
+
+  func testReservedFrameCacheIsUsedBoundedAndCleaned() async throws {
+    for maximumCacheBytes in [Int64(4_096), 1] {
+      let fixture = try makeFixture(delaysCentiseconds: [4, 4, 7], loopsForever: true)
+      defer { try? FileManager.default.removeItem(at: fixture.directory) }
+      let cache = fixture.directory.appendingPathComponent("reserved-cache", isDirectory: true)
+      try FileManager.default.createDirectory(
+        at: cache, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+      let arguments = fixture.directory.appendingPathComponent("arguments.txt")
+      let executable = try fakeExecutable(
+        in: fixture.directory,
+        body: "printf '%s\\n' \"$@\" > '\(arguments.path)'\ncat '\(fixture.source.path)'")
+      let destination = fixture.directory.appendingPathComponent("compressed.gif")
+      let compressor = GifskiCLICompressor(executableURL: executable)
+      XCTAssertEqual(compressor.requiredCacheBytes, 128 * 1_024 * 1_024)
+      let output = CompressedPreviewOutputReservation(
+        url: destination, maximumBytes: 100_000, sourceURL: fixture.source,
+        cacheDirectory: cache, maximumCacheBytes: maximumCacheBytes)
+      do {
+        _ = try await compressor.compress(
+          source: fixture.metadata, settings: GIFCompressionSettings(), to: output)
+        XCTAssertGreaterThan(maximumCacheBytes, 1)
+        XCTAssertTrue(FileManager.default.fileExists(atPath: destination.path))
+        let received = try String(contentsOf: arguments, encoding: .utf8)
+        XCTAssertTrue(received.contains(cache.path + "/.gifferent-gifski-"))
+      } catch let error as GifskiCompressionError {
+        XCTAssertEqual(maximumCacheBytes, 1)
+        XCTAssertEqual(error, .frameWorkspaceLimitExceeded)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: arguments.path))
+        XCTAssertFalse(FileManager.default.fileExists(atPath: destination.path))
+      }
+      XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: cache.path), [])
+      XCTAssertEqual(try temporaryDirectories(in: fixture.directory), [])
     }
   }
 

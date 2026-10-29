@@ -13,7 +13,9 @@ struct GifferentApp: App {
         .resizable()
         .interpolation(.high)
         .renderingMode(.original)
+        .scaledToFit()
         .frame(width: 16, height: 16)
+        .clipped()
         .accessibilityLabel("gifferent")
         .accessibilityIdentifier("menu-bar-mark")
     }

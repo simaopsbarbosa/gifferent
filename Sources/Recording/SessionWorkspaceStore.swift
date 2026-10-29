@@ -56,7 +56,7 @@ struct CompressedPreviewOutputReservation: Sendable, Equatable {
   let maximumBytes: Int64
   let sourceURL: URL?
   let cacheDirectory: URL?
-  /// the ImageMagick pixel cache must stay within this separately reserved workspace.
+  /// temporary encoder frames or pixel caches must stay within this reserved workspace.
   let maximumCacheBytes: Int64
   let token: UUID
 
@@ -84,6 +84,12 @@ struct CapturedPNGFrame: Sendable, Equatable {
 
 struct CapturedPNGSequence: Sendable, Equatable {
   let frames: [CapturedPNGFrame]
+  let finalFrameDuration: TimeInterval?
+
+  init(frames: [CapturedPNGFrame], finalFrameDuration: TimeInterval? = nil) {
+    self.frames = frames
+    self.finalFrameDuration = finalFrameDuration
+  }
 }
 
 actor SessionWorkspaceStore {

@@ -1,26 +1,26 @@
 {
   "images" : [
     {
-      "filename" : "mark-light.svg",
-      "idiom" : "universal",
-      "scale" : "1x",
       "appearances" : [
         {
           "appearance" : "luminosity",
           "value" : "light"
         }
-      ]
+      ],
+      "filename" : "mark-light.svg",
+      "idiom" : "universal",
+      "scale" : "1x"
     },
     {
-      "filename" : "mark-dark.svg",
-      "idiom" : "universal",
-      "scale" : "1x",
       "appearances" : [
         {
           "appearance" : "luminosity",
           "value" : "dark"
         }
-      ]
+      ],
+      "filename" : "mark-dark.svg",
+      "idiom" : "universal",
+      "scale" : "1x"
     }
   ],
   "info" : {

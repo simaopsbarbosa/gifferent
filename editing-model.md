@@ -8,6 +8,8 @@ this document describes the deterministic sequence transform used by the first-r
 
 playback speed in the interface is from `0.5` through `2` in `0.1` steps. `1` keeps the source timing, values above `1` make playback faster, and values below `1` make it slower. output timestamps start at zero and use `(source timestamp - first selected timestamp) / playback speed`, preserving each selected interval subject to floating-point representation.
 
+`CapturedPNGSequence.finalFrameDuration` carries the terminal interval when an edit cannot express it with a later frame-start timestamp. a trim ending inside the source uses the next source timestamp to retain the last selected frame's own interval. a trim reaching the source end uses its explicit terminal interval, or the last source interval when none is available; a single-frame source defaults to `1 / 24` second. speed scales this terminal interval too, so a one-frame trim at 2× does not revert to normal-speed timing. the encoder rounds the complete schedule to cumulative centisecond boundaries and rejects nonpositive or unrepresentable intervals. coordinator validation compares every expected delay before publishing a replacement.
+
 `GIFLoopMode.forever` and `.once` pass the selected loop intent alongside the edited sequence. forever output uses a zero-count loop extension; once output omits the loop extension. the ImageIO candidate reads back GIF metadata before an edit becomes the current preview. this does not select a release encoder.
 
 ## errors
@@ -17,3 +19,5 @@ empty sequences, empty or out-of-bounds ranges, nonpositive or nonfinite speeds,
 ## verification boundary
 
 unit and coordinator tests cover range behavior, frame identity and order, timing transformation, loop intent, newest-request handling, workspace cleanup, and export of the current validated GIF. deterministic UI acceptance checks the two accessible handles, speed control, and loop control. real screen capture and animated paste into GitHub still require real-Mac acceptance.
+
+encoded fixture tests also decode selected frame colors/order and exact delays across boundary trims, irregular timestamps, speed extremes, and both loop modes. UI acceptance changes the trim, speed and loop settings, then reads copied and saved GIF bytes and metadata. the detailed matrix and evidence are in [the editing and optimization acceptance report](editing-optimization-evidence-2026-10-25.md).

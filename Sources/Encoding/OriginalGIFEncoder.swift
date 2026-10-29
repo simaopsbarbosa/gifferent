@@ -313,7 +313,8 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
       guard !sequence.frames.isEmpty, reservation.maximumBytes > 0,
         !FileManager.default.fileExists(atPath: reservation.url.path)
       else { throw OriginalGIFEncodingError.invalidSequence }
-      let delays = try Self.frameDelaysCentiseconds(for: sequence.frames.map(\.timestamp))
+      let delays = try Self.frameDelaysCentiseconds(
+        for: sequence.frames.map(\.timestamp), finalFrameDuration: sequence.finalFrameDuration)
       var dimensions: (width: Int, height: Int)?
 
       let descriptor = open(
@@ -411,7 +412,9 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
     }
   }
 
-  static func frameDelaysCentiseconds(for timestamps: [TimeInterval]) throws -> [Int] {
+  static func frameDelaysCentiseconds(
+    for timestamps: [TimeInterval], finalFrameDuration: TimeInterval? = nil
+  ) throws -> [Int] {
     guard !timestamps.isEmpty else { throw OriginalGIFEncodingError.invalidSequence }
     guard timestamps.allSatisfy(\.isFinite), timestamps.allSatisfy({ $0 >= 0 }) else {
       throw OriginalGIFEncodingError.invalidTimestamp
@@ -427,10 +430,19 @@ struct ImageIOOriginalGIFEncoder: OriginalGIFEncoding {
       throw OriginalGIFEncodingError.invalidTimestamp
     }
 
-    let finalInterval =
-      nanoseconds.count > 1
-      ? nanoseconds[nanoseconds.count - 1] - nanoseconds[nanoseconds.count - 2]
-      : 41_666_667
+    let finalInterval: Int64
+    if let finalFrameDuration {
+      let value = finalFrameDuration * 1_000_000_000
+      guard value.isFinite, value > 0, value < Double(Int64.max) else {
+        throw OriginalGIFEncodingError.invalidTimestamp
+      }
+      finalInterval = Int64(value.rounded(.toNearestOrAwayFromZero))
+    } else {
+      finalInterval =
+        nanoseconds.count > 1
+        ? nanoseconds[nanoseconds.count - 1] - nanoseconds[nanoseconds.count - 2]
+        : 41_666_667
+    }
     let duration = nanoseconds[nanoseconds.count - 1] - nanoseconds[0]
     let (totalNanoseconds, overflow) = duration.addingReportingOverflow(finalInterval)
     guard !overflow else { throw OriginalGIFEncodingError.invalidTimestamp }

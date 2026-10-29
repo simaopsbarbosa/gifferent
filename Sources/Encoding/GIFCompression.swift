@@ -173,6 +173,9 @@ enum GIFFrameSampler {
       guard !overflow else { throw GifskiCompressionError.invalidSource }
       total = next
     }
+    guard total <= 65_535 else {
+      throw GifskiCompressionError.unrepresentableTiming
+    }
     let rate = frameRate.framesPerSecond
     let frameCount = max(1, Int(floor(Double(total) * rate / 100)))
     guard frameCount > 0, frameCount < 1_000_000 else {
@@ -193,7 +196,7 @@ enum GIFFrameSampler {
     boundaries.insert(0, at: 0)
     boundaries.append(total)
     let delays = zip(boundaries, boundaries.dropFirst()).map { $1 - $0 }
-    guard delays.allSatisfy({ $0 > 0 }), total <= 65_535 else {
+    guard delays.allSatisfy({ $0 > 0 }) else {
       throw GifskiCompressionError.unrepresentableTiming
     }
     return GIFFrameSample(
@@ -287,8 +290,10 @@ enum GIFSizeSearchEngine {
     do {
       for (offset, candidate) in plan.candidates.enumerated() {
         try Task.checkCancellation()
-        await onProgress(offset + 1, plan.candidates.count, candidate.settings)
-        let output = try await compress(candidate.settings)
+        var candidateSettings = candidate.settings
+        candidateSettings.destination = settings.destination
+        await onProgress(offset + 1, plan.candidates.count, candidateSettings)
+        let output = try await compress(candidateSettings)
         do {
           try Task.checkCancellation()
         } catch {
@@ -303,11 +308,12 @@ enum GIFSizeSearchEngine {
         }
         if best == nil || output.fileBytes < best!.0.fileBytes {
           if let prior = best { await discard(prior.0) }
-          best = (output, candidate.settings)
+          best = (output, candidateSettings)
         } else {
           await discard(output)
         }
       }
+      try Task.checkCancellation()
     } catch {
       if let best { await discard(best.0) }
       throw error
@@ -330,6 +336,9 @@ enum GIFCompressionAction: Equatable {
 }
 
 protocol GIFCompressing: Sendable {
+  /// temporary frame or cache bytes to reserve in addition to the output file.
+  var requiredCacheBytes: Int64 { get }
+
   /// writes a local replacement and returns its metadata.
   ///
   /// implementations must stop promptly on cancellation and keep output and cache use within
@@ -339,6 +348,10 @@ protocol GIFCompressing: Sendable {
     settings: GIFCompressionSettings,
     to reservation: CompressedPreviewOutputReservation
   ) async throws -> EncodedGIF
+}
+
+extension GIFCompressing {
+  var requiredCacheBytes: Int64 { 0 }
 }
 
 func validateCompressedGIFOutput(

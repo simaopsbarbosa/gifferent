@@ -1,6 +1,6 @@
 # destination limits and mark usage research
 
-accessed 2026-10-24. this is a source snapshot for iteration 3. verify again before release.
+accessed 2026-10-24. upload-limit claims and account caveats rechecked against the same official GitHub and Discord pages on 2026-10-25; the 10 MB / 20 MB claims remain unchanged. this is a source snapshot for iteration 3. verify again before release.
 
 ## published upload limits
 

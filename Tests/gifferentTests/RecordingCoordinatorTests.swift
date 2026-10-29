@@ -97,10 +97,67 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(summary.settings.qualityPercent, 90)
   }
 
+  func testCompressionAndSearchReserveCacheInsideCombinedSessionBudget() async throws {
+    for searchesDestination in [false, true] {
+      let maximumSessionBytes: Int64 = 4_096
+      let fixture = makeFixture(maximumBytes: maximumSessionBytes)
+      defer { try? FileManager.default.removeItem(at: fixture.base) }
+      let compressor = FakeGIFCompressor(requiredCacheBytes: 512)
+      let (coordinator, sessionID, original, originalBytes) = try await makeReadyCoordinator(
+        workspace: fixture.workspace, compressor: compressor)
+      if searchesDestination {
+        coordinator.startSizeSearch(for: .github)
+      } else {
+        coordinator.startCompression()
+      }
+      await waitForCompression(coordinator)
+      XCTAssertEqual(coordinator.compressionAction, .compressed)
+      let reservations = await compressor.reservations()
+      XCTAssertEqual(reservations.count, searchesDestination ? 4 : 1)
+      let first = try XCTUnwrap(reservations.first)
+      XCTAssertEqual(
+        first.maximumBytes + first.maximumCacheBytes, maximumSessionBytes - originalBytes)
+      for reservation in reservations {
+        XCTAssertEqual(reservation.maximumCacheBytes, 512)
+        let cache = try XCTUnwrap(reservation.cacheDirectory)
+        XCTAssertFalse(FileManager.default.fileExists(atPath: cache.path))
+      }
+      let snapshot = try await fixture.workspace.snapshot(for: sessionID)
+      XCTAssertEqual(snapshot.temporaryBytes, originalBytes + original.fileBytes)
+      XCTAssertLessThanOrEqual(snapshot.temporaryBytes, maximumSessionBytes)
+    }
+  }
+
+  func testCompressionAndSearchRejectCacheBeyondRemainingSessionBudgetBeforeLaunch() async throws {
+    for searchesDestination in [false, true] {
+      let fixture = makeFixture(maximumBytes: 1_000)
+      defer { try? FileManager.default.removeItem(at: fixture.base) }
+      let compressor = FakeGIFCompressor(requiredCacheBytes: 1_000)
+      let (coordinator, sessionID, original, originalBytes) = try await makeReadyCoordinator(
+        workspace: fixture.workspace, compressor: compressor)
+      if searchesDestination {
+        coordinator.startSizeSearch(for: .github)
+      } else {
+        coordinator.startCompression()
+      }
+      await waitForCompression(coordinator)
+      XCTAssertEqual(coordinator.compressionAction, .failed)
+      XCTAssertEqual(coordinator.displayedPreviewGIF, original)
+      let reservations = await compressor.reservations()
+      XCTAssertTrue(reservations.isEmpty)
+      let snapshot = try await fixture.workspace.snapshot(for: sessionID)
+      XCTAssertEqual(snapshot.temporaryBytes, originalBytes)
+      assertNoCompressedOutputs(for: sessionID, in: fixture.root)
+      let directory = original.url.deletingLastPathComponent()
+      let contents = try FileManager.default.contentsOfDirectory(atPath: directory.path)
+      XCTAssertFalse(contents.contains { $0.hasPrefix("compression-cache-") })
+    }
+  }
+
   func testCompressionFailureKeepsOriginalAndCleansReservation() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
-    let compressor = FakeGIFCompressor(outcome: .failure)
+    let compressor = FakeGIFCompressor(outcome: .failure, requiredCacheBytes: 512)
     let (coordinator, sessionID, original, originalBytes) = try await makeReadyCoordinator(
       workspace: fixture.workspace,
       compressor: compressor
@@ -170,7 +227,7 @@ final class RecordingCoordinatorTests: XCTestCase {
   func testCompressionCancellationKeepsOriginalAndCleansReservation() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
-    let compressor = FakeGIFCompressor(outcome: .cancellable)
+    let compressor = FakeGIFCompressor(outcome: .cancellable, requiredCacheBytes: 512)
     let (coordinator, sessionID, original, originalBytes) = try await makeReadyCoordinator(
       workspace: fixture.workspace,
       compressor: compressor
@@ -640,6 +697,52 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fixture.root.path), [])
   }
 
+  func testTruthfullyReportedWrongGIFTimingIsRejectedAndCapturedFramesRemainRetryable() async throws
+  {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let encoder = WrongTimingFirstGIFEncoder()
+    let coordinator = RecordingCoordinator(
+      streamFactory: FakeRecordingStreamFactory(
+        stream: FakeRecordingStream(framesOnStart: [
+          validFrame(at: 100_000_000), validFrame(at: 200_000_000), validFrame(at: 300_000_000),
+        ])),
+      workspace: fixture.workspace, gifEncoder: encoder)
+    await coordinator.start(target: .display(1), showsCursor: false)
+    await coordinator.stop()
+    await waitUntil(timeout: .seconds(5)) {
+      if case .captured = coordinator.state { coordinator.previewAction == .failed } else { false }
+    }
+    guard case .captured(let sessionID, let snapshot) = coordinator.state else {
+      return XCTFail("expected valid captured frames after rejecting the GIF timing")
+    }
+    XCTAssertEqual(snapshot.frameCount, 3)
+    let firstOutput = await encoder.firstOutput()
+    let wrongOutput = try XCTUnwrap(firstOutput)
+    XCTAssertEqual(wrongOutput.frameCount, 3)
+    XCTAssertEqual(wrongOutput.width, 1)
+    XCTAssertEqual(wrongOutput.height, 1)
+    XCTAssertTrue(wrongOutput.loopsForever)
+    XCTAssertEqual(wrongOutput.delaysCentiseconds, [5, 5, 5])
+    XCTAssertFalse(FileManager.default.fileExists(atPath: wrongOutput.url.path))
+    let retained = try await fixture.workspace.pngSequence(for: sessionID)
+    XCTAssertEqual(retained.frames.count, 3)
+    XCTAssertTrue(
+      retained.frames.allSatisfy { FileManager.default.fileExists(atPath: $0.url.path) })
+    let closedWithoutDiscard = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertFalse(closedWithoutDiscard)
+
+    coordinator.retryPreviewEncoding()
+    await waitForPreview(coordinator)
+    guard case .previewReady(_, _, let validOutput) = coordinator.state else {
+      return XCTFail("expected the retained capture to support a successful retry")
+    }
+    XCTAssertEqual(validOutput.delaysCentiseconds, [10, 10, 10])
+    let discarded = await coordinator.closePreview(discardUnexported: true)
+    XCTAssertTrue(discarded)
+    XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fixture.root.path), [])
+  }
+
   func testCopyFailureAndSaveCancellationKeepPreviewAndRequireDiscard() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
@@ -812,7 +915,9 @@ final class RecordingCoordinatorTests: XCTestCase {
       "gifferent-session-\(sessionID.rawValue.uuidString)", isDirectory: true)
     let contents =
       (try? FileManager.default.contentsOfDirectory(atPath: sessionDirectory.path)) ?? []
-    XCTAssertFalse(contents.contains { $0.hasPrefix("compressed-") }, file: file, line: line)
+    XCTAssertFalse(
+      contents.contains { $0.hasPrefix("compressed-") || $0.hasPrefix("compression-cache-") },
+      file: file, line: line)
   }
 
   private func validFrame(at timestamp: Int64) -> RecordingFrame {
@@ -864,17 +969,22 @@ private enum FakeGIFCompressionOutcome: Sendable {
 private enum FakeGIFCompressionFailure: Error { case expected }
 
 private actor FakeGIFCompressor: GIFCompressing {
+  nonisolated let requiredCacheBytes: Int64
   private let outcome: FakeGIFCompressionOutcome
   private var waiting = false
   private var receivedSettings: GIFCompressionSettings?
+  private var receivedReservations: [CompressedPreviewOutputReservation] = []
 
-  init(outcome: FakeGIFCompressionOutcome = .success) {
+  init(outcome: FakeGIFCompressionOutcome = .success, requiredCacheBytes: Int64 = 0) {
     self.outcome = outcome
+    self.requiredCacheBytes = requiredCacheBytes
   }
 
   func isWaiting() -> Bool { waiting }
 
   func lastSettings() -> GIFCompressionSettings? { receivedSettings }
+
+  func reservations() -> [CompressedPreviewOutputReservation] { receivedReservations }
 
   func compress(
     source: EncodedGIF,
@@ -882,6 +992,12 @@ private actor FakeGIFCompressor: GIFCompressing {
     to reservation: CompressedPreviewOutputReservation
   ) async throws -> EncodedGIF {
     receivedSettings = settings
+    receivedReservations.append(reservation)
+    if requiredCacheBytes > 0 {
+      guard let cache = reservation.cacheDirectory else { throw FakeGIFCompressionFailure.expected }
+      try Data(repeating: 0, count: Int(requiredCacheBytes))
+        .write(to: cache.appendingPathComponent("fixture-cache"))
+    }
     switch outcome {
     case .success:
       try FileManager.default.copyItem(at: source.url, to: reservation.url)
@@ -1099,6 +1215,37 @@ private actor FailFirstGIFEncoder: OriginalGIFEncoding {
       throw OriginalGIFEncodingError.encodingFailed
     }
     return try await ImageIOOriginalGIFEncoder().encode(sequence, to: reservation)
+  }
+}
+
+private actor WrongTimingFirstGIFEncoder: OriginalGIFEncoding {
+  private var recordedFirstOutput: EncodedGIF?
+
+  func firstOutput() -> EncodedGIF? { recordedFirstOutput }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    try await encode(sequence, loopMode: .forever, to: reservation)
+  }
+
+  func encode(
+    _ sequence: CapturedPNGSequence,
+    loopMode: GIFLoopMode,
+    to reservation: PreviewOutputReservation
+  ) async throws -> EncodedGIF {
+    if recordedFirstOutput == nil {
+      let wrongTiming = CapturedPNGSequence(
+        frames: sequence.frames.map { CapturedPNGFrame(url: $0.url, timestamp: $0.timestamp / 2) },
+        finalFrameDuration: sequence.finalFrameDuration.map { $0 / 2 })
+      let actual = try await ImageIOOriginalGIFEncoder().encode(
+        wrongTiming, loopMode: loopMode, to: reservation)
+      recordedFirstOutput = try GIFMetadataInspector().inspect(actual.url)
+      return actual
+    }
+    return try await ImageIOOriginalGIFEncoder().encode(
+      sequence, loopMode: loopMode, to: reservation)
   }
 }
 
