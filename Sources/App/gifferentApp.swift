@@ -44,6 +44,9 @@ private final class GifferentAppDelegate: NSObject, NSApplicationDelegate {
       window.center()
       window.makeKeyAndOrderFront(nil)
       testingWindow = window
+      if ProcessInfo.processInfo.arguments.contains("--ui-testing-preview") {
+        GifferentRuntime.shared.start()
+      }
     }
   #endif
 

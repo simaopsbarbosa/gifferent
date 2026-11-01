@@ -1,22 +1,5 @@
 import Foundation
 
-enum GIFCompressionFrameRate: Int, CaseIterable, Identifiable, Sendable {
-  case fps50 = 50
-  case fps45 = 45
-  case fps30 = 30
-  case fps24 = 24
-  case fps20 = 20
-  case fps18 = 18
-  case fps15 = 15
-  case fps10 = 10
-
-  static let exportPresets: [Self] = [.fps50, .fps45, .fps30, .fps24, .fps20, .fps15, .fps10]
-
-  var id: Self { self }
-  var framesPerSecond: Double { Double(rawValue) }
-  var label: String { String(format: "%g", framesPerSecond) }
-}
-
 struct GIFFrameRange: Sendable, Equatable {
   let startIndex: Int
   let endIndexExclusive: Int
@@ -31,9 +14,6 @@ struct GIFEditParameters: Sendable, Equatable {
   var frameRange: GIFFrameRange
   var playbackSpeed: Double
   var loopMode: GIFLoopMode
-  var frameRate: GIFCompressionFrameRate = .fps50
-
-  static let speedPresets = (1...12).map { Double($0) / 4 }
 }
 
 struct EditedGIFSequence: Sendable, Equatable {
@@ -101,7 +81,7 @@ enum GIFEditModel {
     } else if lastSourceIndex > 0 {
       finalInterval = lastTimestamp - sequence.frames[lastSourceIndex - 1].timestamp
     } else {
-      finalInterval = 1.0 / 60
+      finalInterval = 1.0 / 24
     }
     let adjustedFinalInterval = finalInterval / parameters.playbackSpeed
     guard adjustedFinalInterval.isFinite, adjustedFinalInterval > 0 else {
@@ -109,48 +89,9 @@ enum GIFEditModel {
     }
 
     return EditedGIFSequence(
-      sequence: try sample(
-        frames: editedFrames, finalFrameDuration: adjustedFinalInterval,
-        frameRate: parameters.frameRate),
+      sequence: CapturedPNGSequence(
+        frames: editedFrames, finalFrameDuration: adjustedFinalInterval),
       loopMode: parameters.loopMode
     )
   }
-
-  /// samples the speed-adjusted timeline, holding sparse frames without adding visual detail.
-  /// cumulative centisecond boundaries avoid drift; very short clips retain one 20 ms frame.
-  private static func sample(
-    frames: [CapturedPNGFrame], finalFrameDuration: TimeInterval,
-    frameRate: GIFCompressionFrameRate
-  ) throws -> CapturedPNGSequence {
-    guard let last = frames.last else { throw GIFEditModelError.emptySequence }
-    let duration = last.timestamp + finalFrameDuration
-    let slots = ceil(duration * frameRate.framesPerSecond)
-    guard duration.isFinite, duration > 0, slots.isFinite, slots < 1_000_000 else {
-      throw GIFEditModelError.unrepresentableTiming
-    }
-    let totalCentiseconds = max(2, (duration * 100).rounded())
-    var sampled: [CapturedPNGFrame] = []
-    var sourceIndex = 0
-    var previousSourceIndex: Int?
-    for slot in 0..<max(1, Int(slots)) {
-      let time = Double(slot) / frameRate.framesPerSecond
-      while sourceIndex + 1 < frames.count,
-        frames[sourceIndex + 1].timestamp <= time + 1e-9
-      {
-        sourceIndex += 1
-      }
-      let boundary = (time * 100).rounded()
-      guard boundary <= totalCentiseconds - 2 else { break }
-      if sourceIndex != previousSourceIndex {
-        sampled.append(
-          CapturedPNGFrame(
-            url: frames[sourceIndex].url, timestamp: boundary / 100))
-        previousSourceIndex = sourceIndex
-      }
-    }
-    guard let finalFrame = sampled.last else { throw GIFEditModelError.emptySequence }
-    return CapturedPNGSequence(
-      frames: sampled, finalFrameDuration: totalCentiseconds / 100 - finalFrame.timestamp)
-  }
-
 }

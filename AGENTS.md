@@ -1,50 +1,34 @@
 # gifferent agent hub
 
-## authority and workflow
+## authority and source of truth
 
-- the user is the product architect and has delegated engineering execution and agent coordination to the lead engineer. the lead engineer decides architecture, task order, interfaces, implementation, and verification. the architect approves changes to settled product behavior, final visual and sound identity, and release policy. do not silently make those product decisions.
-- before implementing a feature, read this file and the linked documents. ask the architect every relevant question needed to make the intended behavior clear. group questions, explain the consequence of each decision, and use Codex multiple choice questions when available. do useful investigation while waiting, but do not implement a dependent choice before the answer.
-- proactively flag gaps, conflicts, platform constraints, privacy concerns, and better options. make a specific recommendation with its tradeoff. record unresolved choices in [decisions.md](decisions.md) and ask; do not turn a recommendation into a requirement without the architect's answer.
-- preserve approved behavior and scope. changes to a settled product rule need the architect's decision. update the relevant documents in the same change as implementation.
-- this is a public macOS product. prioritize stability, predictable performance, privacy, accessibility, and a native feel.
-- follow [delivery-plan.md](delivery-plan.md) for iteration order, agent handoffs, repository setup, CI/CD, and release gates. keep one integration owner responsible for the complete result. the planning stage is complete; work through the implementation gates in order.
+- the architect owns settled product behavior, final visual/sound identity, and release policy. the lead engineer owns architecture, implementation, task order, integration, verification, and CI/CD. proceed with routine engineering choices; ask only about unresolved product decisions, grouping questions and explaining tradeoffs.
+- read the documents relevant to the change, in this order of authority: [vision.md](vision.md), [brand.md](brand.md), [mvp.md](mvp.md), [architecture.md](architecture.md), [definition-of-done.md](definition-of-done.md), [decisions.md](decisions.md), and [delivery-plan.md](delivery-plan.md). the latest explicit architect answer overrides older prose; update affected documents. stop dependent work on an unresolved conflict.
+- planning is complete. follow the delivery dependency order, preserve approved scope, and record new decisions and unresolved product questions in `decisions.md`. recommendations become product requirements only after the architect answers.
+- keep one integration owner and one working chat by default. reuse a suitable checkout. isolate independent delegated work when warranted; serialize shared UI state, project, signing, and capture-pipeline edits. never close or archive user chats as verification housekeeping.
 
-## source of truth
+## implementation
 
-1. [vision.md](vision.md): product promise, brand, and experience rules.
-2. [brand.md](brand.md): visual and sound direction, including the mark under development.
-3. [mvp.md](mvp.md): release scope and observable behavior.
-4. [architecture.md](architecture.md): proposed technical stack, boundaries, and experiments.
-5. [definition-of-done.md](definition-of-done.md): required evidence before any feature is complete.
-6. [decisions.md](decisions.md): confirmed choices, pending questions, and change log.
-7. [delivery-plan.md](delivery-plan.md): execution order and engineering governance.
+- build a stable, private, accessible, native macOS 14+ menu bar app using public APIs. use SwiftUI for product UI; keep AppKit bridges small and limited to capabilities SwiftUI cannot provide cleanly.
+- pixels and GIF processing stay local. no cloud compression or screen-content telemetry; external transfer needs a new explicit product decision.
+- keep expensive capture/encoding work off the main actor, bound memory and temporary disk, and handle cancellation, errors, and cleanup. preserve clear capture, selection, recording, encoding, optimization, export, and UI boundaries without speculative abstractions or broad unrelated refactors.
+- choose bundled encoders through reproducible comparisons and license review. the project is AGPL-3.0-or-later; include required full license texts, notices, source/build materials, and executable signing/notarization evidence before distribution. avoid unnecessary dependencies and unmeasured performance claims.
+- use the approved static orange mark in `Brand/mark-light.svg` and `Brand/mark-dark.svg` under the brand usage rules. optional mark motion and sound require architect approval.
+- app copy, documentation, and comments use lowercase prose except proper names, official product names, identifiers, commands, and paths. Swift identifiers follow Swift conventions.
 
-if documents conflict, stop dependent work and ask the architect. the most recent explicit answer from the architect overrides an older document; then update the documents.
+## each change
 
-## implementation rules
+1. state observable behavior and acceptance scenarios before implementation, including affected permission, failure, cancellation, accessibility, and cleanup paths. do not reopen settled product questions.
+2. implement the smallest complete slice and update affected source documents in the same change.
+3. add meaningful tests at the lowest layer that proves the behavior. keep representative UI journeys and UI wiring coverage; put exhaustive timing, metadata, and error combinations in unit/integration tests.
+4. benchmark changed performance paths on the same machine, fixtures, OS, and power mode as the baseline, including time, memory, bytes, and visual quality where relevant. compare credible alternatives for important pipeline choices.
 
-- use SwiftUI for all product UI. use AppKit only for macOS capabilities SwiftUI cannot provide cleanly, such as overlay windows, global hotkeys, cursor geometry, or clipboard integration. keep bridges small and testable.
-- use public macOS APIs. support macOS 14 and later. the initial release is a notarized direct download and a menu bar app.
-- the project's chosen license is AGPL-3.0-or-later. verify every bundled dependency and CLI's license obligations before inclusion; add the full license text and required notices when the source repository and distributable are assembled.
-- treat the architect-approved static orange mark and its usage rules as a release requirement. use the production SVG assets in `Brand/mark-light.svg` and `Brand/mark-dark.svg`; keep optional motion and sound out unless the architect approves them.
-- screen pixels stay on the device. no cloud compression or screen-content telemetry. any future external transfer requires a new explicit product decision.
-- keep the app responsive during capture and encoding. perform expensive work away from the main actor, bound memory and temporary disk use, and handle cancellation and cleanup.
-- keep capture, selection, recording, encoding, optimization, export, and UI state behind clear interfaces so alternatives can be benchmarked without rewriting the app.
-- choose a bundled existing command-line encoder/optimizer through documented, reproducible benchmarks and license review. do not assume a tool is fastest because of reputation. sign and notarize bundled executables as part of release verification.
-- follow the brand and copy rules in [vision.md](vision.md). documentation, in-app copy, and code comments use lowercase prose, except proper names, official product names, identifiers, commands, and file paths when their spelling matters. code identifiers follow Swift conventions.
-- avoid unnecessary dependencies, speculative abstractions, broad refactors, and unmeasured performance claims.
+## verification stages
 
-## every change
-
-1. ask relevant questions first; capture the architect's answer in the docs.
-2. state the intended user behavior and acceptance scenarios before writing code.
-3. implement the smallest complete slice, including errors, permissions, accessibility, and cleanup.
-4. add or update meaningful unit, integration, and automated acceptance tests. run the relevant checks locally.
-5. benchmark any performance-sensitive change against the recorded baseline on the same input and machine. include speed, memory, output size, and visual quality where applicable.
-6. run the required build, format, lint, test, and documentation checks from [definition-of-done.md](definition-of-done.md). report exact commands, results, and any real-machine checks that remain unverified.
-
-## review and release
-
-- do not call a feature complete while a required test is failing, skipped without a documented reason, or missing.
-- pull requests must identify the behavior changed, test evidence, benchmark evidence when relevant, permission or privacy impact, and documentation updates.
-- the architect reviews product decisions and visual work. automated tests and a real-Mac acceptance pass gate release.
+- development: use focused unit/integration selectors and affected quality checks from [README.md](README.md). run selected UI journeys for changed UI wiring. reuse evidence while its inputs remain unchanged; do not repeat full local and hosted suites after every edit.
+- merge: the final candidate must pass quality and unit/integration suites in CI. run relevant UI acceptance locally on the final candidate and report its result in the PR. `main` requires an up-to-date PR with `quality` and `tests` passing, including administrator merges. build test bundles once and refuse stale reuse.
+- release: retain the full regression/performance matrix, real-Mac permission/hotkey/multi-display/animated-paste/accessibility checks, visual review, licenses/source delivery, signing, notarization, clean-Mac acceptance, and explicit architect release approval in [definition-of-done.md](definition-of-done.md) and [delivery-plan.md](delivery-plan.md).
+- prefer scripts and XCTest for repeatable checks. use computer interaction for a specific native visual/system observation that automated checks cannot establish, stating that observation first.
+- on UI bootstrap failure, preserve logs/results and stop retries until session, signing, or toolchain prerequisites change. fix product assertion failures separately; never skip the merge gate or retry unchanged failures to green.
+- the integration owner checks CI for the final commit, reads failed-job logs, and reports results and next actions. use bounded waits at sensible intervals and do independent work while checks run. rerun only failed jobs when their failure was transient; do not push unchanged code merely to retrigger CI or change GitHub notification preferences.
+- PRs and final handoffs state behavior, exact checks/results, relevant benchmarks, privacy/permission impact, documentation changes, and pending real-Mac evidence. do not call a feature complete with missing or failing required evidence. never present CI success as proof of actual screen capture, third-party paste, or release readiness.

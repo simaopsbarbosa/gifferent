@@ -3,7 +3,8 @@ name: ci
 on:
   pull_request:
   push:
-    branches: [main, "codex/**"]
+    branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -15,6 +16,20 @@ concurrency:
 jobs:
   quality:
     runs-on: xcode-27
+    timeout-minutes: 5
+    env:
+      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: verify toolchain
+        run: bash Scripts/check-toolchain.sh
+      - name: quality checks
+        run: bash Scripts/quality.sh
+
+  tests:
+    runs-on: xcode-27
     timeout-minutes: 20
     env:
       DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
@@ -24,34 +39,10 @@ jobs:
           persist-credentials: false
       - name: verify toolchain
         run: bash Scripts/check-toolchain.sh
-      - name: check documentation
-        run: python3 Scripts/check-docs.py
-      - name: check brand resources
-        run: python3 Scripts/check-brand-assets.py
-      - name: test encoder benchmark harness
-        run: python3 -m unittest discover -s Benchmarks -p 'test_encoder_benchmark.py' -v
-      - name: check formatting
-        run: bash Scripts/format-check.sh
-      - name: lint
-        run: bash Scripts/lint.sh
-
-  tests:
-    runs-on: xcode-27
-    timeout-minutes: 60
-    env:
-      DEVELOPER_DIR: /Applications/Xcode_27.1.app/Contents/Developer
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - name: verify toolchain
-        run: bash Scripts/check-toolchain.sh
-      - name: build
-        run: bash Scripts/build.sh
+      - name: build app and test bundles once
+        run: bash Scripts/build-tests.sh
       - name: unit and integration tests
-        run: bash Scripts/test-unit.sh
-      - name: deterministic UI acceptance
-        run: bash Scripts/test-ui.sh
+        run: bash Scripts/test-unit.sh --no-build
       - name: upload failure evidence
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

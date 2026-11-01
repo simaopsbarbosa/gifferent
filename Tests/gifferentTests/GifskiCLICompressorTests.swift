@@ -8,15 +8,6 @@ import XCTest
 @testable import gifferent
 
 final class GifskiCLICompressorTests: XCTestCase {
-  func testSizeSearchRespectsTheSelectedExportFPSCeiling() {
-    for rate in GIFCompressionFrameRate.exportPresets {
-      let plan = GIFSizeSearchPlan(settings: GIFCompressionSettings(frameRate: rate))
-      XCTAssertTrue(plan.candidates.allSatisfy { $0.frameRate.rawValue <= rate.rawValue })
-      if rate.rawValue < 18 { XCTAssertTrue(plan.candidates.isEmpty) }
-      if rate == .fps20 { XCTAssertEqual(Set(plan.candidates.map(\.frameRate)), [.fps18]) }
-    }
-  }
-
   func testArgumentBuilderKeepsOrderedFramesAndMapsQualityScaleAndLoopMode() {
     let frames = [
       URL(fileURLWithPath: "/tmp/frame 1.png"),
@@ -639,29 +630,6 @@ final class GifskiCLICompressorTests: XCTestCase {
         emittedDelaysCentiseconds: result.delaysCentiseconds,
         expectedDelaysCentiseconds: sample.expectedDelaysCentiseconds))
     XCTAssertTrue(result.loopsForever)
-  }
-
-  func testPinnedGifskiPreservesEveryExportFrameRateAndSparseDuration() async throws {
-    let executable = Self.pinnedGifskiExecutable
-    XCTAssertTrue(FileManager.default.isExecutableFile(atPath: executable.path))
-    for rate in GIFCompressionFrameRate.exportPresets {
-      for loopsForever in [true, false] {
-        let delays = try ImageIOOriginalGIFEncoder.frameDelaysCentiseconds(
-          for: (0..<rate.rawValue).map { Double($0) / rate.framesPerSecond },
-          finalFrameDuration: 1 / rate.framesPerSecond)
-        let fixture = try makeFixture(delaysCentiseconds: delays, loopsForever: loopsForever)
-        defer { try? FileManager.default.removeItem(at: fixture.directory) }
-        let output = fixture.directory.appendingPathComponent("output.gif")
-        let result = try await GifskiCLICompressor(executableURL: executable).compress(
-          source: fixture.metadata, settings: GIFCompressionSettings(frameRate: rate),
-          to: reservation(fixture, destination: output, maximumBytes: 5_000_000))
-        XCTAssertEqual(result.durationCentiseconds, 100)
-        XCTAssertTrue(result.delaysCentiseconds.allSatisfy { $0 >= 2 })
-        XCTAssertEqual(result.loopsForever, loopsForever)
-        XCTAssertEqual(result.width, fixture.metadata.width)
-        XCTAssertTrue(try temporaryDirectories(in: fixture.directory).isEmpty)
-      }
-    }
   }
 
   private static var pinnedGifskiExecutable: URL {
