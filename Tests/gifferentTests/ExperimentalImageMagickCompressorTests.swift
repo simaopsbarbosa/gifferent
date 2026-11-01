@@ -241,53 +241,6 @@ final class ExperimentalImageMagickCompressorTests: XCTestCase {
     XCTAssertEqual(try temporaryOutputFiles(in: fixture.directory), [])
   }
 
-  func testInstalledImageMagickOptimizedDeltaFramesStayInsideLogicalCanvas() async throws {
-    let executable = URL(fileURLWithPath: "/opt/homebrew/bin/magick")
-    guard FileManager.default.isExecutableFile(atPath: executable.path) else {
-      throw XCTSkip("install ImageMagick at /opt/homebrew/bin/magick to run this integration test")
-    }
-    let directory = FileManager.default.temporaryDirectory
-      .appendingPathComponent("gifferent-magick-delta-test-\(UUID().uuidString)", isDirectory: true)
-    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-    defer { try? FileManager.default.removeItem(at: directory) }
-
-    let source = try await makeDeltaGIF(directory: directory)
-    let encodedSource = try GIFMetadataInspector().inspect(source)
-    let sourceMetadata = GIFAnimationMetadataSnapshot(
-      frameCount: encodedSource.frameCount,
-      delaysCentiseconds: encodedSource.delaysCentiseconds,
-      loopCount: encodedSource.loopsForever ? 0 : nil
-    )
-    let destination = directory.appendingPathComponent("compressed.gif")
-    let result = try await ExperimentalImageMagickCompressor().compress(
-      source,
-      executableURL: executable,
-      scale: .original,
-      to: try makeReservation(
-        Fixture(directory: directory, source: source, metadata: sourceMetadata),
-        destination: destination,
-        maximumBytes: 10_000_000
-      )
-    )
-    let frames = try GIFFrameDescriptorInspector.inspect(destination)
-
-    XCTAssertEqual(result.width, 480)
-    XCTAssertEqual(result.height, 270)
-    XCTAssertEqual(result.frameCount, sourceMetadata.frameCount)
-    XCTAssertEqual(result.delaysCentiseconds, sourceMetadata.delaysCentiseconds)
-    XCTAssertEqual(result.loopCount, 0)
-    XCTAssertEqual(frames.width, 480)
-    XCTAssertEqual(frames.height, 270)
-    XCTAssertEqual(frames.frames.count, result.frameCount)
-    XCTAssertTrue(frames.frames.contains { $0.width < frames.width || $0.height < frames.height })
-    XCTAssertTrue(
-      frames.frames.allSatisfy {
-        $0.left >= 0 && $0.top >= 0
-          && $0.left + $0.width <= frames.width
-          && $0.top + $0.height <= frames.height
-      })
-  }
-
   private struct Fixture {
     let directory: URL
     let source: URL

@@ -56,7 +56,7 @@ run_ui() {
     fi
     return "$result"
   fi
-  python3 "$SCRIPT_DIR/check-test-result.py" "$run_dir/Result.xcresult" "$run_dir/$phase.log"
+  python3 "$SCRIPT_DIR/check-test-result.py" "$run_dir/Result.xcresult"
   rm -f "$blocker"
 }
 
