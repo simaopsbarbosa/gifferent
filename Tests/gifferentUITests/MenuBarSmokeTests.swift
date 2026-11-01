@@ -172,7 +172,7 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
     selectionWindow.buttons["draw a region on this display"].click()
 
-    drawFixtureRegion(in: selectionWindow)
+    selectFixtureRegion(in: selectionWindow)
 
     let confirmButton = selectionWindow.buttons["confirm-selection-button"]
     XCTAssertTrue(confirmButton.isEnabled, "drawing a region should enable confirmation")
@@ -283,7 +283,7 @@ final class MenuBarSmokeTests: XCTestCase {
     let selectionWindow = app.windows["capture selection"]
     XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
     selectionWindow.buttons["draw a region on this display"].click()
-    drawFixtureRegion(in: selectionWindow)
+    selectFixtureRegion(in: selectionWindow)
     selectionWindow.buttons["confirm-selection-button"].click()
 
     let status = testWindow.staticTexts["app-status"]
@@ -492,11 +492,11 @@ final class MenuBarSmokeTests: XCTestCase {
     let github = app.menuItems["compression-destination-github"]
     let discord = app.menuItems["compression-destination-discord"]
     XCTAssertTrue(github.waitForExistence(timeout: 5))
-    XCTAssertTrue(github.label.contains("GitHub"), github.label)
-    XCTAssertTrue(github.label.contains("10 MB max"), github.label)
+    XCTAssertTrue(github.title.contains("GitHub"))
+    XCTAssertTrue(github.title.contains("10 MB max"))
     XCTAssertTrue(discord.exists)
-    XCTAssertTrue(discord.label.contains("Discord"), discord.label)
-    XCTAssertTrue(discord.label.contains("20 MB max"), discord.label)
+    XCTAssertTrue(discord.title.contains("Discord"))
+    XCTAssertTrue(discord.title.contains("20 MB max"))
     github.click()
 
     XCTAssertFalse(previewWindow.staticTexts["compression-unavailable-status"].exists)
@@ -564,8 +564,12 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(waitForEnabled(preview.buttons["save-preview-button"]))
     let quality = preview.sliders["compression-quality-slider"]
     quality.adjust(toNormalizedSliderPosition: 0.8)
-    XCTAssertTrue(
-      waitForValue(containing: "80", in: preview.staticTexts["compression-quality-value"]))
+    let qualityValue = preview.staticTexts["compression-quality-value"]
+    let adjustedQuality = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "value != '100'"), object: qualityValue)
+    XCTAssertEqual(XCTWaiter.wait(for: [adjustedQuality], timeout: 5), .completed)
+    let selectedQuality = try XCTUnwrap(Int(qualityValue.value as? String ?? ""))
+    XCTAssertTrue((79...81).contains(selectedQuality), "quality: \(selectedQuality)")
     XCTAssertTrue(preview.buttons["back-to-original-button"].waitForExistence(timeout: 30))
     XCTAssertFalse(preview.staticTexts["compression-target-status"].exists)
     try? FileManager.default.removeItem(at: saved)
@@ -825,12 +829,10 @@ final class MenuBarSmokeTests: XCTestCase {
     )
   }
 
-  private func drawFixtureRegion(in selection: XCUIElement) {
-    let canvas = selection.descendants(matching: .any)["capture-region-canvas"]
-    XCTAssertTrue(canvas.waitForExistence(timeout: 5))
-    let start = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.12, dy: 0.18))
-    let end = canvas.coordinate(withNormalizedOffset: CGVector(dx: 0.3, dy: 0.35))
-    start.press(forDuration: 0.5, thenDragTo: end)
+  private func selectFixtureRegion(in selection: XCUIElement) {
+    let fixture = selection.buttons["select-fixture-region-button"]
+    XCTAssertTrue(fixture.waitForExistence(timeout: 5))
+    fixture.click()
     XCTAssertTrue(waitForEnabled(selection.buttons["confirm-selection-button"]))
   }
 

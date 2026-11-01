@@ -157,7 +157,16 @@ actor RecordingFramePipeline {
 final class RecordingCoordinator: ObservableObject {
   @Published private(set) var state: RecordingCoordinatorState = .idle
   private(set) var diagnostics = RecordingDiagnostics()
-  @Published private(set) var previewAction: PreviewAction = .idle
+  @Published private(set) var previewFeedbackRevision: UInt64 = 0
+  @Published private(set) var previewAction: PreviewAction = .idle {
+    didSet {
+      switch previewAction {
+      case .copied, .saved, .failed, .cancelled, .updateFailed:
+        previewFeedbackRevision &+= 1
+      case .idle, .updated, .copying, .saving: break
+      }
+    }
+  }
   @Published private(set) var editParameters: GIFEditParameters?
   @Published private(set) var isPreviewUpdateInProgress = false
   @Published private(set) var isQualityCompressionScheduled = false

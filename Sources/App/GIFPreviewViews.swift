@@ -156,6 +156,7 @@ struct GIFPreviewReadyView: View {
         sizeSearchUnavailable: GIFSizeSearchPlan(settings: coordinator.compressionSettings)
           .candidates.isEmpty
       )
+      .id(coordinator.previewFeedbackRevision)
       .padding(.top, 8)
     }
   }
@@ -356,7 +357,9 @@ private struct GIFPreviewActionNotice: View {
     }
     .allowsHitTesting(false)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isVisible)
-    .onAppear { showsSizeSearchNotice = sizeSearchUnavailable }
+    .onAppear {
+      showsSizeSearchNotice = sizeSearchUnavailable && (action == .idle || action == .updated)
+    }
     .onChange(of: sizeSearchUnavailable) { _, unavailable in
       showsSizeSearchNotice = unavailable
     }
