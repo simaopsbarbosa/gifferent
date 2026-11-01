@@ -679,17 +679,7 @@ private struct GIFTimelineControl: View {
   @State private var draftEnd: Int?
   @State private var thumbnails: [NSImage] = []
 
-  private var boundaries: [Double] {
-    guard let sequence, let first = sequence.frames.first, let last = sequence.frames.last else {
-      return [0, 1]
-    }
-    let interval =
-      sequence.finalFrameDuration
-      ?? (sequence.frames.count > 1
-        ? last.timestamp - sequence.frames[sequence.frames.count - 2].timestamp : 1.0 / 24)
-    let duration = max(0.000001, last.timestamp - first.timestamp + interval)
-    return sequence.frames.map { ($0.timestamp - first.timestamp) / duration } + [1]
-  }
+  private var boundaries: [Double] { GIFTrimTimeline.boundaries(for: sequence) }
 
   var body: some View {
     GeometryReader { geometry in
@@ -773,10 +763,8 @@ private struct GIFTimelineControl: View {
   }
 
   private func nearest(_ x: CGFloat, width: CGFloat, lower: Int, upper: Int) -> Int {
-    guard lower <= upper else { return lower }
-    let fraction = min(max((x - 10) / width, 0), 1)
-    return (lower...upper).min { abs(boundaries[$0] - fraction) < abs(boundaries[$1] - fraction) }
-      ?? lower
+    GIFTrimTimeline.nearestBoundary(
+      to: (x - 10) / width, boundaries: boundaries, lower: lower, upper: upper)
   }
 
   private func inspect(_ index: Int) {

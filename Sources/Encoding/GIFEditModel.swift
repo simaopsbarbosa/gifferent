@@ -95,3 +95,26 @@ enum GIFEditModel {
     )
   }
 }
+
+enum GIFTrimTimeline {
+  static func boundaries(for sequence: CapturedPNGSequence?) -> [Double] {
+    guard let sequence, let first = sequence.frames.first, let last = sequence.frames.last else {
+      return [0, 1]
+    }
+    let interval =
+      sequence.finalFrameDuration
+      ?? (sequence.frames.count > 1
+        ? last.timestamp - sequence.frames[sequence.frames.count - 2].timestamp : 1.0 / 24)
+    let duration = max(0.000001, last.timestamp - first.timestamp + interval)
+    return sequence.frames.map { ($0.timestamp - first.timestamp) / duration } + [1]
+  }
+
+  static func nearestBoundary(to fraction: Double, boundaries: [Double], lower: Int, upper: Int)
+    -> Int
+  {
+    guard lower <= upper else { return lower }
+    let clamped = min(max(fraction, 0), 1)
+    return (lower...upper).min { abs(boundaries[$0] - clamped) < abs(boundaries[$1] - clamped) }
+      ?? lower
+  }
+}
