@@ -13,13 +13,19 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 class CIScriptTests(unittest.TestCase):
-    def test_result_evidence_rejects_empty_skipped_or_failed_runs(self):
+    def test_result_evidence_requires_passing_tests_and_reasoned_skips(self):
         spec = importlib.util.spec_from_file_location("result_check", ROOT / "Scripts/check-test-result.py")
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         module.validate({"result": "Passed", "passedTests": 1, "failedTests": 0, "skippedTests": 0})
+        module.validate({"result": "Passed", "passedTests": 174, "failedTests": 0, "skippedTests": 1},
+                        "Test skipped - install the optional integration dependency")
+        with self.assertRaises(ValueError):
+            module.validate({"result": "Passed", "passedTests": 1, "skippedTests": 1})
+        with self.assertRaises(ValueError):
+            module.validate({"result": "Passed", "passedTests": 1, "skippedTests": 1},
+                            "Test skipped - \n")
         for summary in ({"result": "Passed", "passedTests": 0},
-                        {"result": "Passed", "passedTests": 1, "skippedTests": 1},
                         {"result": "Failed", "passedTests": 1, "failedTests": 1}):
             with self.assertRaises(ValueError):
                 module.validate(summary)

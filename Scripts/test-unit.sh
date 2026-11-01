@@ -21,7 +21,7 @@ run_xcodebuild "$run_dir/test-unit.log" \
   -resultBundlePath "$run_dir/Result.xcresult" \
   "${test_filter_args[@]}" \
   "${test_signing_args[@]}" test-without-building
-python3 "$SCRIPT_DIR/check-test-result.py" "$run_dir/Result.xcresult"
+python3 "$SCRIPT_DIR/check-test-result.py" "$run_dir/Result.xcresult" "$run_dir/test-unit.log"
 
 echo "unit and integration evidence: $run_dir"
 if [[ -n "${GITHUB_STEP_SUMMARY:-}" ]]; then
