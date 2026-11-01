@@ -42,7 +42,7 @@ Computer Use inspected the actual built SwiftUI preview using deterministic synt
 - the next fixture recording restores 10 fps/0.25× while resetting loop to forever. manual 75% compression through bundled Gifski succeeds at 12 by 12 with the same duration; back restores the 16 by 16 preview and selected FPS/speed.
 - the fixture app was closed after the checks, cleaning its session media. these checks exercise test export adapters; they do not prove real clipboard compatibility, a native save sheet, or live ScreenCaptureKit behavior.
 
-light appearance, increased contrast, VoiceOver operation, actual animated GitHub paste, full keyboard navigation, window resizing, and architect final visual approval remain pending. the XCTest acceptance journey for changing FPS/speed, exported timing, and subsequent recording persistence is implemented and compiles, but its runner did not execute.
+light appearance, increased contrast, VoiceOver operation, actual animated GitHub paste, full keyboard navigation, window resizing, and architect final visual approval remain pending. the XCTest acceptance journey for changing FPS/speed, exported timing, and subsequent recording persistence is implemented and compiles, but its local runner did not execute; see the hosted follow-up below.
 
 ## performance evidence
 
@@ -55,3 +55,10 @@ see [the frame-rate benchmark report](Benchmarks/frame-rate-presets-2026-11-01.m
 3. review light/dark/accessibility behavior and animated fixture quality with the architect, and verify actual GitHub paste/save. screenshots and unit metadata checks cannot establish these outcomes.
 4. the architect accepted the measured encoder cost at the 50 fps default on 2026-11-01. this scoped tradeoff does not establish the under-two-second complete preview target; measure live capture and full preview publication separately.
 5. require passing hosted CI and the existing signing/notarization, dependency/source-delivery, clean-Mac, and release-approval gates before distribution.
+
+
+## hosted acceptance follow-up
+
+initial hosted [run 41264532851](https://github.com/simaopsbarbosa/gifferent/actions/runs/41264532851) passed quality, build, and all unit/integration assertions. one optional research-only ImageMagick integration test was skipped because that installed executable is absent on the runner; ImageMagick is not the shipped encoder, and the test ran locally. all bundled Gifski tests ran in hosted CI.
+
+the hosted UI runner executed and exposed stale selectors from the previous preview refactor: native menus are menu buttons, segmented SwiftUI choices are radio buttons, metadata labels needed separate accessibility containment, and the region drag needed a dedicated canvas target. this change updates those selectors, gives metadata distinct accessible values, exposes the canvas without changing its gesture, and checks the current 280 point proportional viewport instead of the obsolete 232 point bound. native Computer Use confirmed canvas dragging, region recording/frame visibility, preview creation, and separate file-size/duration/dimensions values. the subsequent full local unit/integration run passed 184 tests with zero skips at `.build/ci/test-unit-4xkEKm/Result.xcresult`. hosted UI regression is rerun on the updated branch; its current outcome is tracked on the PR.

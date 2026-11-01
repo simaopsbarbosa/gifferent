@@ -26,8 +26,12 @@ struct CaptureSelectionOverlayView: View {
         .accessibilityHidden(true)
 
       Color.black.opacity(0.16)
+        .frame(width: displaySize.width, height: displaySize.height)
         .contentShape(Rectangle())
         .gesture(regionCreationGesture)
+        .accessibilityElement()
+        .accessibilityLabel("draw a capture region")
+        .accessibilityIdentifier("capture-region-canvas")
 
       if case .display(let id) = coordinator.selection, id == screen.geometry.id {
         Rectangle()

@@ -168,12 +168,13 @@ struct GIFPreviewReadyView: View {
 
   private func metadata(_ label: String, value: String, id: String) -> some View {
     VStack(alignment: .leading, spacing: 3) {
-      Text(label).font(.caption).foregroundStyle(.secondary)
-      Text(value).accessibilityIdentifier(id).accessibilityValue(value)
+      Text(label).font(.caption).foregroundStyle(.secondary).accessibilityHidden(true)
+      Text(value)
+        .accessibilityLabel(label)
+        .accessibilityValue(value)
+        .accessibilityIdentifier(id)
     }
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel(label)
-    .accessibilityValue(value)
+    .accessibilityElement(children: .contain)
     .padding(.vertical, 12)
   }
 
