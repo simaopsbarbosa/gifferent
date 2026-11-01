@@ -2,7 +2,16 @@ import AppKit
 import SwiftUI
 
 @MainActor
+private func updateCoordinatorAfterViewUpdate(_ update: @escaping @MainActor () async -> Void) {
+  Task { @MainActor in
+    await Task.yield()
+    await update()
+  }
+}
+
+@MainActor
 struct GIFPreviewReadyView: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
   @ObservedObject var runtime: GifferentRuntime
   @ObservedObject var coordinator: RecordingCoordinator
   let snapshot: RecordingSessionSnapshot
@@ -13,41 +22,77 @@ struct GIFPreviewReadyView: View {
     coordinator.displayedPreviewGIF ?? gif
   }
 
+  private var fittedGIFSize: CGSize {
+    let width = CGFloat(displayedGIF.width)
+    let height = CGFloat(displayedGIF.height)
+    guard width > 0, height > 0, previewWidth > 0 else { return .zero }
+    let scale = min(previewWidth / width, 280 / height)
+    return CGSize(width: width * scale, height: height * scale)
+  }
+
   var body: some View {
-    VStack(spacing: 14) {
-      Text("preview ready")
-        .accessibilityIdentifier("preview-status")
-        .accessibilityValue("preview ready")
+    VStack(spacing: 9) {
       AnimatedGIFView(url: displayedGIF.url)
         .frame(
           width: previewWidth,
-          height: min(
-            278,
-            previewWidth * CGFloat(displayedGIF.height) / CGFloat(max(1, displayedGIF.width))
-          )
+          height: 280
         )
-
-      if coordinator.compressedPreview == nil {
-        GIFEditControls(coordinator: coordinator)
-          .disabled(coordinator.isCompressionInProgress)
-        GIFCompressionControls(coordinator: coordinator)
-      } else {
-        VStack(alignment: .leading, spacing: 8) {
-          Text("compressed for \(coordinator.compressionSettings.destination.displayName)")
-            .accessibilityIdentifier("compression-preview-status")
-          Text(compressionTargetMessage)
-            .font(.caption)
-            .foregroundStyle(.secondary)
-            .accessibilityIdentifier("compression-target-status")
-          Button("back to original") {
-            Task { await coordinator.backToOriginalPreview() }
-          }
-          .accessibilityIdentifier("back-to-original-button")
+        .background { PreviewDitherBackground() }
+        .overlay {
+          Rectangle()
+            .strokeBorder(.quaternary, lineWidth: 1)
+            .frame(width: fittedGIFSize.width, height: fittedGIFSize.height)
+            .shadow(color: .black.opacity(0.35), radius: 6, x: -3)
+            .shadow(color: .black.opacity(0.35), radius: 6, x: 3)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-      }
+        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+        .overlay {
+          RoundedRectangle(cornerRadius: 7, style: .continuous)
+            .strokeBorder(.quaternary, lineWidth: 1)
+        }
+        .overlay {
+          if coordinator.isPreviewUpdateInProgress || coordinator.isCompressionInProgress {
+            VStack(spacing: 9) {
+              ProgressView()
+                .controlSize(.small)
+                .accessibilityLabel("updating gif")
+              Text("updating gif")
+                .font(.callout.weight(.medium))
+              if coordinator.isCompressionInProgress {
+                Button("cancel") { Task { await coordinator.cancelCompression() } }
+                  .controlSize(.small)
+                  .accessibilityIdentifier("cancel-compression-button")
+              }
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(.ultraThinMaterial)
+            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+            .accessibilityElement(children: .contain)
+            .accessibilityIdentifier("preview-processing-overlay")
+            .transition(.opacity)
+          }
+        }
+        .animation(
+          reduceMotion ? nil : .easeInOut(duration: 0.16),
+          value: coordinator.isPreviewUpdateInProgress
+        )
+        .animation(
+          reduceMotion ? nil : .easeInOut(duration: 0.16),
+          value: coordinator.isCompressionInProgress
+        )
+        .frame(maxWidth: .infinity)
 
-      HStack(spacing: 16) {
+      GIFEditControls(coordinator: coordinator)
+        .disabled(
+          coordinator.isCompressionInProgress || coordinator.isQualityCompressionScheduled
+            || coordinator.compressedPreview != nil
+        )
+      GIFCompressionControls(coordinator: coordinator)
+        .padding(.top, 6)
+
+      HStack(spacing: 28) {
         metadata(
           "file size",
           value: ByteCountFormatter.string(
@@ -60,68 +105,65 @@ struct GIFPreviewReadyView: View {
           "dimensions", value: "\(displayedGIF.width) by \(displayedGIF.height)",
           id: "preview-dimensions")
       }
+      .frame(maxWidth: .infinity)
 
       if snapshot.isPartialResult {
         Text("partial recording")
           .accessibilityIdentifier("preview-partial-status")
       }
 
-      Text(actionMessage)
-        .accessibilityIdentifier("preview-action-status")
-        .accessibilityValue(actionMessage)
-        .accessibilityAddTraits(.updatesFrequently)
-
-      HStack {
-        Button("copy") { runtime.copyPreview() }
+      HStack(spacing: 8) {
+        if coordinator.compressedPreview != nil {
+          Button {
+            Task {
+              if coordinator.isCompressionInProgress {
+                await coordinator.cancelCompression()
+              }
+              await coordinator.backToOriginalPreview()
+            }
+          } label: {
+            Image(systemName: "arrow.left")
+          }
+          .buttonStyle(.bordered)
+          .accessibilityLabel("back to original")
+          .help("back to original")
+          .accessibilityIdentifier("back-to-original-button")
+        }
+        Button("copy (⌘C)") { runtime.copyPreview() }
           .keyboardShortcut("c", modifiers: .command)
           .disabled(exportIsDisabled)
           .accessibilityIdentifier("copy-preview-button")
-        Button("save…") { runtime.savePreview() }
+        Button("save… (⌘S)") { runtime.savePreview() }
           .keyboardShortcut("s", modifiers: .command)
           .disabled(exportIsDisabled)
           .accessibilityIdentifier("save-preview-button")
-        Button("discard") { runtime.requestDiscardPreview() }
-          .disabled(exportIsDisabled)
-          .accessibilityIdentifier("discard-preview-button")
         Button("close") { runtime.requestPreviewClose() }
           .accessibilityIdentifier("close-preview-button")
       }
+      .frame(maxWidth: .infinity)
+    }
+    .background {
+      Text("preview ready")
+        .accessibilityIdentifier("preview-status")
+        .accessibilityValue("preview ready")
+        .frame(width: 1, height: 1)
+        .opacity(0.01)
+        .accessibilityHidden(false)
+    }
+    .overlay(alignment: .top) {
+      GIFPreviewActionNotice(
+        action: coordinator.previewAction,
+        sizeSearchUnavailable: GIFSizeSearchPlan(settings: coordinator.compressionSettings)
+          .candidates.isEmpty
+      )
+      .padding(.top, 8)
     }
   }
 
   private var exportIsDisabled: Bool {
     coordinator.previewAction == .copying || coordinator.previewAction == .saving
       || coordinator.isPreviewUpdateInProgress || coordinator.isCompressionInProgress
-  }
-
-  private var compressionTargetMessage: String {
-    let destination = coordinator.compressionSettings.destination
-    let output = ByteCountFormatter.string(fromByteCount: displayedGIF.fileBytes, countStyle: .file)
-    if let result = coordinator.sizeSearchSummary {
-      let actual = ByteCountFormatter.string(fromByteCount: result.fileBytes, countStyle: .file)
-      let target = ByteCountFormatter.string(fromByteCount: result.targetBytes, countStyle: .file)
-      let settings =
-        "\(result.settings.scale.label), \(result.settings.frameRate.label) fps, quality \(result.settings.qualityPercent)"
-      let targetStatus = result.reachedTarget ? "target met" : "best attempt; target not met"
-      return "\(actual) of \(target) · \(settings) · \(targetStatus) · \(result.attempts) attempts"
-    }
-    return displayedGIF.fileBytes <= destination.targetBytes
-      ? "\(output) · under the \(destination.targetLabel) target"
-      : "\(output) · above the \(destination.targetLabel) target"
-  }
-
-  private var actionMessage: String {
-    switch coordinator.previewAction {
-    case .idle: ""
-    case .updated: "gif updated"
-    case .updateFailed: "could not update gif; previous preview kept"
-    case .copying: "copying"
-    case .saving: "saving"
-    case .copied: "copied"
-    case .saved: "saved"
-    case .cancelled: "save cancelled"
-    case .failed: "could not export gif; try again"
-    }
+      || coordinator.isQualityCompressionScheduled
   }
 
   private func metadata(_ label: String, value: String, id: String) -> some View {
@@ -132,11 +174,203 @@ struct GIFPreviewReadyView: View {
     .accessibilityElement(children: .combine)
     .accessibilityLabel(label)
     .accessibilityValue(value)
+    .padding(.vertical, 12)
   }
 
   private func duration(_ centiseconds: Int) -> String {
     let seconds = Double(centiseconds) / 100
     return String(format: "%.2f seconds", seconds)
+  }
+}
+
+private struct PreviewDitherBackground: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.colorScheme) private var colorScheme
+  @State private var canAnimate = false
+
+  var body: some View {
+    TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: reduceMotion || !canAnimate)) {
+      timeline in
+      PreviewDitherCanvas(
+        time: reduceMotion || !canAnimate ? 0 : timeline.date.timeIntervalSinceReferenceDate,
+        dark: colorScheme == .dark
+      )
+    }
+    .background(Color(nsColor: .controlBackgroundColor))
+    .background { PreviewAnimationVisibility(canAnimate: $canAnimate) }
+    .accessibilityHidden(true)
+    .allowsHitTesting(false)
+  }
+}
+
+private struct PreviewDitherCanvas: View {
+  let time: TimeInterval
+  let dark: Bool
+
+  var body: some View {
+    Canvas { context, size in
+      if let image = PreviewDitherArtwork.image(size: size, time: time, dark: dark) {
+        context.draw(
+          Image(decorative: image, scale: 1, orientation: .up).interpolation(.none),
+          in: CGRect(origin: .zero, size: size)
+        )
+      }
+    }
+  }
+}
+
+enum PreviewDitherArtwork {
+  private static let bayer = [
+    0, 32, 8, 40, 2, 34, 10, 42,
+    48, 16, 56, 24, 50, 18, 58, 26,
+    12, 44, 4, 36, 14, 46, 6, 38,
+    60, 28, 52, 20, 62, 30, 54, 22,
+    3, 35, 11, 43, 1, 33, 9, 41,
+    51, 19, 59, 27, 49, 17, 57, 25,
+    15, 47, 7, 39, 13, 45, 5, 37,
+    63, 31, 55, 23, 61, 29, 53, 21,
+  ]
+
+  static func image(size: CGSize, time: TimeInterval, dark: Bool) -> CGImage? {
+    guard size.width > 0, size.height > 0 else { return nil }
+    let width = max(1, min(256, Int(size.width / 3)))
+    let height = max(1, min(128, Int(size.height / 3)))
+    var pixels = [UInt8](repeating: 0, count: width * height * 4)
+    let base: UInt8 = dark ? 35 : 228
+    let highlight: UInt8 = dark ? 46 : 213
+
+    for y in 0..<height {
+      let vertical = Double(y) / Double(height)
+      let centers = (0..<8).map { vine in
+        let phase = Double(vine) * 2.1
+        return Double(width) * (0.06 + Double(vine) * 0.125)
+          + Double(width) * 0.075 * sin(vertical * 7 + phase + time * 0.10)
+          + Double(width) * 0.035 * sin(vertical * 15 - phase + time * 0.07)
+      }
+      for x in 0..<width {
+        var nearest = Double.greatestFiniteMagnitude
+        for center in centers {
+          nearest = min(nearest, abs(Double(x) - center))
+        }
+        let distance = nearest / max(1, Double(width) * 0.014)
+        let intensity = 0.8 / (1 + distance * distance)
+        let threshold = (Double(bayer[(y % 8) * 8 + x % 8]) + 0.5) / 64
+        let value = intensity > threshold ? highlight : base
+        let offset = (y * width + x) * 4
+        pixels[offset] = value
+        pixels[offset + 1] = value
+        pixels[offset + 2] = value
+        pixels[offset + 3] = 255
+      }
+    }
+
+    guard let provider = CGDataProvider(data: Data(pixels) as CFData) else { return nil }
+    return CGImage(
+      width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
+      bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue),
+      provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
+    )
+  }
+}
+
+private struct PreviewAnimationVisibility: NSViewRepresentable {
+  @Binding var canAnimate: Bool
+
+  func makeNSView(context: Context) -> VisibilityView {
+    let view = VisibilityView()
+    view.onChange = { value in
+      DispatchQueue.main.async { canAnimate = value }
+    }
+    return view
+  }
+
+  func updateNSView(_ view: VisibilityView, context: Context) {}
+
+  final class VisibilityView: NSView {
+    var onChange: ((Bool) -> Void)?
+    override func viewDidMoveToWindow() {
+      super.viewDidMoveToWindow()
+      NotificationCenter.default.removeObserver(self)
+      if let window {
+        for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.willCloseNotification] {
+          NotificationCenter.default.addObserver(
+            self, selector: #selector(updateVisibility), name: name, object: window)
+        }
+        NotificationCenter.default.addObserver(
+          self, selector: #selector(updateVisibility), name: .NSProcessInfoPowerStateDidChange,
+          object: nil)
+      }
+      updateVisibility()
+    }
+
+    @objc private func updateVisibility() {
+      onChange?(
+        window?.occlusionState.contains(.visible) == true
+          && !ProcessInfo.processInfo.isLowPowerModeEnabled
+      )
+    }
+  }
+}
+
+@MainActor
+private struct GIFPreviewActionNotice: View {
+  let action: PreviewAction
+  let sizeSearchUnavailable: Bool
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @State private var isVisible = false
+  @State private var showsSizeSearchNotice = false
+
+  private var message: String {
+    if showsSizeSearchNotice {
+      return "automatic size search is unavailable at this resolution"
+    }
+    return switch action {
+    case .copied: "copied"
+    case .saved: "saved"
+    case .cancelled: "save cancelled"
+    case .updateFailed: "could not update gif; previous preview kept"
+    case .failed: "could not export gif; try again"
+    case .idle, .updated, .copying, .saving: ""
+    }
+  }
+
+  var body: some View {
+    ZStack {
+      if isVisible, !message.isEmpty {
+        Text(message)
+          .font(.callout)
+          .padding(.horizontal, 14)
+          .padding(.vertical, 8)
+          .background(.regularMaterial, in: Capsule())
+          .overlay { Capsule().strokeBorder(.quaternary, lineWidth: 1) }
+          .shadow(color: .black.opacity(0.12), radius: 6, y: 2)
+          .accessibilityIdentifier(
+            showsSizeSearchNotice ? "compression-search-unavailable" : "preview-action-status"
+          )
+          .accessibilityValue(message)
+          .accessibilityAddTraits(.updatesFrequently)
+          .transition(.opacity)
+      }
+    }
+    .allowsHitTesting(false)
+    .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isVisible)
+    .onChange(of: sizeSearchUnavailable) { _, unavailable in
+      showsSizeSearchNotice = unavailable
+    }
+    .onChange(of: action) { _, _ in
+      showsSizeSearchNotice = false
+    }
+    .task(id: message) {
+      isVisible = !message.isEmpty
+      guard isVisible else { return }
+      do {
+        try await Task.sleep(for: .seconds(action == .failed || action == .updateFailed ? 6 : 2.5))
+        isVisible = false
+      } catch {
+        // a newer action or a closed preview cancels this notice's timer.
+      }
+    }
   }
 }
 
@@ -148,7 +382,7 @@ private struct GIFEditControls: View {
   var body: some View {
     Group {
       if let parameters = coordinator.editParameters, coordinator.editFrameCount > 0 {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: 4) {
           Text("trim")
             .font(.caption)
             .foregroundStyle(.secondary)
@@ -159,7 +393,7 @@ private struct GIFEditControls: View {
             onChange: updateTrim
           )
 
-          HStack {
+          HStack(spacing: 8) {
             Text("speed")
             Slider(
               value: $playbackSpeed,
@@ -169,29 +403,36 @@ private struct GIFEditControls: View {
             .accessibilityLabel("playback speed")
             .accessibilityIdentifier("playback-speed-slider")
             .onChange(of: playbackSpeed) { _, value in
-              coordinator.updatePlaybackSpeed(value)
+              updateCoordinatorAfterViewUpdate {
+                coordinator.updatePlaybackSpeed(value)
+              }
             }
             Text(String(format: "%.1f×", parameters.playbackSpeed))
               .accessibilityIdentifier("playback-speed-value")
-          }
-
-          HStack(spacing: 8) {
             Text("loop")
-            Button("forever", action: selectForever)
-              .buttonStyle(.bordered)
-              .accessibilityIdentifier("loop-forever-button")
-              .accessibilityAddTraits(parameters.loopMode == .forever ? .isSelected : [])
-            Button("once", action: selectOnce)
-              .buttonStyle(.bordered)
-              .accessibilityIdentifier("loop-once-button")
-              .accessibilityAddTraits(parameters.loopMode == .once ? .isSelected : [])
+            Picker(
+              "loop",
+              selection: Binding(
+                get: { parameters.loopMode },
+                set: { value in
+                  updateCoordinatorAfterViewUpdate {
+                    coordinator.updateLoopMode(value)
+                  }
+                }
+              )
+            ) {
+              Text("forever")
+                .tag(GIFLoopMode.forever)
+                .accessibilityIdentifier("loop-forever-button")
+              Text("once")
+                .tag(GIFLoopMode.once)
+                .accessibilityIdentifier("loop-once-button")
+            }
+            .labelsHidden()
+            .pickerStyle(.segmented)
+            .accessibilityIdentifier("loop-mode-picker")
           }
 
-          if coordinator.isPreviewUpdateInProgress {
-            Text("updating gif")
-              .accessibilityIdentifier("preview-update-status")
-              .accessibilityValue("updating gif")
-          }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .disabled(coordinator.isPreviewActionInProgress)
@@ -206,16 +447,11 @@ private struct GIFEditControls: View {
   }
 
   private func updateTrim(start: Int, end: Int) {
-    coordinator.updateTrim(startIndex: start, endIndexExclusive: end)
+    updateCoordinatorAfterViewUpdate {
+      coordinator.updateTrim(startIndex: start, endIndexExclusive: end)
+    }
   }
 
-  private func selectForever() {
-    coordinator.updateLoopMode(.forever)
-  }
-
-  private func selectOnce() {
-    coordinator.updateLoopMode(.once)
-  }
 }
 
 @MainActor
@@ -223,18 +459,17 @@ private struct GIFCompressionControls: View {
   @ObservedObject var coordinator: RecordingCoordinator
 
   var body: some View {
-    VStack(alignment: .leading, spacing: 8) {
+    VStack(alignment: .leading, spacing: 4) {
       Text("compression")
         .font(.caption)
         .foregroundStyle(.secondary)
-      GIFCompressionDestinationControl(coordinator: coordinator)
-      GIFCompressionScaleControl(coordinator: coordinator)
-      if GIFSizeSearchPlan(settings: coordinator.compressionSettings).candidates.isEmpty {
-        Text("automatic size search is unavailable at this resolution")
-          .font(.caption)
-          .foregroundStyle(.secondary)
-          .accessibilityIdentifier("compression-search-unavailable")
+      HStack(spacing: 8) {
+        Text("size")
+        GIFCompressionScaleControl(coordinator: coordinator)
+        Spacer(minLength: 8)
+        GIFCompressionDestinationControl(coordinator: coordinator)
       }
+      .frame(maxWidth: .infinity)
       GIFCompressionQualityControl(coordinator: coordinator)
       GIFCompressionActionControl(coordinator: coordinator)
     }
@@ -246,79 +481,58 @@ private struct GIFCompressionControls: View {
 private struct GIFCompressionDestinationControl: View {
   @ObservedObject var coordinator: RecordingCoordinator
 
-  var body: some View {
-    HStack(spacing: 8) {
-      ForEach(GIFCompressionDestination.allCases) { destination in
-        GIFCompressionDestinationButton(coordinator: coordinator, destination: destination)
-      }
-    }
-  }
-}
-
-@MainActor
-private struct GIFCompressionDestinationButton: View {
-  @ObservedObject var coordinator: RecordingCoordinator
-  let destination: GIFCompressionDestination
-
-  private var buttonLabel: some View {
-    HStack(spacing: 6) {
-      Image(systemName: destination.systemImage)
-        .accessibilityHidden(true)
-      Text(destination.buttonTitle)
-    }
-  }
-
-  private var accessibleLabel: String {
-    "\(destination.displayName), \(destination.targetLabel) target, "
-      + "\(destination.publishedMaximumLabel) published maximum"
-  }
-
   private var hasApprovedCandidates: Bool {
     !GIFSizeSearchPlan(settings: coordinator.compressionSettings).candidates.isEmpty
   }
 
-  private var helpText: String {
-    guard hasApprovedCandidates else {
-      return "automatic size search is unavailable at this resolution"
-    }
-    let maximum = "published maximum: \(destination.publishedMaximumLabel)"
-    let scope = "for \(destination.limitScopeDescription)"
-    return "target: \(destination.targetLabel) · \(maximum) \(scope) · "
-      + "checked \(destination.limitResearchDate)"
-  }
-
   var body: some View {
-    Button {
-      coordinator.startSizeSearch(for: destination)
+    Menu {
+      ForEach(GIFCompressionDestination.allCases) { destination in
+        Button {
+          coordinator.startSizeSearch(for: destination)
+        } label: {
+          Text("\(destination.displayName) (\(destination.publishedMaximumLabel) max)")
+        }
+        .disabled(
+          coordinator.isPreviewActionInProgress || coordinator.isQualityCompressionScheduled
+            || coordinator.compressedPreview != nil
+            || !hasApprovedCandidates
+        )
+        .accessibilityIdentifier("compression-destination-\(destination.accessibilityID)")
+        .help(destinationHelp(for: destination))
+      }
     } label: {
-      buttonLabel
+      Text("compress for")
     }
-    .buttonStyle(.bordered)
     .disabled(
-      coordinator.isCompressionInProgress || coordinator.compressedPreview != nil
+      coordinator.isPreviewActionInProgress || coordinator.isQualityCompressionScheduled
+        || coordinator.compressedPreview != nil
         || !hasApprovedCandidates
     )
-    .accessibilityIdentifier("compression-destination-\(destination.accessibilityID)")
-    .accessibilityLabel(accessibleLabel)
-    .accessibilityAddTraits(
-      coordinator.compressionSettings.destination == destination ? .isSelected : []
-    )
-    .help(helpText)
+    .accessibilityIdentifier("compression-destination-menu")
+    .help("choose a destination and start size optimization")
+  }
+
+  private func destinationHelp(for destination: GIFCompressionDestination) -> String {
+    let scope = destination.limitScopeDescription
+    return "target: \(destination.targetLabel) · maximum: "
+      + "\(destination.publishedMaximumLabel) · \(scope) · checked "
+      + destination.limitResearchDate
   }
 }
 
 @MainActor
 private struct GIFCompressionScaleControl: View {
   @ObservedObject var coordinator: RecordingCoordinator
+  @State private var selectedScale = GIFCompressionScale.original
 
   var body: some View {
-    HStack(spacing: 8) {
-      Text("size")
+    HStack(spacing: 6) {
       Picker(
         "size",
         selection: Binding(
-          get: { coordinator.compressionSettings.scale },
-          set: { coordinator.selectCompressionScale($0) }
+          get: { selectedScale },
+          set: { selectedScale = $0 }
         )
       ) {
         ForEach(GIFCompressionScale.allCases) { scale in
@@ -328,7 +542,22 @@ private struct GIFCompressionScaleControl: View {
       .labelsHidden()
       .pickerStyle(.segmented)
       .accessibilityIdentifier("compression-scale-picker")
-      .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+      .disabled(coordinator.isCompressionSettingEditDisabled)
+    }
+    .onAppear {
+      selectedScale = coordinator.compressionSettings.scale
+    }
+    .onChange(of: selectedScale) { _, value in
+      guard value != coordinator.compressionSettings.scale else { return }
+      updateCoordinatorAfterViewUpdate {
+        let started = await coordinator.compressImmediately(scale: value)
+        if !started {
+          selectedScale = coordinator.compressionSettings.scale
+        }
+      }
+    }
+    .onChange(of: coordinator.compressionSettings.scale) { _, value in
+      selectedScale = value
     }
   }
 }
@@ -336,24 +565,62 @@ private struct GIFCompressionScaleControl: View {
 @MainActor
 private struct GIFCompressionQualityControl: View {
   @ObservedObject var coordinator: RecordingCoordinator
+  @State private var qualityPercent = 100
+  @State private var isScrubbing = false
 
   var body: some View {
-    HStack {
+    HStack(spacing: 8) {
       Text("quality")
       Slider(
         value: Binding(
-          get: { Double(coordinator.compressionSettings.qualityPercent) },
-          set: { coordinator.setCompressionQuality(Int($0.rounded())) }
+          get: { Double(qualityPercent) },
+          set: { qualityPercent = Int($0.rounded()) }
         ),
         in: 1...100,
-        step: 1
+        step: 1,
+        onEditingChanged: { editing in
+          isScrubbing = editing
+          let quality = qualityPercent
+          updateCoordinatorAfterViewUpdate {
+            if editing {
+              coordinator.beginQualityAdjustment()
+            } else {
+              coordinator.finishQualityAdjustment(quality)
+            }
+          }
+        }
       )
       .accessibilityLabel("gifski quality")
       .accessibilityIdentifier("compression-quality-slider")
-      Text("\(coordinator.compressionSettings.qualityPercent)")
+      .overlay(alignment: .center) {
+        HStack(spacing: 0) {
+          ForEach(0..<25, id: \.self) { _ in
+            Rectangle().fill(.secondary.opacity(0.35)).frame(width: 1, height: 3)
+            Spacer(minLength: 0)
+          }
+        }
+        .allowsHitTesting(false)
+        .padding(.horizontal, 7)
+      }
+      Text("\(qualityPercent)")
         .accessibilityIdentifier("compression-quality-value")
     }
-    .disabled(coordinator.isCompressionInProgress || coordinator.compressedPreview != nil)
+    .disabled(coordinator.isCompressionSettingEditDisabled)
+    .onAppear {
+      qualityPercent = coordinator.compressionSettings.qualityPercent
+    }
+    .onChange(of: qualityPercent) { _, value in
+      guard !isScrubbing else { return }
+      updateCoordinatorAfterViewUpdate {
+        coordinator.finishQualityAdjustment(value)
+      }
+    }
+    .onChange(of: coordinator.compressionSettings.qualityPercent) { _, value in
+      qualityPercent = value
+    }
+    .onChange(of: coordinator.isQualityCompressionScheduled) { _, scheduled in
+      if !scheduled { qualityPercent = coordinator.compressionSettings.qualityPercent }
+    }
   }
 }
 
@@ -363,39 +630,7 @@ private struct GIFCompressionActionControl: View {
 
   var body: some View {
     Group {
-      if coordinator.isCompressionAvailable {
-        if coordinator.isCompressionInProgress {
-          VStack(alignment: .leading, spacing: 6) {
-            if let progress = coordinator.sizeSearchProgress {
-              ProgressView(
-                value: Double(progress.attempt), total: Double(progress.totalAttempts)
-              )
-              .accessibilityLabel("size search progress")
-              .accessibilityValue("attempt \(progress.attempt) of \(progress.totalAttempts)")
-              Text(
-                "searching \(progress.attempt) of \(progress.totalAttempts) · "
-                  + "\(progress.settings.scale.label) · \(progress.settings.frameRate.label) fps · "
-                  + "quality \(progress.settings.qualityPercent)"
-              )
-              .accessibilityIdentifier("compression-action-status")
-            } else {
-              HStack {
-                ProgressView()
-                  .controlSize(.small)
-                  .accessibilityLabel("compressing gif")
-                Text("compressing gif")
-                  .accessibilityIdentifier("compression-action-status")
-              }
-            }
-            Button("cancel") { Task { await coordinator.cancelCompression() } }
-              .accessibilityIdentifier("cancel-compression-button")
-          }
-        } else {
-          Button("compress") { coordinator.startCompression() }
-            .accessibilityIdentifier("compress-preview-button")
-            .disabled(coordinator.isPreviewUpdateInProgress || coordinator.compressedPreview != nil)
-        }
-      } else {
+      if !coordinator.isCompressionAvailable {
         Text("compression unavailable until a verified local backend is provided")
           .font(.caption)
           .accessibilityIdentifier("compression-unavailable-status")
@@ -403,10 +638,10 @@ private struct GIFCompressionActionControl: View {
 
       switch coordinator.compressionAction {
       case .failed:
-        Text("could not compress gif; original preview kept")
+        Text("could not compress gif; previous preview kept")
           .accessibilityIdentifier("compression-action-status")
       case .cancelled:
-        Text("compression cancelled; original preview kept")
+        Text("compression cancelled; previous preview kept")
           .accessibilityIdentifier("compression-action-status")
       case .unavailable, .idle, .compressing, .compressed:
         EmptyView()

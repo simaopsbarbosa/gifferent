@@ -1,3 +1,4 @@
+import Combine
 import Foundation
 import XCTest
 
@@ -43,7 +44,7 @@ final class RecordingCoordinatorTests: XCTestCase {
       clipboard: clipboard
     )
 
-    XCTAssertEqual(coordinator.compressionSettings.qualityPercent, 90)
+    XCTAssertEqual(coordinator.compressionSettings.qualityPercent, 100)
     coordinator.selectCompressionDestination(.discord)
     coordinator.selectCompressionScale(.original)
     coordinator.setCompressionQuality(40)
@@ -74,6 +75,127 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(restoredSnapshot.temporaryBytes, originalBytes)
   }
 
+  func testCompressionSettingChangesRecompressFromTheOriginalPreview() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let compressor = FakeGIFCompressor()
+    let (coordinator, _, original, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace, compressor: compressor)
+
+    await coordinator.compressImmediately(scale: .fiftyPercent, quality: 82)
+    await waitForCompression(coordinator)
+    XCTAssertEqual(coordinator.compressionAction, .compressed)
+    XCTAssertEqual(coordinator.compressionSettings.scale, .fiftyPercent)
+    XCTAssertEqual(coordinator.compressionSettings.qualityPercent, 82)
+    XCTAssertNotEqual(coordinator.displayedPreviewGIF?.url, original.url)
+    let firstSettings = await compressor.lastSettings()
+    XCTAssertEqual(firstSettings?.scale, .fiftyPercent)
+
+    await coordinator.compressImmediately(scale: .twentyFivePercent, quality: 71)
+    await waitForCompression(coordinator)
+    XCTAssertEqual(coordinator.compressionAction, .compressed)
+    XCTAssertEqual(coordinator.compressionSettings.scale, .twentyFivePercent)
+    XCTAssertEqual(coordinator.compressionSettings.qualityPercent, 71)
+    let secondSettings = await compressor.lastSettings()
+    XCTAssertEqual(secondSettings?.scale, .twentyFivePercent)
+    XCTAssertTrue(FileManager.default.fileExists(atPath: original.url.path))
+  }
+
+  func testQualityCompressionWaitsForOneSecondWithoutFurtherChanges() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let compressor = FakeGIFCompressor()
+    let (coordinator, _, _, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace, compressor: compressor)
+
+    coordinator.scheduleCompressionForQuality(80)
+    var pendingStates: [Bool] = []
+    let subscription = coordinator.$isQualityCompressionScheduled.removeDuplicates().sink {
+      pendingStates.append($0)
+    }
+    defer { subscription.cancel() }
+    try await Task.sleep(for: .milliseconds(300))
+    coordinator.scheduleCompressionForQuality(70)
+    try await Task.sleep(for: .milliseconds(700))
+    XCTAssertTrue(coordinator.isQualityCompressionScheduled)
+    XCTAssertFalse(coordinator.isCompressionInProgress)
+
+    await waitUntil(timeout: .seconds(5)) { coordinator.compressionAction == .compressed }
+    XCTAssertEqual(coordinator.compressionSettings.qualityPercent, 70)
+    let settings = await compressor.lastSettings()
+    XCTAssertEqual(settings?.qualityPercent, 70)
+    XCTAssertEqual(pendingStates, [true, false])
+  }
+
+  func testFailedOrCancelledRecompressionKeepsTheVisibleExportedResult() async throws {
+    for outcome in [FakeGIFCompressionOutcome.failure, .cancellable] {
+      let fixture = makeFixture()
+      defer { try? FileManager.default.removeItem(at: fixture.base) }
+      let compressor = FakeGIFCompressor()
+      let (coordinator, _, _, _) = try await makeReadyCoordinator(
+        workspace: fixture.workspace, compressor: compressor)
+      await coordinator.compressImmediately(quality: 90)
+      await waitForCompression(coordinator)
+      let previous = try XCTUnwrap(coordinator.displayedPreviewGIF)
+      let previousBytes = try Data(contentsOf: previous.url)
+      await coordinator.copyPreview()
+      await compressor.setOutcome(outcome)
+      await coordinator.compressImmediately(quality: 80)
+      XCTAssertEqual(coordinator.displayedPreviewGIF, previous)
+      if outcome == .cancellable {
+        while !(await compressor.isWaiting()) { await Task.yield() }
+        await coordinator.cancelCompression()
+      } else {
+        await waitForCompression(coordinator)
+      }
+      XCTAssertEqual(coordinator.displayedPreviewGIF, previous)
+      XCTAssertEqual(try Data(contentsOf: previous.url), previousBytes)
+      let closed = await coordinator.closePreview(discardUnexported: false)
+      XCTAssertTrue(closed)
+    }
+  }
+
+  func testBackToOriginalCancelsPendingQualityCompression() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let compressor = FakeGIFCompressor()
+    let (coordinator, _, original, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace, compressor: compressor)
+    await coordinator.compressImmediately(quality: 90)
+    await waitForCompression(coordinator)
+    coordinator.scheduleCompressionForQuality(70)
+    await coordinator.backToOriginalPreview()
+    XCTAssertFalse(coordinator.isQualityCompressionScheduled)
+    try await Task.sleep(for: .milliseconds(1100))
+    XCTAssertFalse(coordinator.isCompressionInProgress)
+    XCTAssertEqual(coordinator.displayedPreviewGIF, original)
+    let reservations = await compressor.reservations()
+    XCTAssertEqual(reservations.count, 1)
+  }
+
+  func testQualityScrubbingWaitsForReleaseAndDoesNotCompressAnUnchangedValue() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let compressor = FakeGIFCompressor()
+    let clipboard = RecordingTestClipboard()
+    let (coordinator, _, _, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace, compressor: compressor, clipboard: clipboard)
+    coordinator.beginQualityAdjustment()
+    try await Task.sleep(for: .milliseconds(1100))
+    XCTAssertTrue(coordinator.isQualityCompressionScheduled)
+    XCTAssertFalse(coordinator.isCompressionInProgress)
+    await coordinator.copyPreview()
+    XCTAssertTrue(clipboard.urls.isEmpty)
+    coordinator.finishQualityAdjustment(100)
+    XCTAssertFalse(coordinator.isQualityCompressionScheduled)
+    let reservations = await compressor.reservations()
+    XCTAssertTrue(reservations.isEmpty)
+    coordinator.beginQualityAdjustment()
+    coordinator.finishQualityAdjustment(70)
+    await waitUntil(timeout: .seconds(5)) { coordinator.compressionAction == .compressed }
+    XCTAssertEqual(coordinator.compressionSettings.qualityPercent, 70)
+  }
+
   func testDestinationStartsSizeSearchAndReportsResultWhileKeepingOriginal() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
@@ -92,9 +214,9 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(summary.fileBytes, original.fileBytes)
     XCTAssertEqual(summary.targetBytes, GIFCompressionDestination.github.targetBytes)
     XCTAssertTrue(summary.reachedTarget)
-    XCTAssertEqual(summary.attempts, 4)
+    XCTAssertEqual(summary.attempts, 12)
     XCTAssertEqual(summary.settings.scale, .original)
-    XCTAssertEqual(summary.settings.qualityPercent, 90)
+    XCTAssertEqual(summary.settings.qualityPercent, 100)
   }
 
   func testCompressionAndSearchReserveCacheInsideCombinedSessionBudget() async throws {
@@ -113,7 +235,7 @@ final class RecordingCoordinatorTests: XCTestCase {
       await waitForCompression(coordinator)
       XCTAssertEqual(coordinator.compressionAction, .compressed)
       let reservations = await compressor.reservations()
-      XCTAssertEqual(reservations.count, searchesDestination ? 4 : 1)
+      XCTAssertEqual(reservations.count, searchesDestination ? 12 : 1)
       let first = try XCTUnwrap(reservations.first)
       XCTAssertEqual(
         first.maximumBytes + first.maximumCacheBytes, maximumSessionBytes - originalBytes)
@@ -309,7 +431,7 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(GIFCompressionDestination.discord.limitResearchDate, "2026-10-24")
     XCTAssertEqual(GIFCompressionSettings().destination, .github)
     XCTAssertEqual(GIFCompressionSettings().scale, .original)
-    XCTAssertEqual(GIFCompressionSettings().qualityPercent, 90)
+    XCTAssertEqual(GIFCompressionSettings().qualityPercent, 100)
     XCTAssertEqual(GIFCompressionScale.allCases.map(\.rawValue), [100, 75, 50, 25])
     XCTAssertTrue(GIFCompressionSettings(qualityPercent: 100).isValid)
     XCTAssertTrue(GIFCompressionSettings(qualityPercent: 1).isValid)
@@ -959,7 +1081,7 @@ final class RecordingCoordinatorTests: XCTestCase {
 
 private enum TestFailure: Error { case start }
 
-private enum FakeGIFCompressionOutcome: Sendable {
+private enum FakeGIFCompressionOutcome: Sendable, Equatable {
   case success
   case failure
   case cancellable
@@ -970,7 +1092,7 @@ private enum FakeGIFCompressionFailure: Error { case expected }
 
 private actor FakeGIFCompressor: GIFCompressing {
   nonisolated let requiredCacheBytes: Int64
-  private let outcome: FakeGIFCompressionOutcome
+  private var outcome: FakeGIFCompressionOutcome
   private var waiting = false
   private var receivedSettings: GIFCompressionSettings?
   private var receivedReservations: [CompressedPreviewOutputReservation] = []
@@ -981,6 +1103,8 @@ private actor FakeGIFCompressor: GIFCompressing {
   }
 
   func isWaiting() -> Bool { waiting }
+
+  func setOutcome(_ outcome: FakeGIFCompressionOutcome) { self.outcome = outcome }
 
   func lastSettings() -> GIFCompressionSettings? { receivedSettings }
 

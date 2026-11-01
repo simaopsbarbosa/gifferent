@@ -160,6 +160,7 @@ final class RecordingCoordinator: ObservableObject {
   @Published private(set) var previewAction: PreviewAction = .idle
   @Published private(set) var editParameters: GIFEditParameters?
   @Published private(set) var isPreviewUpdateInProgress = false
+  @Published private(set) var isQualityCompressionScheduled = false
   @Published private(set) var editFrameCount = 0
   @Published private(set) var recordingWorkspaceBytes: Int64 = 0
   @Published private(set) var compressionSettings = GIFCompressionSettings()
@@ -194,6 +195,8 @@ final class RecordingCoordinator: ObservableObject {
   private var previewTask: Task<Void, Never>?
   private var replacementTask: Task<Void, Never>?
   private var compressionTask: Task<Void, Never>?
+  private var qualityCompressionTask: Task<Void, Never>?
+  private var pendingCompressionQuality: Int?
   private var compressionRequest: UUID?
   private var latestEditRequest: UUID?
   private var originalSequence: CapturedPNGSequence?
@@ -281,6 +284,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func discardCapturedSession() async {
+    cancelScheduledQualityCompression()
     guard !isPreviewActionInProgress else { return }
     let id: RecordingSessionID
     switch state {
@@ -318,6 +322,15 @@ final class RecordingCoordinator: ObservableObject {
 
   var isPreviewActionInProgress: Bool {
     previewAction == .copying || previewAction == .saving || isCompressionInProgress
+  }
+
+  var isExportInProgress: Bool {
+    previewAction == .copying || previewAction == .saving
+  }
+
+  var isCompressionSettingEditDisabled: Bool {
+    isCompressionInProgress || isPreviewUpdateInProgress
+      || previewAction == .copying || previewAction == .saving
   }
 
   func retryPreviewEncoding() {
@@ -375,9 +388,68 @@ final class RecordingCoordinator: ObservableObject {
     compressionSettings.qualityPercent = percent
   }
 
+  func beginQualityAdjustment() {
+    guard !isCompressionSettingEditDisabled else { return }
+    cancelScheduledQualityCompression()
+    isQualityCompressionScheduled = true
+  }
+
+  func finishQualityAdjustment(_ percent: Int) {
+    if percent == compressionSettings.qualityPercent {
+      cancelScheduledQualityCompression()
+    } else {
+      scheduleCompressionForQuality(percent)
+    }
+  }
+
+  func scheduleCompressionForQuality(_ percent: Int) {
+    guard (1...100).contains(percent), !isCompressionSettingEditDisabled else { return }
+    qualityCompressionTask?.cancel()
+    pendingCompressionQuality = percent
+    isQualityCompressionScheduled = true
+    qualityCompressionTask = Task { @MainActor [weak self] in
+      do {
+        try await Task.sleep(for: .seconds(1))
+      } catch {
+        return
+      }
+      guard let self else { return }
+      self.qualityCompressionTask = nil
+      self.isQualityCompressionScheduled = false
+      await self.compressImmediately()
+    }
+  }
+
+  @discardableResult
+  func compressImmediately(
+    scale: GIFCompressionScale? = nil,
+    quality: Int? = nil
+  ) async -> Bool {
+    let qualityToApply = quality ?? pendingCompressionQuality
+    cancelScheduledQualityCompression()
+    guard !isCompressionSettingEditDisabled, !isPreviewActionInProgress
+    else { return false }
+
+    if let scale { compressionSettings.scale = scale }
+    if let qualityToApply, (1...100).contains(qualityToApply) {
+      compressionSettings.qualityPercent = qualityToApply
+    }
+    pendingCompressionQuality = nil
+    startCompression()
+    return isCompressionInProgress
+  }
+
+  private func cancelScheduledQualityCompression() {
+    qualityCompressionTask?.cancel()
+    qualityCompressionTask = nil
+    pendingCompressionQuality = nil
+    isQualityCompressionScheduled = false
+  }
+
   func startCompression() {
+    cancelScheduledQualityCompression()
     guard !isPreviewUpdateInProgress, !isPreviewActionInProgress,
-      compressionTask == nil, compressedPreview == nil,
+      compressionTask == nil,
       case .previewReady(_, _, let source) = state,
       let compressor
     else { return }
@@ -389,8 +461,9 @@ final class RecordingCoordinator: ObservableObject {
     compressionRequest = request
     compressionAction = .compressing
     sizeSearchProgress = nil
-    sizeSearchSummary = nil
-    originalPreviewExportedBeforeCompression = previewExported
+    if compressedPreview == nil {
+      originalPreviewExportedBeforeCompression = previewExported
+    }
     let settings = compressionSettings
     compressionTask = Task { @MainActor [weak self] in
       guard let self else { return }
@@ -400,6 +473,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func startSizeSearch(for destination: GIFCompressionDestination) {
+    cancelScheduledQualityCompression()
     guard !isPreviewUpdateInProgress, !isPreviewActionInProgress,
       compressionTask == nil, compressedPreview == nil,
       case .previewReady(_, _, let source) = state,
@@ -433,6 +507,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func backToOriginalPreview() async {
+    cancelScheduledQualityCompression()
     guard !isCompressionInProgress,
       compressedPreview != nil,
       case .previewReady(let id, _, let original) = state
@@ -456,6 +531,7 @@ final class RecordingCoordinator: ObservableObject {
 
   func copyPreview() async {
     guard !isPreviewUpdateInProgress, !isPreviewActionInProgress,
+      !isQualityCompressionScheduled,
       let gif = displayedPreviewGIF
     else { return }
     previewAction = .copying
@@ -470,6 +546,7 @@ final class RecordingCoordinator: ObservableObject {
 
   func savePreview() async {
     guard !isPreviewUpdateInProgress, !isPreviewActionInProgress,
+      !isQualityCompressionScheduled,
       let gif = displayedPreviewGIF
     else { return }
     previewAction = .saving
@@ -487,6 +564,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   func closePreview(discardUnexported: Bool) async -> Bool {
+    cancelScheduledQualityCompression()
     guard !isPreviewActionInProgress else { return false }
     let id: RecordingSessionID
     switch state {
@@ -737,8 +815,6 @@ final class RecordingCoordinator: ObservableObject {
       reservation = nil
       committedURL = output.url
       try Task.checkCancellation()
-      try await workspace.keepCompressedPreviewOutput(for: previewID, at: output.url)
-      try Task.checkCancellation()
       let snapshot = try await workspace.snapshot(for: previewID)
       guard compressionRequest == request, !Task.isCancelled else {
         try? await workspace.removeCompressedPreviewOutput(for: previewID, at: output.url)
@@ -746,9 +822,17 @@ final class RecordingCoordinator: ObservableObject {
         return
       }
       compressedPreview = compressed
+      committedURL = nil
       sizeSearchProgress = nil
+      sizeSearchSummary = nil
       previewExported = false
       state = .previewReady(previewID, snapshot, original)
+      // publish the replacement before pruning the previously visible output.
+      // cancellation after publication keeps the new, validated preview usable.
+      try? await workspace.keepCompressedPreviewOutput(for: previewID, at: output.url)
+      if let currentSnapshot = try? await workspace.snapshot(for: previewID) {
+        state = .previewReady(previewID, currentSnapshot, original)
+      }
       compressionAction = .compressed
       compressionTask = nil
       compressionRequest = nil
@@ -853,7 +937,7 @@ final class RecordingCoordinator: ObservableObject {
   private func finishCompression(_ request: UUID, action: GIFCompressionAction) {
     guard compressionRequest == request else { return }
     compressionAction = action
-    if action == .failed || action == .cancelled {
+    if action == .failed || action == .cancelled, compressedPreview == nil {
       originalPreviewExportedBeforeCompression = nil
     }
     compressionTask = nil
@@ -861,7 +945,7 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   private func requestPreviewUpdate(_ parameters: GIFEditParameters) {
-    guard !isPreviewActionInProgress,
+    guard !isPreviewActionInProgress, !isQualityCompressionScheduled,
       case .previewReady(let id, _, _) = state,
       let originalSequence,
       parameters != editParameters,

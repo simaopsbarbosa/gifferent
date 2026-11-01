@@ -5,7 +5,7 @@ struct GIFFrameRange: Sendable, Equatable {
   let endIndexExclusive: Int
 }
 
-enum GIFLoopMode: Sendable, Equatable {
+enum GIFLoopMode: Sendable, Equatable, Hashable {
   case forever
   case once
 }

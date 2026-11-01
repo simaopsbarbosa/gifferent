@@ -52,7 +52,7 @@
 - the minimum acceptable compression quality keeps text legible at native scale, keeps cursor edges clear, and has no distracting banding or flicker in gradients. minor differences visible only at 2× are acceptable.
 - original choice, superseded below: the architect approved an ImageMagick diffusion slider from 0% to 100% in 5% steps, default 35%. after full-path benchmarking, the architect replaced it with Gifski quality control.
 - size goals target 90% of each published cap using decimal megabytes: 9 MB for GitHub image/GIF uploads and 18 MB for Discord's non-Nitro attachment cap. these are optimization targets, not guarantees; show the current cap and account caveat.
-- use destination names with native symbols on the optimizer buttons. do not bundle third-party destination marks unless written permission is obtained.
+- do not bundle third-party destination marks unless written permission is obtained.
 - after reviewing the native-size animated examples for mostly-static UI and high-motion content in [the encoder review](Benchmarks/reviews/gifski-magick-35-2026-10-24/index.html), the architect confirmed that both samples hold against the approved quality floor. this is a visual-quality judgment for these samples, not an encoder selection or a claim that the full search matrix passes.
 
 ## Gifski quality control approved on 2026-10-24
@@ -81,7 +81,7 @@
 
 ## bounded size-search implementation on 2026-10-24
 
-- destination buttons start a cancellable local search. the selected scale is the maximum; active candidates use only architect-approved scale/rate pairs at or below that scale. quality steps down from the selected value in five-point increments and always stops at 90, so the default 90 setting runs one quality attempt per eligible pair; the 100 setting runs three per pair.
+- destination buttons start a cancellable local search. the selected scale is the maximum; active candidates use only architect-approved scale/rate pairs at or below that scale. quality steps down from the selected value in five-point increments and always stops at 90. quality 90 runs one quality attempt per eligible pair; the latest default of 100 runs three per pair.
 - sample source frames from cumulative GIF timing, preserve the full edited duration by adjusting the final output frame delay, and allow only contiguous coalescing of the sampled delay schedule, correct the final delay from the remaining expected suffix, and validate exact total duration, dimensions, and loop mode. run one candidate at a time, retain only the smallest candidate, and remove all other outputs on replacement, failure, or cancellation. the original GIF remains available throughout.
 
 ## confirmed by the architect on 2026-10-20
@@ -92,7 +92,7 @@
 - GIF only; no captured sound. cursor included by default but configurable. initial target 24 fps. typical recording under 30 seconds; warn about long or large recording but do not silently stop it.
 - floating preview after stop; original retained behind a back action when viewing compression. include metadata, copy, save dialog, discard, and compress. `⌘C` copies an animated GIF suitable for pasting into GitHub; `⌘S` saves. confirm before closing an unexported preview.
 - trim, playback speed that changes duration, and forever/once loop modes in the first release.
-- compression runs locally through a bundled existing command-line tool. the latest approved control is Gifski quality from 1 to 100, default 90. resolution: original, 75%, 50%, 25%. destination presets: Discord and GitHub; show destination names with native symbols, current published maximum, and the approved 90% target (9 MB GitHub, 18 MB Discord non-Nitro). Slack is excluded until a useful size goal is defined. search across resolution, sampled frame rate, and quality; prefer the smallest acceptable file under target and show the best attempt plus a warning otherwise. Gifski manages palette generation internally.
+- compression runs locally through a bundled existing command-line tool. the latest approved control is Gifski quality from 1 to 100, default 90. resolution: original, 75%, 50%, 25%. destination presets: Discord and GitHub; show destination names with native symbols, current published maximum, and the approved 90% target (9 MB GitHub, 18 MB Discord non-Nitro). Slack is excluded until a useful size goal is defined. search across resolution, sampled frame rate, and quality; prefer the smallest acceptable file under target and retain the best attempt if the target cannot be met. Gifski manages palette generation internally. the architect later removed the size-against-target summary from the preview controls.
 - brand working name `gifferent`; the first mark candidate is a simple geometric loop frame, mostly monochrome with warm orange accent; mood references Augusta Labs and Cloudflare UI; small occasional brand marks in capture UI. sound is subtle and optional.
 - prose is lowercase except proper names. all features need unit, integration, and automated end-to-end acceptance tests. CI gates build, tests, format, and lint; release includes real-Mac manual acceptance.
 - public project under AGPL-3.0-or-later; captured pixels never leave the Mac. benchmark speed goals on a baseline Apple Silicon laptop. clear partial recordings after a crash rather than restoring them. when a detail is undecided, record it and ask the architect.
@@ -102,6 +102,36 @@
 1. **bundled tool license:** the candidate-level engineering screen is recorded in [the encoder license audit](Benchmarks/encoder-license-audit.md). exact source, dependency, and binary audits remain required before packaging; Gifsicle's distribution terms remain unresolved for this app bundle.
 2. **encoder distribution:** Gifski 1.34.0 is approved for backend integration and search. `gif-dispose` can use its manifest-declared Apache-2.0 option, documented in [package license evidence](Benchmarks/encoder-package-license-evidence-2026-10-24.md). direct distribution remains blocked until complete dependency license/attribution texts, corresponding source obligations, pinned build provenance, and final bundle contents are verified. ImageMagick is not the release path; its measured time/resource costs and distributable dependency closure are recorded in the benchmark and package-evidence reports.
 3. **clipboard representation:** verify the chosen pasteboard representations by pasting an animated GIF into GitHub on a real Mac. a successful local pasteboard write alone does not establish destination compatibility.
+
+## preview window UI approved on 2026-10-31
+
+- replace the earlier preview interface with the architect-approved [DESIRED UI](https://www.figma.com/design/O68yQjTFJHxVcnJCFtqnvL?node-id=19-4741): a compact native window with a centered 338 by 232 point GIF, full-width trim, speed and loop on one row, grouped resolution/destination controls, a quality slider, centered metadata, and copy/save/close actions.
+- the initial destination controls used native system symbols and visible published maximums; the architect replaced them with a `compress for` menu listing Discord (20 MB max) and GitHub (10 MB max) on 2026-10-31.
+- close on an unexported preview keeps the existing confirmation flow; discard remains explicit inside that confirmation. the ready view does not need a second direct discard button.
+- destination menu choices start the local size search. the displayed 75% in the design is a selected example; preserve the approved original-size default, quality 90, speed 1×, and forever loop defaults.
+- on 2026-10-31, the architect requested a segmented forever/once control inline with speed, trailing alignment for destination actions, a resizable window that opens at its current 700 point width and compact height, and a save sheet above the floating preview. official GitHub and Discord logos remain gated by the written-permission rule in [brand.md](brand.md).
+- on 2026-10-31, the architect approved immediate compression when resolution changes and a one-second idle debounce after quality scrubbing. each new compression replaces the shown result using the retained original GIF as its source.
+- on 2026-10-31, the architect specified the busy state: show a spinner and `updating gif` over the preview, retain the current preview and metadata until replacement completes, disable copy/save while busy, keep close available, and never show a completion message. remove the size-against-target summary below compression controls; resolution/quality presets remain separate from destination size search. place the original-return arrow beside copy, and show `⌘C`/`⌘S` in the copy/save labels.
+
+- on 2026-10-31, the architect replaced inline export feedback with a compact floating notice near the top of the preview. copy/save success and save cancellation fade out after 2.5 seconds without changing window height; errors remain for six seconds. use native material and respect reduced motion. the destination menu uses only its native dropdown arrow.
+
+- on 2026-10-31, the architect requested that GIF updates preserve the preview window's position. center and constrain the window only when creating it; subsequent updates retain the current frame.
+
+- on 2026-10-31, the architect reduced the default preview window width to 560 points (80% of 700), increased metadata vertical padding to 12 points, and removed the preview's 338 point width cap. the preview fills the available content width with a 232 point height limit and proportional image scaling, so portrait GIFs stay contained.
+
+- on 2026-10-31, the architect clarified that `compress for` is an action menu replacing two destination buttons, with no selected platform in its label. quality defaults to 100; opening the preview leaves the original GIF untouched. the preview height cap is now 280 points, with equal 12 point top and side margins.
+
+- on 2026-10-31, the architect moved the unavailable-resolution size-search explanation into the same temporary floating feedback used for copy. fit the initial ready-preview window height to measured content so all controls fit without scrolling, constrained by available screen height. fit only once and preserve later window resizing and position.
+
+## UI refactor verification on 2026-11-01
+
+- on 2026-11-01, the architect approved continuous, softly moving dithered vines behind the GIF preview as an exception to the brief-motion rule. the background may show through transparent GIF pixels. reduce motion and low power mode use a still frame.
+- on 2026-11-01, the architect requested more, narrower vines at the same speed, lower pattern contrast, and an outline and subtle side shadows around the fitted GIF to distinguish it from the background.
+- on 2026-11-01, the architect approved the resulting preview direction and requested slightly more space above the compression controls.
+
+- the audit restored the previously approved Xcode 27.1/27A9275 pin, fixed real-Gifski fixture discovery, and covered pending-quality publication, pointer-release debounce, retained results on failure/cancellation, and cancelling delayed compression on back.
+- the [verification report](ui-refactor-verification-2026-11-01.md) records local checks, benchmark evidence, and the signing/hosted-CI/real-Mac acceptance gates that remain open. it does not waive definition-of-done requirements.
+- the architect explicitly approved a local commit with those acceptance gates pending on 2026-11-01. merge, release, and definition-of-done completion remain gated on the outstanding evidence.
 
 ## research notes, not product decisions
 

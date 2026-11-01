@@ -1,0 +1,685 @@
+{
+  "environment": {
+    "macos": "27.0.1",
+    "machine": {
+      "command": [
+        "sysctl",
+        "-n",
+        "hw.model"
+      ],
+      "exit_code": 0,
+      "stdout": "Mac14,2",
+      "stderr": ""
+    },
+    "power": {
+      "command": [
+        "pmset",
+        "-g",
+        "batt"
+      ],
+      "exit_code": 0,
+      "stdout": "Now drawing from 'Battery Power'\n -InternalBattery-0 61%; discharging; 2:31 remaining present: true",
+      "stderr": ""
+    },
+    "toolchain": {
+      "command": [
+        "xcodebuild",
+        "-version"
+      ],
+      "exit_code": 0,
+      "stdout": "Xcode 27.1\nBuild version 27A9275",
+      "stderr": ""
+    }
+  },
+  "binary_sha256": "e2ca0614ce3803e1963d4b48923b25e8c20fc4070873a526f1e151b652a87df6",
+  "binary_version": {
+    "command": [
+      "/Users/simaob/dev/gifferent/Vendor/Gifski-1.34.0/gifski",
+      "--version"
+    ],
+    "exit_code": 0,
+    "stdout": "gifski 1.34.0",
+    "stderr": ""
+  },
+  "warm_runs": 7,
+  "profiles": {
+    "mostly-static-ui": {
+      "manifest_sha256": "6e2f785f8c29a9ca43cd1bbf91dd636e0405822c01438cb8a27ef1a7a35a28fa",
+      "frames_sha256": "d42ed02d552de0db283b9a2d720ac782b7b62dc8dd7c41817da0837b3ce71fc2",
+      "qualities": {
+        "90": {
+          "samples": [
+            {
+              "cold": true,
+              "seconds": 0.5888817500090227,
+              "peak_rss_bytes": 83083264,
+              "file_bytes": 15311,
+              "sha256": "3beeaabc6e18589bbb6c5b00cc5e1794a66a4d4ca7a65db2e9596a609064a555",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15311,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.6010255829896778,
+              "peak_rss_bytes": 82640896,
+              "file_bytes": 15311,
+              "sha256": "3beeaabc6e18589bbb6c5b00cc5e1794a66a4d4ca7a65db2e9596a609064a555",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15311,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5396404999773949,
+              "peak_rss_bytes": 86425600,
+              "file_bytes": 15311,
+              "sha256": "3beeaabc6e18589bbb6c5b00cc5e1794a66a4d4ca7a65db2e9596a609064a555",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15311,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5254885000176728,
+              "peak_rss_bytes": 78741504,
+              "file_bytes": 15311,
+              "sha256": "3beeaabc6e18589bbb6c5b00cc5e1794a66a4d4ca7a65db2e9596a609064a555",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15311,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5369429159909487,
+              "peak_rss_bytes": 81264640,
+              "file_bytes": 15311,
+              "sha256": "3beeaabc6e18589bbb6c5b00cc5e1794a66a4d4ca7a65db2e9596a609064a555",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15311,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5275815830100328,
+              "peak_rss_bytes": 81821696,
+              "file_bytes": 15311,
+              "sha256": "3beeaabc6e18589bbb6c5b00cc5e1794a66a4d4ca7a65db2e9596a609064a555",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15311,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.521125708008185,
+              "peak_rss_bytes": 86556672,
+              "file_bytes": 15311,
+              "sha256": "3beeaabc6e18589bbb6c5b00cc5e1794a66a4d4ca7a65db2e9596a609064a555",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15311,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5320557910017669,
+              "peak_rss_bytes": 89440256,
+              "file_bytes": 15311,
+              "sha256": "3beeaabc6e18589bbb6c5b00cc5e1794a66a4d4ca7a65db2e9596a609064a555",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15311,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            }
+          ],
+          "summary": {
+            "seconds": {
+              "median": 0.5320557910017669,
+              "p90": 0.6010255829896778
+            },
+            "peak_rss_bytes": {
+              "median": 82640896,
+              "p90": 89440256
+            },
+            "file_bytes": {
+              "median": 15311,
+              "p90": 15311
+            }
+          }
+        },
+        "100": {
+          "samples": [
+            {
+              "cold": true,
+              "seconds": 0.5590245419880375,
+              "peak_rss_bytes": 82378752,
+              "file_bytes": 15365,
+              "sha256": "1e66ca32adeec8f7be22585397c8860dab96cfa3380e4ed2fb363f75658a5cb1",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15365,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5322050000540912,
+              "peak_rss_bytes": 81477632,
+              "file_bytes": 15365,
+              "sha256": "1e66ca32adeec8f7be22585397c8860dab96cfa3380e4ed2fb363f75658a5cb1",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15365,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5310651670442894,
+              "peak_rss_bytes": 81821696,
+              "file_bytes": 15365,
+              "sha256": "1e66ca32adeec8f7be22585397c8860dab96cfa3380e4ed2fb363f75658a5cb1",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15365,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5421231250511482,
+              "peak_rss_bytes": 86114304,
+              "file_bytes": 15365,
+              "sha256": "1e66ca32adeec8f7be22585397c8860dab96cfa3380e4ed2fb363f75658a5cb1",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15365,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5287800841033459,
+              "peak_rss_bytes": 86016000,
+              "file_bytes": 15365,
+              "sha256": "1e66ca32adeec8f7be22585397c8860dab96cfa3380e4ed2fb363f75658a5cb1",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15365,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5148368750233203,
+              "peak_rss_bytes": 85508096,
+              "file_bytes": 15365,
+              "sha256": "1e66ca32adeec8f7be22585397c8860dab96cfa3380e4ed2fb363f75658a5cb1",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15365,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5391045419964939,
+              "peak_rss_bytes": 89341952,
+              "file_bytes": 15365,
+              "sha256": "1e66ca32adeec8f7be22585397c8860dab96cfa3380e4ed2fb363f75658a5cb1",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15365,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.5143892910564318,
+              "peak_rss_bytes": 84934656,
+              "file_bytes": 15365,
+              "sha256": "1e66ca32adeec8f7be22585397c8860dab96cfa3380e4ed2fb363f75658a5cb1",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 15365,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            }
+          ],
+          "summary": {
+            "seconds": {
+              "median": 0.5310651670442894,
+              "p90": 0.5421231250511482
+            },
+            "peak_rss_bytes": {
+              "median": 85508096,
+              "p90": 89341952
+            },
+            "file_bytes": {
+              "median": 15365,
+              "p90": 15365
+            }
+          }
+        }
+      }
+    },
+    "high-motion-gradient-cursor": {
+      "manifest_sha256": "8a90e5f8d09fe44045642bc1fb744d3865494ad8ede21e36b95ab06759f71c64",
+      "frames_sha256": "8436939cbc8b536dcc3ea3423669f4f0ccdda1dc14a75a3e5eee4b652b4c0c01",
+      "qualities": {
+        "90": {
+          "samples": [
+            {
+              "cold": true,
+              "seconds": 0.9772859159857035,
+              "peak_rss_bytes": 82657280,
+              "file_bytes": 5792443,
+              "sha256": "f4afa4f9e61d7b094cf6037f997c1a268b81fd85457a035a35032175f91efa1a",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 5792443,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9986354579450563,
+              "peak_rss_bytes": 92291072,
+              "file_bytes": 5792443,
+              "sha256": "f4afa4f9e61d7b094cf6037f997c1a268b81fd85457a035a35032175f91efa1a",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 5792443,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 1.0511496249819174,
+              "peak_rss_bytes": 81821696,
+              "file_bytes": 5792443,
+              "sha256": "f4afa4f9e61d7b094cf6037f997c1a268b81fd85457a035a35032175f91efa1a",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 5792443,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9721103339688852,
+              "peak_rss_bytes": 86802432,
+              "file_bytes": 5792443,
+              "sha256": "f4afa4f9e61d7b094cf6037f997c1a268b81fd85457a035a35032175f91efa1a",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 5792443,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.965506583917886,
+              "peak_rss_bytes": 84983808,
+              "file_bytes": 5792443,
+              "sha256": "f4afa4f9e61d7b094cf6037f997c1a268b81fd85457a035a35032175f91efa1a",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 5792443,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9746664579724893,
+              "peak_rss_bytes": 83525632,
+              "file_bytes": 5792443,
+              "sha256": "f4afa4f9e61d7b094cf6037f997c1a268b81fd85457a035a35032175f91efa1a",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 5792443,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9843763750977814,
+              "peak_rss_bytes": 84426752,
+              "file_bytes": 5792443,
+              "sha256": "f4afa4f9e61d7b094cf6037f997c1a268b81fd85457a035a35032175f91efa1a",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 5792443,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9595521659357473,
+              "peak_rss_bytes": 86130688,
+              "file_bytes": 5792443,
+              "sha256": "f4afa4f9e61d7b094cf6037f997c1a268b81fd85457a035a35032175f91efa1a",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 5792443,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            }
+          ],
+          "summary": {
+            "seconds": {
+              "median": 0.9746664579724893,
+              "p90": 1.0511496249819174
+            },
+            "peak_rss_bytes": {
+              "median": 84983808,
+              "p90": 92291072
+            },
+            "file_bytes": {
+              "median": 5792443,
+              "p90": 5792443
+            }
+          }
+        },
+        "100": {
+          "samples": [
+            {
+              "cold": true,
+              "seconds": 0.9144122910220176,
+              "peak_rss_bytes": 89473024,
+              "file_bytes": 14562564,
+              "sha256": "44ea456509fbadf41e287b5765f8361cde86d29a9a3896e089ddb167aa6ae175",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 14562564,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9142306670546532,
+              "peak_rss_bytes": 84869120,
+              "file_bytes": 14562564,
+              "sha256": "44ea456509fbadf41e287b5765f8361cde86d29a9a3896e089ddb167aa6ae175",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 14562564,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9174557910300791,
+              "peak_rss_bytes": 85180416,
+              "file_bytes": 14562564,
+              "sha256": "44ea456509fbadf41e287b5765f8361cde86d29a9a3896e089ddb167aa6ae175",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 14562564,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9281338750151917,
+              "peak_rss_bytes": 83476480,
+              "file_bytes": 14562564,
+              "sha256": "44ea456509fbadf41e287b5765f8361cde86d29a9a3896e089ddb167aa6ae175",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 14562564,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9141590000363067,
+              "peak_rss_bytes": 84443136,
+              "file_bytes": 14562564,
+              "sha256": "44ea456509fbadf41e287b5765f8361cde86d29a9a3896e089ddb167aa6ae175",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 14562564,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9337470419704914,
+              "peak_rss_bytes": 88555520,
+              "file_bytes": 14562564,
+              "sha256": "44ea456509fbadf41e287b5765f8361cde86d29a9a3896e089ddb167aa6ae175",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 14562564,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9468813330167904,
+              "peak_rss_bytes": 80740352,
+              "file_bytes": 14562564,
+              "sha256": "44ea456509fbadf41e287b5765f8361cde86d29a9a3896e089ddb167aa6ae175",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 14562564,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            },
+            {
+              "cold": false,
+              "seconds": 0.9589926250046119,
+              "peak_rss_bytes": 94175232,
+              "file_bytes": 14562564,
+              "sha256": "44ea456509fbadf41e287b5765f8361cde86d29a9a3896e089ddb167aa6ae175",
+              "matches_reviewed_animation": true,
+              "metadata": {
+                "width": 640,
+                "height": 360,
+                "frame_count": 240,
+                "duration_seconds": 10.0,
+                "loop_count": 0,
+                "bytes": 14562564,
+                "frame_delays_sha256": "0c1b5cc3b9a5e4955200d9b1787302b635f3a0a0a5d6242bfc2ae26c20d02d94"
+              }
+            }
+          ],
+          "summary": {
+            "seconds": {
+              "median": 0.9281338750151917,
+              "p90": 0.9589926250046119
+            },
+            "peak_rss_bytes": {
+              "median": 84869120,
+              "p90": 94175232
+            },
+            "file_bytes": {
+              "median": 14562564,
+              "p90": 14562564
+            }
+          }
+        }
+      }
+    }
+  },
+  "recorded_at_utc": "2026-11-01T01:10:53.416532+00:00",
+  "settings": {
+    "fps": 24,
+    "repeat": 0,
+    "no_sort": true,
+    "qualities": [
+      90,
+      100
+    ]
+  }
+}
