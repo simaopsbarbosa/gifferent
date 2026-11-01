@@ -154,3 +154,5 @@
 - implementation and acceptance sequence: [frame rate and speed plan](fps-implementation-plan.md). merge and definition-of-done completion remain gated on actual test, performance, and visual evidence.
 
 - performance tradeoff approved on 2026-11-01: after reviewing the [50 fps benchmark](Benchmarks/frame-rate-presets-2026-11-01.md), the architect explicitly accepted the measured encoding cost and retained the 50 fps default. the 10-second motion fixture takes 2.28 seconds median / 2.31 seconds p90 (24 fps baseline 1.07 / 1.08 seconds), creates 23.3 MB (baseline 11.2 MB), and peaks around 1 GiB encoder RSS. this accepts these fixture encoder measurements for the feature; it does not establish the under-two-second preview target or waive live capture, automated UI, final visual/accessibility, or release acceptance.
+
+- on 2026-11-01, the architect instructed “skip acceptance for now”. acceptance work is deferred; retain pending automated UI/real-Mac checks and the draft PR. this is not a claim that acceptance passed or that definition-of-done/release gates are complete.
