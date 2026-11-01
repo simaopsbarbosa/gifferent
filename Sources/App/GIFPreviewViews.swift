@@ -1,4 +1,5 @@
 import AppKit
+import ImageIO
 import SwiftUI
 
 @MainActor
@@ -17,6 +18,8 @@ struct GIFPreviewReadyView: View {
   let snapshot: RecordingSessionSnapshot
   let gif: EncodedGIF
   let previewWidth: CGFloat
+  @State private var inspectedFrame: URL?
+  @State private var trimDraftActive = false
 
   private var displayedGIF: EncodedGIF {
     coordinator.displayedPreviewGIF ?? gif
@@ -32,63 +35,71 @@ struct GIFPreviewReadyView: View {
 
   var body: some View {
     VStack(spacing: 9) {
-      AnimatedGIFView(url: displayedGIF.url)
-        .frame(
-          width: previewWidth,
-          height: 280
-        )
-        .background { PreviewDitherBackground() }
-        .overlay {
-          Rectangle()
-            .strokeBorder(.quaternary, lineWidth: 1)
-            .frame(width: fittedGIFSize.width, height: fittedGIFSize.height)
-            .shadow(color: .black.opacity(0.35), radius: 6, x: -3)
-            .shadow(color: .black.opacity(0.35), radius: 6, x: 3)
-            .allowsHitTesting(false)
-            .accessibilityHidden(true)
+      Group {
+        if let inspectedFrame, let image = NSImage(contentsOf: inspectedFrame) {
+          Image(nsImage: image).resizable().aspectRatio(contentMode: .fit)
+        } else {
+          AnimatedGIFView(url: displayedGIF.url)
         }
-        .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-        .overlay {
-          RoundedRectangle(cornerRadius: 7, style: .continuous)
-            .strokeBorder(.quaternary, lineWidth: 1)
-        }
-        .overlay {
-          if coordinator.isPreviewUpdateInProgress || coordinator.isCompressionInProgress {
-            VStack(spacing: 9) {
-              ProgressView()
+      }
+      .frame(
+        width: previewWidth,
+        height: 280
+      )
+      .background { PreviewDitherBackground() }
+      .overlay {
+        Rectangle()
+          .strokeBorder(.quaternary, lineWidth: 1)
+          .frame(width: fittedGIFSize.width, height: fittedGIFSize.height)
+          .shadow(color: .black.opacity(0.35), radius: 6, x: -3)
+          .shadow(color: .black.opacity(0.35), radius: 6, x: 3)
+          .allowsHitTesting(false)
+          .accessibilityHidden(true)
+      }
+      .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+      .overlay {
+        RoundedRectangle(cornerRadius: 7, style: .continuous)
+          .strokeBorder(.quaternary, lineWidth: 1)
+      }
+      .overlay {
+        if coordinator.isPreviewUpdateInProgress || coordinator.isCompressionInProgress {
+          VStack(spacing: 9) {
+            ProgressView()
+              .controlSize(.small)
+              .accessibilityLabel("updating gif")
+            Text("updating gif")
+              .font(.callout.weight(.medium))
+            if coordinator.isCompressionInProgress {
+              Button("cancel") { Task { await coordinator.cancelCompression() } }
                 .controlSize(.small)
-                .accessibilityLabel("updating gif")
-              Text("updating gif")
-                .font(.callout.weight(.medium))
-              if coordinator.isCompressionInProgress {
-                Button("cancel") { Task { await coordinator.cancelCompression() } }
-                  .controlSize(.small)
-                  .accessibilityIdentifier("cancel-compression-button")
-              }
+                .accessibilityIdentifier("cancel-compression-button")
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(.ultraThinMaterial)
-            .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
-            .accessibilityElement(children: .contain)
-            .accessibilityIdentifier("preview-processing-overlay")
-            .transition(.opacity)
           }
+          .frame(maxWidth: .infinity, maxHeight: .infinity)
+          .background(.ultraThinMaterial)
+          .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
+          .accessibilityElement(children: .contain)
+          .accessibilityIdentifier("preview-processing-overlay")
+          .transition(.opacity)
         }
-        .animation(
-          reduceMotion ? nil : .easeInOut(duration: 0.16),
-          value: coordinator.isPreviewUpdateInProgress
-        )
-        .animation(
-          reduceMotion ? nil : .easeInOut(duration: 0.16),
-          value: coordinator.isCompressionInProgress
-        )
-        .frame(maxWidth: .infinity)
+      }
+      .animation(
+        reduceMotion ? nil : .easeInOut(duration: 0.16),
+        value: coordinator.isPreviewUpdateInProgress
+      )
+      .animation(
+        reduceMotion ? nil : .easeInOut(duration: 0.16),
+        value: coordinator.isCompressionInProgress
+      )
+      .frame(maxWidth: .infinity)
 
-      GIFEditControls(coordinator: coordinator)
-        .disabled(
-          coordinator.isCompressionInProgress || coordinator.isQualityCompressionScheduled
-            || coordinator.compressedPreview != nil
-        )
+      GIFEditControls(
+        coordinator: coordinator, inspectedFrame: $inspectedFrame, trimDraftActive: $trimDraftActive
+      )
+      .disabled(
+        coordinator.isCompressionInProgress || coordinator.isQualityCompressionScheduled
+          || coordinator.compressedPreview != nil
+      )
       GIFCompressionControls(coordinator: coordinator)
         .padding(.top, 6)
 
@@ -161,7 +172,7 @@ struct GIFPreviewReadyView: View {
   }
 
   private var exportIsDisabled: Bool {
-    coordinator.previewAction == .copying || coordinator.previewAction == .saving
+    trimDraftActive || coordinator.previewAction == .copying || coordinator.previewAction == .saving
       || coordinator.isPreviewUpdateInProgress || coordinator.isCompressionInProgress
       || coordinator.isQualityCompressionScheduled
   }
@@ -378,6 +389,8 @@ private struct GIFPreviewActionNotice: View {
 private struct GIFEditControls: View {
   @ObservedObject var coordinator: RecordingCoordinator
   @State private var playbackSpeed = 1.0
+  @Binding var inspectedFrame: URL?
+  @Binding var trimDraftActive: Bool
 
   var body: some View {
     Group {
@@ -387,9 +400,12 @@ private struct GIFEditControls: View {
             .font(.caption)
             .foregroundStyle(.secondary)
           GIFTimelineControl(
+            sequence: coordinator.trimSource,
             frameCount: coordinator.editFrameCount,
             startIndex: parameters.frameRange.startIndex,
             endIndexExclusive: parameters.frameRange.endIndexExclusive,
+            inspectedFrame: $inspectedFrame,
+            trimDraftActive: $trimDraftActive,
             onChange: updateTrim
           )
 
@@ -652,123 +668,140 @@ private struct GIFCompressionActionControl: View {
 
 @MainActor
 private struct GIFTimelineControl: View {
+  let sequence: CapturedPNGSequence?
   let frameCount: Int
   let startIndex: Int
   let endIndexExclusive: Int
+  @Binding var inspectedFrame: URL?
+  @Binding var trimDraftActive: Bool
   let onChange: @MainActor (Int, Int) -> Void
+  @State private var draftStart: Int?
+  @State private var draftEnd: Int?
+  @State private var thumbnails: [NSImage] = []
+
+  private var boundaries: [Double] {
+    guard let sequence, let first = sequence.frames.first, let last = sequence.frames.last else {
+      return [0, 1]
+    }
+    let interval =
+      sequence.finalFrameDuration
+      ?? (sequence.frames.count > 1
+        ? last.timestamp - sequence.frames[sequence.frames.count - 2].timestamp : 1.0 / 24)
+    let duration = max(0.000001, last.timestamp - first.timestamp + interval)
+    return sequence.frames.map { ($0.timestamp - first.timestamp) / duration } + [1]
+  }
 
   var body: some View {
     GeometryReader { geometry in
-      let trackWidth = max(1, geometry.size.width - 24)
-      let lastIndex = max(0, frameCount - 1)
-      let start = min(max(startIndex, 0), lastIndex)
-      let end = min(max(endIndexExclusive - 1, start), lastIndex)
-      let startX = 12 + trackWidth * fraction(start, lastIndex: lastIndex)
-      let endX = 12 + trackWidth * fraction(end, lastIndex: lastIndex)
-
+      let width = max(1, geometry.size.width - 20)
+      let start = min(max(draftStart ?? startIndex, 0), max(0, frameCount - 1))
+      let end = min(max(draftEnd ?? endIndexExclusive, start + 1), frameCount)
+      let left = 10 + width * boundaries[start]
+      let right = 10 + width * boundaries[end]
       ZStack(alignment: .leading) {
-        Capsule()
-          .fill(.quaternary)
-          .frame(width: trackWidth, height: 4)
-          .offset(x: 12)
-        Capsule()
-          .fill(Color.accentColor)
-          .frame(width: max(4, endX - startX), height: 4)
-          .offset(x: startX)
-
-        GIFTimelineHandle(
-          identifier: "trim-start-handle",
-          label: "trim start",
-          index: start,
-          frameCount: frameCount,
-          lastIndex: max(0, min(lastIndex, end - 1)),
-          minimumIndex: 0,
-          x: startX,
-          trackWidth: trackWidth,
-          currentRange: start..<(end + 1),
-          onMove: { value in onChange(value, endIndexExclusive) }
-        )
-
-        GIFTimelineHandle(
-          identifier: "trim-end-handle",
-          label: "trim end",
-          index: end,
-          frameCount: frameCount,
-          lastIndex: lastIndex,
-          minimumIndex: min(lastIndex, max(0, start + 1)),
-          x: endX,
-          trackWidth: trackWidth,
-          currentRange: start..<(end + 1),
-          onMove: { value in onChange(startIndex, value + 1) }
-        )
+        HStack(spacing: 0) {
+          ForEach(Array(thumbnails.enumerated()), id: \.offset) { _, image in
+            Image(nsImage: image).resizable().aspectRatio(contentMode: .fill)
+              .frame(width: width / CGFloat(max(1, thumbnails.count)), height: 48).clipped()
+          }
+        }
+        .frame(width: width, height: 48).background(.quaternary).offset(x: 10)
+        .contentShape(Rectangle())
+        .gesture(
+          DragGesture(minimumDistance: 0, coordinateSpace: .named("trim"))
+            .onChanged { value in
+              inspect(nearest(value.location.x, width: width, lower: 0, upper: frameCount - 1))
+            }
+            .onEnded { _ in inspectedFrame = nil })
+        Rectangle().fill(.black.opacity(0.55)).frame(width: max(0, left - 10), height: 48).offset(
+          x: 10
+        ).allowsHitTesting(false)
+        Rectangle().fill(.black.opacity(0.55)).frame(width: max(0, width + 10 - right), height: 48)
+          .offset(x: right).allowsHitTesting(false)
+        RoundedRectangle(cornerRadius: 4).strokeBorder(.yellow, lineWidth: 4)
+          .frame(width: max(1, right - left), height: 52).offset(x: left).allowsHitTesting(false)
+        handle(start, x: left, width: width, isStart: true, start: start, end: end)
+        handle(end, x: right, width: width, isStart: false, start: start, end: end)
       }
-      .frame(maxWidth: .infinity, maxHeight: .infinity)
-      .coordinateSpace(name: "gif-timeline")
+      .coordinateSpace(name: "trim")
     }
-    .frame(height: 32)
-    .accessibilityElement(children: .contain)
+    .frame(height: 52)
+    .task(id: sequence?.frames.first?.url) { await loadThumbnails() }
+    .onDisappear {
+      inspectedFrame = nil
+      trimDraftActive = false
+    }
   }
 
-  private func fraction(_ index: Int, lastIndex: Int) -> CGFloat {
-    guard lastIndex > 0 else { return 0 }
-    return CGFloat(index) / CGFloat(lastIndex)
-  }
-}
-
-@MainActor
-private struct GIFTimelineHandle: View {
-  let identifier: String
-  let label: String
-  let index: Int
-  let frameCount: Int
-  let lastIndex: Int
-  let minimumIndex: Int
-  let x: CGFloat
-  let trackWidth: CGFloat
-  let currentRange: Range<Int>
-  let onMove: @MainActor (Int) -> Void
-
-  var body: some View {
-    Circle()
-      .fill(Color.accentColor)
-      .frame(width: 18, height: 18)
-      .position(x: x, y: 16)
+  private func handle(_ index: Int, x: CGFloat, width: CGFloat, isStart: Bool, start: Int, end: Int)
+    -> some View
+  {
+    RoundedRectangle(cornerRadius: 3).fill(.yellow).frame(width: 12, height: 52)
+      .overlay { Capsule().fill(.black).frame(width: 2, height: 20) }
+      .position(x: x, y: 26)
       .gesture(
-        DragGesture(minimumDistance: 0, coordinateSpace: .named("gif-timeline"))
-          .onChanged { value in move(to: value.location.x) }
+        DragGesture(minimumDistance: 0, coordinateSpace: .named("trim"))
+          .onChanged { value in
+            trimDraftActive = true
+            let position = nearest(
+              value.location.x, width: width, lower: isStart ? 0 : start + 1,
+              upper: isStart ? end - 1 : frameCount)
+            if isStart { draftStart = position } else { draftEnd = position }
+            inspect(isStart ? position : position - 1)
+          }
+          .onEnded { _ in
+            let selectedStart = draftStart ?? startIndex
+            let selectedEnd = draftEnd ?? endIndexExclusive
+            onChange(selectedStart, selectedEnd)
+            draftStart = nil
+            draftEnd = nil
+            inspectedFrame = nil
+            trimDraftActive = false
+          }
       )
-      .accessibilityElement()
-      .accessibilityLabel(label)
-      .accessibilityValue("frame \(index + 1) of \(frameCount)")
-      .accessibilityIdentifier(identifier)
-      .accessibilityAddTraits(.isButton)
-      .accessibilityAdjustableAction(adjust)
-      .focusable()
-      .onKeyPress(.leftArrow) {
-        adjust(.decrement)
-        return .handled
+      .accessibilityLabel(isStart ? "trim start" : "trim end")
+      .accessibilityIdentifier(isStart ? "trim-start-handle" : "trim-end-handle")
+      .accessibilityValue("frame \(isStart ? index + 1 : index) of \(frameCount)")
+      .accessibilityAdjustableAction { direction in
+        let delta = direction == .increment ? 1 : -1
+        if isStart {
+          onChange(min(max(index + delta, 0), end - 1), end)
+        } else {
+          onChange(start, min(max(index + delta, start + 1), frameCount))
+        }
       }
-      .onKeyPress(.rightArrow) {
-        adjust(.increment)
-        return .handled
-      }
-      .help("selected frames \(currentRange.lowerBound + 1) to \(currentRange.upperBound)")
   }
 
-  private func move(to locationX: CGFloat) {
-    let normalized = min(max((locationX - 12) / trackWidth, 0), 1)
-    let moved = Int((normalized * CGFloat(max(0, frameCount - 1))).rounded())
-    onMove(min(max(moved, minimumIndex), lastIndex))
+  private func nearest(_ x: CGFloat, width: CGFloat, lower: Int, upper: Int) -> Int {
+    guard lower <= upper else { return lower }
+    let fraction = min(max((x - 10) / width, 0), 1)
+    return (lower...upper).min { abs(boundaries[$0] - fraction) < abs(boundaries[$1] - fraction) }
+      ?? lower
   }
 
-  private func adjust(_ direction: AccessibilityAdjustmentDirection) {
-    let changed: Int
-    switch direction {
-    case .increment: changed = min(index + 1, lastIndex)
-    case .decrement: changed = max(index - 1, minimumIndex)
-    @unknown default: changed = index
+  private func inspect(_ index: Int) {
+    guard let sequence, sequence.frames.indices.contains(index) else { return }
+    inspectedFrame = sequence.frames[index].url
+  }
+
+  private func loadThumbnails() async {
+    guard let sequence, !sequence.frames.isEmpty else { return }
+    let count = min(16, sequence.frames.count)
+    let urls = (0..<count).map {
+      sequence.frames[min(sequence.frames.count - 1, $0 * sequence.frames.count / count)].url
     }
-    onMove(changed)
+    let images = await Task.detached(priority: .utility) {
+      urls.compactMap { url -> CGImage? in
+        guard let source = CGImageSourceCreateWithURL(url as CFURL, nil) else { return nil }
+        let options: [CFString: Any] = [
+          kCGImageSourceCreateThumbnailFromImageAlways: true,
+          kCGImageSourceThumbnailMaxPixelSize: 120,
+        ]
+        return CGImageSourceCreateThumbnailAtIndex(source, 0, options as CFDictionary)
+      }
+    }.value
+    guard !Task.isCancelled else { return }
+    thumbnails = images.map { NSImage(cgImage: $0, size: .zero) }
   }
 }
 
