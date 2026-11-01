@@ -6,45 +6,6 @@ import XCTest
 
 @MainActor
 final class RecordingCoordinatorTests: XCTestCase {
-  func testValidatedExportSelectionsAreRememberedAcrossRecordingsAndInvalidSelectionsAreIgnored()
-    async throws
-  {
-    let fixture = makeFixture()
-    defer { try? FileManager.default.removeItem(at: fixture.base) }
-    let preferences = GIFExportSettingsStore()
-    let coordinator = RecordingCoordinator(
-      streamFactory: FakeRecordingStreamFactory(
-        stream: FakeRecordingStream(
-          framesOnStart: (0..<60).map { validFrame(at: Int64($0) * 16_666_667 + 1) })),
-      workspace: fixture.workspace, exportSettings: preferences)
-    await coordinator.start(target: .display(1), showsCursor: true)
-    await coordinator.stop()
-    await waitForPreview(coordinator)
-    coordinator.updatePlaybackSpeed(0.25)
-    coordinator.updateFrameRate(.fps15)
-    await waitUntil { !coordinator.isPreviewUpdateInProgress }
-    XCTAssertEqual(preferences.frameRate, .fps15)
-    XCTAssertEqual(preferences.playbackSpeed, 0.25)
-    coordinator.updatePlaybackSpeed(1.1)
-    coordinator.updateFrameRate(.fps18)
-    XCTAssertEqual(coordinator.editParameters?.frameRate, .fps15)
-    XCTAssertEqual(coordinator.editParameters?.playbackSpeed, 0.25)
-    let closed = await coordinator.closePreview(discardUnexported: true)
-    XCTAssertTrue(closed)
-    let next = RecordingCoordinator(
-      streamFactory: FakeRecordingStreamFactory(
-        stream: FakeRecordingStream(
-          framesOnStart: [validFrame(at: 1), validFrame(at: 100_000_001)])),
-      workspace: fixture.workspace, exportSettings: preferences)
-    await next.start(target: .display(1), showsCursor: true)
-    await next.stop()
-    await waitForPreview(next)
-    XCTAssertEqual(next.editParameters?.frameRate, .fps15)
-    XCTAssertEqual(next.editParameters?.playbackSpeed, 0.25)
-    XCTAssertEqual(next.editParameters?.loopMode, .forever)
-    XCTAssertEqual(next.compressionSettings.frameRate, .fps15)
-  }
-
   func testFirstFrameDeliveredImmediatelyAfterStartIsPersisted() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
@@ -97,8 +58,7 @@ final class RecordingCoordinatorTests: XCTestCase {
     let receivedSettings = await compressor.lastSettings()
     XCTAssertEqual(
       receivedSettings,
-      GIFCompressionSettings(
-        destination: .discord, scale: .original, qualityPercent: 40, frameRate: .fps50)
+      GIFCompressionSettings(destination: .discord, scale: .original, qualityPercent: 40)
     )
     let compressedSnapshot = try await fixture.workspace.snapshot(for: sessionID)
     XCTAssertGreaterThan(compressedSnapshot.temporaryBytes, originalBytes)

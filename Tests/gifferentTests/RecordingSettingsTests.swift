@@ -70,30 +70,6 @@ final class RecordingSettingsTests: XCTestCase {
     XCTAssertTrue(throttle.shouldPublish(at: start.advanced(by: .milliseconds(250))))
   }
 
-  func testExportPresetsDefaultPersistAndRejectInvalidStoredValues() {
-    let defaults = temporaryDefaults()
-    let initial = GIFExportSettingsStore(defaults: defaults)
-    XCTAssertEqual(initial.frameRate, .fps50)
-    XCTAssertEqual(initial.playbackSpeed, 1)
-    initial.remember(
-      GIFEditParameters(
-        frameRange: GIFFrameRange(startIndex: 0, endIndexExclusive: 1),
-        playbackSpeed: 0.25, loopMode: .once, frameRate: .fps15))
-    let restored = GIFExportSettingsStore(defaults: defaults)
-    XCTAssertEqual(restored.frameRate, .fps15)
-    XCTAssertEqual(restored.playbackSpeed, 0.25)
-    defaults.set(60, forKey: GIFExportSettingsStore.frameRateKey)
-    defaults.set(1.1, forKey: GIFExportSettingsStore.speedKey)
-    let invalid = GIFExportSettingsStore(defaults: defaults)
-    XCTAssertEqual(invalid.frameRate, .fps50)
-    XCTAssertEqual(invalid.playbackSpeed, 1)
-  }
-
-  func testScreenCaptureRequestsSixtyFPS() {
-    XCTAssertEqual(ScreenCaptureRecordingStream.captureFrameInterval.value, 1)
-    XCTAssertEqual(ScreenCaptureRecordingStream.captureFrameInterval.timescale, 60)
-  }
-
   private func temporaryDefaults() -> UserDefaults {
     let suiteName = "gifferent.recording-settings.tests.\(UUID().uuidString)"
     let defaults = UserDefaults(suiteName: suiteName)!

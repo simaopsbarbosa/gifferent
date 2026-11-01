@@ -17,9 +17,6 @@ final class ScreenCaptureRecordingStream: RecordingCaptureSession {
   var frames: AsyncStream<RecordingFrame> { transport.frames }
   var frameStatistics: RecordingFrameStatistics { transport.statistics() }
 
-  static let captureFramesPerSecond: Int32 = 60
-  static var captureFrameInterval: CMTime { CMTime(value: 1, timescale: captureFramesPerSecond) }
-
   private let stream: SCStream
   private let output: ScreenFrameOutput
   private let target: RecordingTarget
@@ -229,7 +226,7 @@ final class ScreenCaptureRecordingStream: RecordingCaptureSession {
     let configuration = SCStreamConfiguration()
     configuration.width = Int(pixelWidth)
     configuration.height = Int(pixelHeight)
-    configuration.minimumFrameInterval = captureFrameInterval
+    configuration.minimumFrameInterval = CMTime(value: 1, timescale: 24)
     configuration.pixelFormat = kCVPixelFormatType_32BGRA
     configuration.queueDepth = 3
     configuration.showsCursor = showsCursor

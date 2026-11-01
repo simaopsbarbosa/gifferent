@@ -73,24 +73,20 @@ final class GifferentRuntime: ObservableObject {
           workspace: workspace,
           compressor: UITestGIFCompressor.configured() ?? compressor,
           clipboard: UITestGIFClipboardWriter(),
-          fileSaver: UITestGIFSavePanelSaver(),
-          exportSettings: GIFExportSettingsStore(
-            defaults: UserDefaults(suiteName: "gifferent.ui-testing"))
+          fileSaver: UITestGIFSavePanelSaver()
         )
       } else {
         recordingCoordinator = RecordingCoordinator(
           streamFactory: ScreenCaptureRecordingStreamFactory(sourceService: service),
           workspace: workspace,
-          compressor: compressor,
-          exportSettings: GIFExportSettingsStore(defaults: .standard)
+          compressor: compressor
         )
       }
     #else
       recordingCoordinator = RecordingCoordinator(
         streamFactory: ScreenCaptureRecordingStreamFactory(sourceService: service),
         workspace: workspace,
-        compressor: compressor,
-        exportSettings: GIFExportSettingsStore(defaults: .standard)
+        compressor: compressor
       )
     #endif
     recordingStateObservation = recordingCoordinator.$state.sink { [weak self] state in
@@ -106,7 +102,27 @@ final class GifferentRuntime: ObservableObject {
   func start() {
     guard !hasStarted else { return }
     hasStarted = true
-    Task { try? await recordingCoordinator.cleanOrphanedSessions() }
+    Task {
+      try? await recordingCoordinator.cleanOrphanedSessions()
+      #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing"),
+          ProcessInfo.processInfo.arguments.contains("--ui-testing-preview")
+        {
+          // compression journeys start at a real encoded synthetic preview;
+          // capture selection has its own end-to-end acceptance journeys.
+          let selection = CaptureSelection.display(CGMainDisplayID())
+          lastSelection = selection
+          selectionDescription = Self.describe(selection)
+          await recordingCoordinator.start(
+            target: RecordingTarget(selection: selection),
+            showsCursor: recordingSettings.showsCursor)
+          await recordingCoordinator.stop()
+        }
+      #endif
+    }
+    #if DEBUG
+      if ProcessInfo.processInfo.arguments.contains("--ui-testing") { return }
+    #endif
     hotkeySettings.onAction = { [weak self] action in
       self?.handle(action)
     }
@@ -501,6 +517,11 @@ final class GifferentRuntime: ObservableObject {
         status = "screen recording access lost"
       case .captureStartFailed:
         status = "could not start recording; try again"
+        #if DEBUG
+          if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+            status += ": " + recordingCoordinator.uiTestStartupFailure
+          }
+        #endif
       case .frameEncodingFailed:
         status = "could not process captured frames"
       case .frameStorageFailed, .workspaceFailed:
@@ -595,6 +616,12 @@ final class GifferentRuntime: ObservableObject {
   }
 
   private static func recordingWorkspaceURL() -> URL {
+    #if DEBUG
+      if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+        return uiTestExportDirectory().appendingPathComponent(
+          "recording-sessions", isDirectory: true)
+      }
+    #endif
     let cacheRoot =
       FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
       ?? FileManager.default.temporaryDirectory
