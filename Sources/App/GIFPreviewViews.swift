@@ -323,7 +323,7 @@ private struct GIFPreviewActionNotice: View {
 
   private var message: String {
     if showsSizeSearchNotice {
-      return "automatic size search is unavailable at this resolution"
+      return "automatic size search is unavailable at this resolution or fps"
     }
     return switch action {
     case .copied: "copied"
@@ -377,7 +377,6 @@ private struct GIFPreviewActionNotice: View {
 @MainActor
 private struct GIFEditControls: View {
   @ObservedObject var coordinator: RecordingCoordinator
-  @State private var playbackSpeed = 1.0
 
   var body: some View {
     Group {
@@ -395,20 +394,43 @@ private struct GIFEditControls: View {
 
           HStack(spacing: 8) {
             Text("speed")
-            Slider(
-              value: $playbackSpeed,
-              in: 0.5...2,
-              step: 0.1
-            )
-            .accessibilityLabel("playback speed")
-            .accessibilityIdentifier("playback-speed-slider")
-            .onChange(of: playbackSpeed) { _, value in
-              updateCoordinatorAfterViewUpdate {
-                coordinator.updatePlaybackSpeed(value)
+            Picker(
+              "playback speed",
+              selection: Binding(
+                get: { parameters.playbackSpeed },
+                set: { value in
+                  updateCoordinatorAfterViewUpdate { coordinator.updatePlaybackSpeed(value) }
+                }
+              )
+            ) {
+              ForEach(GIFEditParameters.speedPresets, id: \.self) { speed in
+                Text("\(speed.formatted(.number.precision(.fractionLength(0...2))))×").tag(speed)
               }
             }
-            Text(String(format: "%.1f×", parameters.playbackSpeed))
-              .accessibilityIdentifier("playback-speed-value")
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .accessibilityIdentifier("playback-speed-picker")
+            Spacer(minLength: 0)
+            Text("fps")
+            Picker(
+              "output frame rate",
+              selection: Binding(
+                get: { parameters.frameRate },
+                set: { value in
+                  updateCoordinatorAfterViewUpdate { coordinator.updateFrameRate(value) }
+                }
+              )
+            ) {
+              ForEach(GIFCompressionFrameRate.exportPresets) { rate in
+                Text(rate.label).tag(rate)
+              }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .accessibilityIdentifier("output-frame-rate-picker")
+            Spacer(minLength: 0)
             Text("loop")
             Picker(
               "loop",
@@ -436,12 +458,7 @@ private struct GIFEditControls: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .disabled(coordinator.isPreviewActionInProgress)
-        .onAppear {
-          playbackSpeed = coordinator.editParameters?.playbackSpeed ?? 1
-        }
-        .onChange(of: coordinator.editParameters?.playbackSpeed) { _, value in
-          if let value { playbackSpeed = value }
-        }
+
       }
     }
   }
