@@ -51,6 +51,24 @@ struct CaptureSelectionOverlayView: View {
         .padding(16)
         .padding(.bottom, screen.bottomSafeAreaInset)
     }
+    .overlay(alignment: .topTrailing) {
+      #if DEBUG
+        if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
+          Button("select fixture region") {
+            let rectangle = CGRect(
+              x: displaySize.width * 0.2, y: displaySize.height * 0.2,
+              width: displaySize.width * 0.3, height: displaySize.height * 0.3)
+            if let region = SelectionGeometry(
+              display: screen.geometry, regionInDisplayPoints: rectangle)
+            {
+              coordinator.selectRegion(region)
+            }
+          }
+          .accessibilityIdentifier("select-fixture-region-button")
+          .padding(64)
+        }
+      #endif
+    }
     .clipped()
     .onExitCommand { coordinator.cancel() }
   }

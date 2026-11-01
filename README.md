@@ -42,3 +42,5 @@ test scripts use ad hoc signing by default. when local macOS policy requires the
 
 for a reliable local Screen Recording permission check, choose an Apple Development team in Xcode's signing settings and build with `bash Scripts/build.sh`. unsigned or ad hoc builds may lose the permission association after a rebuild. after enabling access in System Settings, quit and reopen gifferent before checking again. CI intentionally builds without signing because it does not exercise live screen capture.
 # gifferent
+
+recording targets 60 fps. in the preview, choose output FPS (50, 45, 30, 24, 20, 15, or 10) and playback speed (0.25× through 3×). the initial export is 50 fps at 1×; validated FPS/speed selections are remembered. manual compression preserves selected FPS; `compress for` may use approved 24/18 fps candidates within the selected ceiling. below 18 fps, use manual compression. GIF delays are rounded to centiseconds; very short clips retain at least 20 ms, and sparse capture does not create extra visual detail.
