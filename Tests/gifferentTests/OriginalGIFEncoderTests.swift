@@ -275,9 +275,13 @@ final class OriginalGIFEncoderTests: XCTestCase {
     let directory = uniqueTemporaryDirectory()
     defer { try? FileManager.default.removeItem(at: directory) }
     try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let colors: [[UInt8]] = [
+      [255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255],
+      [255, 255, 0, 255], [255, 0, 255, 255], [0, 255, 255, 255],
+    ]
     let frames = try (0..<60).map { index in
       let url = directory.appendingPathComponent("\(index).png")
-      try png(color: [UInt8(index * 4), 0, 0, 255]).write(to: url)
+      try png(color: colors[index % colors.count]).write(to: url)
       return CapturedPNGFrame(url: url, timestamp: Double(index) / 60)
     }
     let source = CapturedPNGSequence(frames: frames, finalFrameDuration: 1.0 / 60)
@@ -299,7 +303,7 @@ final class OriginalGIFEncoderTests: XCTestCase {
         for (index, frame) in edited.sequence.frames.enumerated() {
           let sourceIndex = try XCTUnwrap(Int(frame.url.deletingPathExtension().lastPathComponent))
           let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(decoded, index, nil))
-          XCTAssertEqual(try rgbaPixel(image), [UInt8(sourceIndex * 4), 0, 0, 255])
+          XCTAssertEqual(try rgbaPixel(image), colors[sourceIndex % colors.count])
         }
       }
     }

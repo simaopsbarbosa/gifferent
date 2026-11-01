@@ -355,11 +355,12 @@ private struct GIFPreviewActionNotice: View {
     }
     .allowsHitTesting(false)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isVisible)
+    .onAppear { showsSizeSearchNotice = sizeSearchUnavailable }
     .onChange(of: sizeSearchUnavailable) { _, unavailable in
       showsSizeSearchNotice = unavailable
     }
-    .onChange(of: action) { _, _ in
-      showsSizeSearchNotice = false
+    .onChange(of: action) { _, value in
+      if value != .updated && value != .idle { showsSizeSearchNotice = false }
     }
     .task(id: message) {
       isVisible = !message.isEmpty
@@ -527,7 +528,10 @@ private struct GIFCompressionDestinationControl: View {
         || !hasApprovedCandidates
     )
     .accessibilityIdentifier("compression-destination-menu")
-    .help("choose a destination and start size optimization")
+    .help(
+      hasApprovedCandidates
+        ? "choose a destination and start size optimization"
+        : "automatic size search is unavailable at this resolution or fps")
   }
 
   private func destinationHelp(for destination: GIFCompressionDestination) -> String {

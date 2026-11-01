@@ -273,7 +273,9 @@ final class MenuBarSmokeTests: XCTestCase {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =
       exportDirectory.path
-    app.launchArguments.append("--ui-testing")
+    app.launchArguments.append(contentsOf: [
+      "--ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+    ])
     app.launch()
 
     let testWindow = app.windows["gifferent test menu"]
@@ -409,7 +411,9 @@ final class MenuBarSmokeTests: XCTestCase {
   func testFPSAndSpeedMenusPersistAndCopiedSavedTimingAgrees() throws {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] = exportDirectory.path
-    app.launchArguments.append("--ui-testing")
+    app.launchArguments.append(contentsOf: [
+      "--ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+    ])
     app.launch()
     let menu = app.windows["gifferent test menu"]
     XCTAssertTrue(menu.waitForExistence(timeout: 10))

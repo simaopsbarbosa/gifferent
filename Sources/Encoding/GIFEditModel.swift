@@ -101,7 +101,7 @@ enum GIFEditModel {
     } else if lastSourceIndex > 0 {
       finalInterval = lastTimestamp - sequence.frames[lastSourceIndex - 1].timestamp
     } else {
-      finalInterval = 1.0 / 24
+      finalInterval = 1.0 / 60
     }
     let adjustedFinalInterval = finalInterval / parameters.playbackSpeed
     guard adjustedFinalInterval.isFinite, adjustedFinalInterval > 0 else {

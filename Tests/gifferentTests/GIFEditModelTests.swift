@@ -53,6 +53,7 @@ final class GIFEditModelTests: XCTestCase {
     )
 
     XCTAssertEqual(result.sequence.frames.map(\.timestamp), [0])
+    XCTAssertEqual(result.sequence.finalFrameDuration, 0.03)
   }
 
   func testRejectsEmptySequenceAndInvalidRanges() {
