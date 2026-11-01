@@ -4,6 +4,40 @@ import XCTest
 @testable import gifferent
 
 final class GIFEditModelTests: XCTestCase {
+  func testTrimTimelineUsesSourceTimestampsAndTerminalDuration() {
+    let source = CapturedPNGSequence(
+      frames: [10.0, 10.25, 11.0].map {
+        CapturedPNGFrame(url: URL(fileURLWithPath: "/tmp/frame"), timestamp: $0)
+      },
+      finalFrameDuration: 1)
+    let boundaries = GIFTrimTimeline.boundaries(for: source)
+    XCTAssertEqual(boundaries.count, 4)
+    XCTAssertEqual(boundaries[0], 0, accuracy: 1e-12)
+    XCTAssertEqual(boundaries[1], 0.125, accuracy: 1e-12)
+    XCTAssertEqual(boundaries[2], 0.5, accuracy: 1e-12)
+    XCTAssertEqual(boundaries[3], 1, accuracy: 1e-12)
+  }
+
+  func testTrimTimelineSnapsToFrameBoundaryAndRespectsHandleLimits() {
+    let boundaries = [0.0, 0.125, 0.5, 1.0]
+    XCTAssertEqual(
+      GIFTrimTimeline.nearestBoundary(to: 0.4, boundaries: boundaries, lower: 0, upper: 3), 2)
+    XCTAssertEqual(
+      GIFTrimTimeline.nearestBoundary(to: -1, boundaries: boundaries, lower: 1, upper: 3), 1)
+    XCTAssertEqual(
+      GIFTrimTimeline.nearestBoundary(to: 2, boundaries: boundaries, lower: 0, upper: 2), 2)
+  }
+
+  func testTrimTimelineSingleFrameHasTwoUsableBoundaries() {
+    let source = sequence(timestamps: [42])
+    let boundaries = GIFTrimTimeline.boundaries(for: source)
+    XCTAssertEqual(boundaries, [0, 1])
+    XCTAssertEqual(
+      GIFTrimTimeline.nearestBoundary(to: 0.9, boundaries: boundaries, lower: 0, upper: 0), 0)
+    XCTAssertEqual(
+      GIFTrimTimeline.nearestBoundary(to: 0.1, boundaries: boundaries, lower: 1, upper: 1), 1)
+  }
+
   func testTrimsHalfOpenFrameRangeAndNormalizesSpeedAdjustedTimestamps() throws {
     let source = sequence(timestamps: [10, 10.1, 10.5, 10.75])
     let result = try GIFEditModel.apply(

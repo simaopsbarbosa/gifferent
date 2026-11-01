@@ -97,9 +97,15 @@
 - prose is lowercase except proper names. all features need unit, integration, and automated end-to-end acceptance tests. CI gates build, tests, format, and lint; release includes real-Mac manual acceptance.
 - public project under AGPL-3.0-or-later; captured pixels never leave the Mac. benchmark speed goals on a baseline Apple Silicon laptop. clear partial recordings after a crash rather than restoring them. when a detail is undecided, record it and ask the architect.
 
+## thumbnail trim interaction confirmed on 2026-11-01
+
+- keep the thumbnail trim control inline. show the active boundary frame in the main preview while dragging and encode the selected GIF when the handle is released.
+- allow independent scrubbing by clicking or dragging inside the filmstrip.
+- final visual review and the detailed scrub playback interaction remain to be verified during implementation.
+
 ## questions to resolve before affected implementation
 
-**thumbnail trim control, 2026-11-01:** the architect requested macOS-style yellow end handles around a recording-thumbnail filmstrip and confirmed that trimming stays inline; use SwiftUI if Apple's native control requires a separate trim/cancel step. the [feature plan](trim-filmstrip-plan.md) defines a native feasibility check, a SwiftUI fallback, and acceptance evidence. before dependent implementation, resolve whether to show a boundary-frame still and encode on release (recommended), and whether thumbnails plus handle inspection suffice or independent interior scrubbing is required. these interaction proposals and final visual details are not yet approved; this entry authorizes documentation planning, not product implementation.
+**thumbnail trim control, 2026-11-01:** the architect requested macOS-style yellow end handles around a recording-thumbnail filmstrip and confirmed that trimming stays inline; use SwiftUI if Apple's native control requires a separate trim/cancel step. the [feature plan](trim-filmstrip-plan.md) defines a native feasibility check, a SwiftUI fallback, and acceptance evidence. the architect subsequently approved boundary-frame inspection, encoding on release, and independent interior scrubbing, as recorded above. final visual details remain subject to review.
 
 1. **bundled tool license:** the candidate-level engineering screen is recorded in [the encoder license audit](Benchmarks/encoder-license-audit.md). exact source, dependency, and binary audits remain required before packaging; Gifsicle's distribution terms remain unresolved for this app bundle.
 2. **encoder distribution:** Gifski 1.34.0 is approved for backend integration and search. `gif-dispose` can use its manifest-declared Apache-2.0 option, documented in [package license evidence](Benchmarks/encoder-package-license-evidence-2026-10-24.md). direct distribution remains blocked until complete dependency license/attribution texts, corresponding source obligations, pinned build provenance, and final bundle contents are verified. ImageMagick is not the release path; its measured time/resource costs and distributable dependency closure are recorded in the benchmark and package-evidence reports.

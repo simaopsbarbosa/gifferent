@@ -203,6 +203,8 @@ final class RecordingCoordinator: ObservableObject {
   private var compressionRequest: UUID?
   private var latestEditRequest: UUID?
   private var originalSequence: CapturedPNGSequence?
+
+  var trimSource: CapturedPNGSequence? { originalSequence }
   private var currentPreviewParameters: GIFEditParameters?
   private var previewExported = false
   private var originalPreviewExportedBeforeCompression: Bool?
