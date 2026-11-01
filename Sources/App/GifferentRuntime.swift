@@ -298,11 +298,14 @@ final class GifferentRuntime: ObservableObject {
   }
 
   func requestPreviewClose() {
-    guard !recordingCoordinator.isPreviewActionInProgress else {
-      status = "wait for compression or export to finish before closing the preview"
+    guard !recordingCoordinator.isExportInProgress else {
+      status = "wait for export to finish before closing the preview"
       return
     }
     Task {
+      if recordingCoordinator.isCompressionInProgress {
+        await recordingCoordinator.cancelCompression()
+      }
       if await recordingCoordinator.closePreview(discardUnexported: false) {
         previewWindowController?.closeAfterCleanup()
       } else {
@@ -317,12 +320,15 @@ final class GifferentRuntime: ObservableObject {
   }
 
   func confirmPreviewDiscard() {
-    guard !recordingCoordinator.isPreviewActionInProgress else {
-      status = "wait for compression or export to finish before discarding the preview"
+    guard !recordingCoordinator.isExportInProgress else {
+      status = "wait for export to finish before discarding the preview"
       return
     }
     isPreviewCloseConfirmationPresented = false
     Task {
+      if recordingCoordinator.isCompressionInProgress {
+        await recordingCoordinator.cancelCompression()
+      }
       let discarded: Bool
       switch recordingCoordinator.state {
       case .captured, .previewReady:
@@ -350,8 +356,8 @@ final class GifferentRuntime: ObservableObject {
   }
 
   func requestDiscardPreview() {
-    guard !recordingCoordinator.isPreviewActionInProgress else {
-      status = "wait for compression or export to finish before discarding the preview"
+    guard !recordingCoordinator.isExportInProgress else {
+      status = "wait for export to finish before discarding the preview"
       return
     }
     isPreviewCloseConfirmationPresented = true
@@ -360,6 +366,10 @@ final class GifferentRuntime: ObservableObject {
   func previewWindowDidClose(_ controller: GIFPreviewWindowController) {
     guard previewWindowController === controller else { return }
     previewWindowController = nil
+  }
+
+  func fitInitialPreviewContent(height: CGFloat) {
+    previewWindowController?.fitInitialReadyContent(height: height)
   }
 
   var recordingActionTitle: String {
@@ -611,7 +621,11 @@ struct SavePanelGIFSaver: GIFSaving {
     panel.title = "save gif"
     panel.prompt = "save"
     let response = await withCheckedContinuation { continuation in
-      panel.begin { continuation.resume(returning: $0) }
+      if let parent = NSApp.keyWindow {
+        panel.beginSheetModal(for: parent) { continuation.resume(returning: $0) }
+      } else {
+        panel.begin { continuation.resume(returning: $0) }
+      }
     }
     guard response == .OK, let destination = panel.url else { return .cancelled }
     try await Task.detached(priority: .utility) {

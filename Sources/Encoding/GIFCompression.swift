@@ -13,13 +13,6 @@ enum GIFCompressionDestination: CaseIterable, Identifiable, Sendable {
     }
   }
 
-  var systemImage: String {
-    switch self {
-    case .github: "chevron.left.forwardslash.chevron.right"
-    case .discord: "bubble.left.and.bubble.right"
-    }
-  }
-
   var targetBytes: Int64 {
     switch self {
     case .github: 9_000_000
@@ -39,12 +32,6 @@ enum GIFCompressionDestination: CaseIterable, Identifiable, Sendable {
     case .github: "9 MB"
     case .discord: "18 MB"
     }
-  }
-
-  var buttonTitle: String {
-    let target = "\(targetLabel) target"
-    let maximum = "\(publishedMaximumLabel) max"
-    return "\(displayName) · \(target) · \(maximum)"
   }
 
   var publishedMaximumLabel: String {
@@ -92,7 +79,7 @@ enum GIFCompressionScale: Int, CaseIterable, Identifiable, Sendable {
 struct GIFCompressionSettings: Equatable, Sendable {
   var destination: GIFCompressionDestination = .github
   var scale: GIFCompressionScale = .original
-  var qualityPercent = 90
+  var qualityPercent = 100
   var frameRate = GIFCompressionFrameRate.fps24
 
   var isValid: Bool {

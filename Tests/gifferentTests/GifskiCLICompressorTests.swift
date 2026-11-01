@@ -636,6 +636,7 @@ final class GifskiCLICompressorTests: XCTestCase {
     URL(fileURLWithPath: #filePath)
       .deletingLastPathComponent()
       .deletingLastPathComponent()
+      .deletingLastPathComponent()
       .appendingPathComponent("Vendor/Gifski-1.34.0/gifski")
   }
 

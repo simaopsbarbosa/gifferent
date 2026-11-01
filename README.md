@@ -15,10 +15,11 @@ the source license is [AGPL-3.0-or-later](LICENSE). [third-party notices](THIRD-
 - [decisions and open questions](decisions.md)
 - [delivery plan](delivery-plan.md)
 - [editing and optimization acceptance](editing-optimization-evidence-2026-10-25.md)
+- [preview UI refactor verification](ui-refactor-verification-2026-11-01.md)
 
 ## local development
 
-use Xcode 26.2 (build 17C52) for the current foundation. open `gifferent.xcodeproj` with the shared `gifferent` scheme, or run:
+use Xcode 27.1 (build 27A9275) for local development. open `gifferent.xcodeproj` with the shared `gifferent` scheme, or run:
 
 ```sh
 bash Scripts/ci-local.sh

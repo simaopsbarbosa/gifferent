@@ -48,7 +48,7 @@ the architect approved the static orange mark shown in the [production-mark revi
 - keep the selected region legible over bright, dark, and moving backgrounds. the magnifier shows the exact pixels under a dragged corner and never appears in the output.
 - motion is brief and purposeful: selection snaps into place, recording begins with one clear beat, the preview resolves without a long spinner, and successful copy/save gets a short confirmation. respect reduced motion and low power mode.
 - optimize for keyboard use and VoiceOver. every icon needs an accessible name; every sound has a visible equivalent; every interaction works without hover.
-- use destination names with native symbols on optimizer controls; do not bundle third-party destination marks unless written permission is obtained.
+- use a compact `compress for` menu with each destination name and published size maximum; do not bundle third-party destination marks unless written permission is obtained.
 
 ## copy examples
 

@@ -156,17 +156,19 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
   weak var runtime: GifferentRuntime?
   let window: NSWindow
   private var mayClose = false
+  private var hasFittedReadyContent = false
 
   init(runtime: GifferentRuntime, coordinator: RecordingCoordinator) {
     self.runtime = runtime
     window = NSWindow(
-      contentRect: NSRect(x: 0, y: 0, width: 700, height: 640),
-      styleMask: [.titled, .closable, .miniaturizable],
+      contentRect: NSRect(x: 0, y: 0, width: 560, height: 520),
+      styleMask: [.titled, .closable, .miniaturizable, .resizable],
       backing: .buffered,
       defer: false
     )
     super.init()
     window.title = "gif preview"
+    window.contentMinSize = NSSize(width: 540, height: 430)
     window.level = .floating
     window.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
     window.isReleasedWhenClosed = false
@@ -180,9 +182,22 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
   }
 
   func showWindow() {
-    positionWithinVisibleFrame()
     NSApp.activate(ignoringOtherApps: true)
     window.makeKeyAndOrderFront(nil)
+  }
+
+  func fitInitialReadyContent(height: CGFloat) {
+    guard !hasFittedReadyContent, height > 0 else { return }
+    hasFittedReadyContent = true
+    let contentHeight = ceil(height)
+    let requestedFrame = window.frameRect(
+      forContentRect: NSRect(x: 0, y: 0, width: window.frame.width, height: contentHeight))
+    let visibleFrame = (window.screen ?? NSScreen.main)?.visibleFrame.insetBy(dx: 16, dy: 16)
+    let height = min(requestedFrame.height, visibleFrame?.height ?? requestedFrame.height)
+    var frame = window.frame
+    frame.origin.y = max(frame.maxY - height, visibleFrame?.minY ?? frame.maxY - height)
+    frame.size.height = height
+    window.setFrame(frame, display: true)
   }
 
   private func positionWithinVisibleFrame() {
@@ -261,10 +276,21 @@ private struct GIFPreviewView: View {
               coordinator: coordinator,
               snapshot: snapshot,
               gif: gif,
-              previewWidth: min(558, max(0, geometry.size.width - 36))
+              previewWidth: max(0, geometry.size.width - 24)
             )
-            .frame(width: max(0, geometry.size.width - 36))
-            .padding(18)
+            .frame(width: max(0, geometry.size.width - 24))
+            .padding(12)
+            .background {
+              GeometryReader { content in
+                Color.clear.preference(
+                  key: PreviewContentHeightKey.self, value: content.size.height)
+              }
+            }
+          }
+          .onPreferenceChange(PreviewContentHeightKey.self) { height in
+            Task { @MainActor in
+              runtime.fitInitialPreviewContent(height: height)
+            }
           }
         }
       case .failed(let failure):
@@ -305,5 +331,13 @@ private struct GIFPreviewView: View {
       "could not store recording data; check available storage"
     default: "recording could not be completed"
     }
+  }
+}
+
+private struct PreviewContentHeightKey: PreferenceKey {
+  static let defaultValue: CGFloat = 0
+
+  static func reduce(value: inout CGFloat, nextValue: () -> CGFloat) {
+    value = max(value, nextValue())
   }
 }

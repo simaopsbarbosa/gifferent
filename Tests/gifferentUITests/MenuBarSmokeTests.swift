@@ -12,10 +12,10 @@ final class MenuBarSmokeTests: XCTestCase {
     try FileManager.default.createDirectory(at: exportDirectory, withIntermediateDirectories: true)
   }
 
-  override func tearDownWithError() throws {
+  override func tearDown() async throws {
     XCUIApplication().terminate()
     try? FileManager.default.removeItem(at: exportDirectory)
-    try super.tearDownWithError()
+    try await super.tearDown()
   }
 
   func testLaunchShowsIdleContentAndQuitAction() {
@@ -248,8 +248,19 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(previewWindow.waitForExistence(timeout: 10))
     XCTAssertTrue(waitForPreviewStatus("preview ready", in: previewWindow))
     XCTAssertTrue(previewWindow.staticTexts["preview-partial-status"].exists)
+    XCTAssertTrue(previewWindow.buttons["copy-preview-button"].isHittable)
+    XCTAssertTrue(previewWindow.buttons["save-preview-button"].isHittable)
+    XCTAssertTrue(previewWindow.buttons["close-preview-button"].isHittable)
+    let previewHeight = previewWindow.frame.height
     previewWindow.buttons["copy-preview-button"].click()
     XCTAssertTrue(waitForPreviewAction("copied", in: previewWindow))
+    XCTAssertEqual(previewWindow.frame.height, previewHeight, accuracy: 1)
+    let noticeDismissed = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "exists == false"),
+      object: previewWindow.staticTexts["preview-action-status"]
+    )
+    XCTAssertEqual(XCTWaiter.wait(for: [noticeDismissed], timeout: 5), .completed)
+    XCTAssertEqual(previewWindow.frame.height, previewHeight, accuracy: 1)
   }
 
   func testRecordingActionOpensPreviewAndKeepsExportAfterClose() throws {
@@ -302,8 +313,8 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(animatedPreview.waitForExistence(timeout: 5))
     XCTAssertEqual(animatedPreview.elementType, .image)
     XCTAssertEqual(animatedPreview.label, "animated gif preview")
-    XCTAssertLessThanOrEqual(animatedPreview.frame.width, 560.5)
-    XCTAssertLessThanOrEqual(animatedPreview.frame.height, 280.5)
+    XCTAssertLessThanOrEqual(animatedPreview.frame.width, 340.5)
+    XCTAssertLessThanOrEqual(animatedPreview.frame.height, 234.5)
     XCTAssertTrue(
       previewWindow.frame.insetBy(dx: -2, dy: -2).contains(animatedPreview.frame),
       "window: \(previewWindow.frame), image: \(animatedPreview.frame)")
@@ -331,8 +342,10 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(endHandle.label, "trim end")
     let speedSlider = previewWindow.sliders["playback-speed-slider"]
     XCTAssertTrue(speedSlider.exists)
-    XCTAssertTrue(previewWindow.buttons["loop-once-button"].exists)
-    XCTAssertTrue(previewWindow.buttons["loop-forever-button"].exists)
+    let loopSelector = previewWindow.segmentedControls["loop-mode-picker"]
+    XCTAssertTrue(loopSelector.exists)
+    XCTAssertTrue(loopSelector.buttons["once"].exists)
+    XCTAssertTrue(loopSelector.buttons["forever"].exists)
 
     let trimDestination = startHandle.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0.5))
       .withOffset(CGVector(dx: (endHandle.frame.midX - startHandle.frame.midX) / 2, dy: 0))
@@ -340,8 +353,21 @@ final class MenuBarSmokeTests: XCTestCase {
       .press(forDuration: 0.1, thenDragTo: trimDestination)
     XCTAssertTrue(waitForValue(containing: "frame 2 of 3", in: endHandle))
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
-    previewWindow.buttons["loop-once-button"].click()
-    XCTAssertTrue(waitForPreviewAction("gif updated", in: previewWindow))
+    let titleBar = previewWindow.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 0))
+      .withOffset(CGVector(dx: 0, dy: 12))
+    let initialFrame = previewWindow.frame
+    titleBar.press(
+      forDuration: 0.1, thenDragTo: titleBar.withOffset(CGVector(dx: 24, dy: -16)))
+    let movedFrame = previewWindow.frame
+    XCTAssertGreaterThan(abs(movedFrame.minX - initialFrame.minX), 10)
+    loopSelector.buttons["once"].click()
+    let selectedOnce = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "isSelected == true"), object: loopSelector.buttons["once"])
+    XCTAssertEqual(XCTWaiter.wait(for: [selectedOnce], timeout: 5), .completed)
+    XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
+    XCTAssertFalse(previewWindow.otherElements["preview-processing-overlay"].exists)
+    XCTAssertEqual(previewWindow.frame.minX, movedFrame.minX, accuracy: 1)
+    XCTAssertEqual(previewWindow.frame.minY, movedFrame.minY, accuracy: 1)
     speedSlider.adjust(toNormalizedSliderPosition: 0.666)
     XCTAssertTrue(
       waitForValue(containing: "1.5×", in: previewWindow.staticTexts["playback-speed-value"])
@@ -352,7 +378,7 @@ final class MenuBarSmokeTests: XCTestCase {
     previewScrollView.swipeUp()
     XCTAssertTrue(previewWindow.buttons["copy-preview-button"].isHittable)
     XCTAssertTrue(previewWindow.buttons["save-preview-button"].isHittable)
-    XCTAssertTrue(previewWindow.buttons["discard-preview-button"].isHittable)
+    XCTAssertFalse(previewWindow.buttons["discard-preview-button"].exists)
     XCTAssertTrue(previewWindow.buttons["close-preview-button"].isHittable)
 
     previewWindow.typeKey("c", modifierFlags: .command)
@@ -400,17 +426,19 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(previewWindow.waitForExistence(timeout: 10))
     XCTAssertTrue(waitForPreviewStatus("preview ready", in: previewWindow))
 
-    let github = previewWindow.buttons["compression-destination-github"]
-    XCTAssertTrue(github.exists)
+    let destinationMenu = previewWindow.buttons["compression-destination-menu"]
+    XCTAssertTrue(destinationMenu.exists)
+    XCTAssertTrue(destinationMenu.label.contains("compress for"), destinationMenu.label)
+    destinationMenu.click()
+    let github = app.menuItems["compression-destination-github"]
+    let discord = app.menuItems["compression-destination-discord"]
+    XCTAssertTrue(github.waitForExistence(timeout: 5))
     XCTAssertTrue(github.label.contains("GitHub"), github.label)
-    XCTAssertTrue(github.label.contains("9 MB target"), github.label)
-    XCTAssertTrue(github.label.contains("10 MB published maximum"), github.label)
-
-    let discord = previewWindow.buttons["compression-destination-discord"]
+    XCTAssertTrue(github.label.contains("10 MB max"), github.label)
     XCTAssertTrue(discord.exists)
     XCTAssertTrue(discord.label.contains("Discord"), discord.label)
-    XCTAssertTrue(discord.label.contains("18 MB target"), discord.label)
-    XCTAssertTrue(discord.label.contains("20 MB published maximum"), discord.label)
+    XCTAssertTrue(discord.label.contains("20 MB max"), discord.label)
+    github.click()
 
     XCTAssertFalse(previewWindow.staticTexts["compression-unavailable-status"].exists)
     let quality = previewWindow.sliders["compression-quality-slider"]
@@ -418,21 +446,12 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(quality.label, "gifski quality")
     XCTAssertTrue(previewWindow.staticTexts["compression-quality-value"].exists)
     XCTAssertTrue(
-      waitForValue(containing: "90", in: previewWindow.staticTexts["compression-quality-value"])
+      waitForValue(containing: "100", in: previewWindow.staticTexts["compression-quality-value"])
     )
-    let compress = previewWindow.buttons["compress-preview-button"]
-    XCTAssertTrue(waitForEnabled(compress))
-
-    github.click()
     XCTAssertTrue(previewWindow.buttons["back-to-original-button"].waitForExistence(timeout: 30))
-    XCTAssertTrue(
-      waitForText(
-        containing: "target met",
-        in: previewWindow.staticTexts["compression-target-status"]
-      )
-    )
+    XCTAssertFalse(previewWindow.staticTexts["compression-target-status"].exists)
     previewWindow.buttons["back-to-original-button"].click()
-    XCTAssertTrue(waitForEnabled(previewWindow.buttons["compress-preview-button"]))
+    XCTAssertTrue(waitForEnabled(previewWindow.buttons["compression-destination-menu"]))
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["save-preview-button"]))
   }
@@ -460,16 +479,9 @@ final class MenuBarSmokeTests: XCTestCase {
     let originalBytes = try Data(contentsOf: saved)
     let original = try gifMetadata(at: saved)
 
-    preview.sliders["compression-quality-slider"].adjust(toNormalizedSliderPosition: 1)
-    XCTAssertTrue(
-      waitForValue(containing: "100", in: preview.staticTexts["compression-quality-value"]))
-    preview.buttons["compression-destination-github"].click()
+    selectCompressionDestination("github", in: preview, app: app)
     XCTAssertTrue(preview.buttons["back-to-original-button"].waitForExistence(timeout: 15))
-    let resultStatus = preview.staticTexts["compression-target-status"]
-    XCTAssertTrue(waitForText(containing: "target met", in: resultStatus))
-    XCTAssertTrue(waitForText(containing: "quality", in: resultStatus))
-    XCTAssertTrue(waitForText(containing: "fps", in: resultStatus))
-    XCTAssertTrue(waitForText(containing: "attempts", in: resultStatus))
+    XCTAssertFalse(preview.staticTexts["compression-target-status"].exists)
     XCTAssertTrue(waitForEnabled(preview.buttons["copy-preview-button"]))
     try? FileManager.default.removeItem(at: copied)
     try? FileManager.default.removeItem(at: saved)
@@ -489,7 +501,44 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertLessThanOrEqual(try Data(contentsOf: saved).count, 9_000_000)
 
     preview.buttons["back-to-original-button"].click()
-    XCTAssertTrue(preview.buttons["compress-preview-button"].waitForExistence(timeout: 5))
+    XCTAssertTrue(waitForEnabled(preview.buttons["compression-destination-menu"]))
+    XCTAssertTrue(waitForEnabled(preview.buttons["save-preview-button"]))
+    let quality = preview.sliders["compression-quality-slider"]
+    quality.adjust(toNormalizedSliderPosition: 0.8)
+    XCTAssertTrue(
+      waitForValue(containing: "80", in: preview.staticTexts["compression-quality-value"]))
+    XCTAssertTrue(preview.buttons["back-to-original-button"].waitForExistence(timeout: 30))
+    XCTAssertFalse(preview.staticTexts["compression-target-status"].exists)
+    try? FileManager.default.removeItem(at: saved)
+    preview.typeKey("s", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+    XCTAssertTrue(waitForFile(saved))
+    let manuallyCompressed = try gifMetadata(at: saved)
+    XCTAssertEqual(manuallyCompressed.durationCentiseconds, original.durationCentiseconds)
+    XCTAssertEqual(manuallyCompressed.loopsForever, original.loopsForever)
+    XCTAssertLessThanOrEqual(manuallyCompressed.width, original.width)
+    XCTAssertLessThanOrEqual(manuallyCompressed.height, original.height)
+
+    preview.buttons["back-to-original-button"].click()
+    XCTAssertTrue(waitForEnabled(preview.buttons["save-preview-button"]))
+    let sizePicker = preview.segmentedControls["compression-scale-picker"]
+    sizePicker.buttons["75%"].click()
+    XCTAssertTrue(preview.buttons["back-to-original-button"].waitForExistence(timeout: 15))
+    XCTAssertTrue(
+      waitForValue(containing: "12 by 12", in: preview.staticTexts["preview-dimensions"]))
+
+    preview.buttons["back-to-original-button"].click()
+    XCTAssertTrue(waitForEnabled(sizePicker))
+    let heightBeforeNotice = preview.frame.height
+    sizePicker.buttons["25%"].click()
+    let unavailableNotice = preview.staticTexts["compression-search-unavailable"]
+    XCTAssertTrue(unavailableNotice.waitForExistence(timeout: 5))
+    XCTAssertEqual(preview.frame.height, heightBeforeNotice, accuracy: 1)
+    let noticeDismissed = XCTNSPredicateExpectation(
+      predicate: NSPredicate(format: "exists == false"), object: unavailableNotice)
+    XCTAssertEqual(XCTWaiter.wait(for: [noticeDismissed], timeout: 5), .completed)
+    XCTAssertTrue(preview.buttons["back-to-original-button"].waitForExistence(timeout: 15))
+    preview.buttons["back-to-original-button"].click()
     XCTAssertTrue(waitForEnabled(preview.buttons["save-preview-button"]))
     try? FileManager.default.removeItem(at: saved)
     preview.typeKey("s", modifierFlags: .command)
@@ -515,13 +564,9 @@ final class MenuBarSmokeTests: XCTestCase {
     let originalBytes = try Data(contentsOf: saved)
     let originalMetadata = try gifMetadata(at: saved)
 
-    preview.buttons["compression-destination-github"].click()
+    selectCompressionDestination("github", in: preview, app: app)
     XCTAssertTrue(preview.buttons["back-to-original-button"].waitForExistence(timeout: 15))
-    let result = preview.staticTexts["compression-target-status"]
-    XCTAssertTrue(waitForText(containing: "best attempt; target not met", in: result))
-    XCTAssertTrue(waitForText(containing: "quality 90", in: result))
-    XCTAssertTrue(waitForText(containing: "fps", in: result))
-    XCTAssertTrue(waitForText(containing: "4 attempts", in: result))
+    XCTAssertFalse(preview.staticTexts["compression-target-status"].exists)
     try? FileManager.default.removeItem(at: saved)
     preview.typeKey("s", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("saved", in: preview))
@@ -532,7 +577,7 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(bestAttempt.loopsForever, originalMetadata.loopsForever)
 
     preview.buttons["back-to-original-button"].click()
-    XCTAssertTrue(preview.buttons["compress-preview-button"].waitForExistence(timeout: 5))
+    XCTAssertTrue(waitForEnabled(preview.buttons["compression-destination-menu"]))
     try? FileManager.default.removeItem(at: saved)
     preview.typeKey("s", modifierFlags: .command)
     XCTAssertTrue(waitForPreviewAction("saved", in: preview))
@@ -556,10 +601,13 @@ final class MenuBarSmokeTests: XCTestCase {
       XCTAssertTrue(waitForPreviewAction("saved", in: preview))
       XCTAssertTrue(waitForFile(saved))
       let original = try Data(contentsOf: saved)
-      preview.buttons["compression-destination-discord"].click()
+      selectCompressionDestination("discord", in: preview, app: app)
       if mode == "cancellable" {
         let cancel = preview.buttons["cancel-compression-button"]
         XCTAssertTrue(cancel.waitForExistence(timeout: 5))
+        XCTAssertFalse(preview.buttons["copy-preview-button"].isEnabled)
+        XCTAssertFalse(preview.buttons["save-preview-button"].isEnabled)
+        XCTAssertTrue(preview.buttons["close-preview-button"].isEnabled)
         cancel.click()
       }
       let expected = mode == "failure" ? "could not compress gif" : "compression cancelled"
@@ -603,7 +651,7 @@ final class MenuBarSmokeTests: XCTestCase {
     keepButton.click()
     XCTAssertTrue(previewWindow.exists)
 
-    previewWindow.buttons["discard-preview-button"].click()
+    previewWindow.buttons["close-preview-button"].click()
     let discardButton = app.buttons["confirm-preview-discard-button"]
     XCTAssertTrue(discardButton.waitForExistence(timeout: 5))
     discardButton.click()
@@ -716,6 +764,17 @@ final class MenuBarSmokeTests: XCTestCase {
       CGImageSourceGetCount(source), duration,
       (gifProperties[kCGImagePropertyGIFLoopCount] as? Int) == 0, width, height
     )
+  }
+
+  private func selectCompressionDestination(
+    _ destination: String,
+    in preview: XCUIElement,
+    app: XCUIApplication
+  ) {
+    preview.buttons["compression-destination-menu"].click()
+    let option = app.menuItems["compression-destination-\(destination)"]
+    XCTAssertTrue(option.waitForExistence(timeout: 5))
+    option.click()
   }
 
   private func waitForValue(
