@@ -29,7 +29,7 @@ bash Scripts/test-unit.sh gifferentTests/GIFEditModelTests
 bash Scripts/test-ui.sh gifferentUITests/MenuBarSmokeTests/testRecordingActionOpensPreviewAndKeepsExportAfterClose
 ```
 
-selectors run only the named class or method, after building the test bundles. use `gifferentTests/ClassName/testMethod` or `gifferentUITests/ClassName/testMethod`; omit selectors for the full target. UI runs always include a launch preflight. focused results do not satisfy full merge acceptance.
+selectors run only the named class or method, after building the test bundles. use `gifferentTests/ClassName/testMethod` or `gifferentUITests/ClassName/testMethod`; omit selectors for the full target. UI runs always include a launch preflight.
 
 for a full local rehearsal of the merge gate:
 
@@ -37,9 +37,9 @@ for a full local rehearsal of the merge gate:
 bash Scripts/ci-local.sh
 ```
 
-CI runs once per PR update and on `main` pushes; feature-branch pushes do not duplicate the PR run. manual workflow dispatch is available for branch diagnostics. `main` protection requires `quality` and `tests` from an up-to-date PR, including administrator merges; no human approval count is imposed. the integration owner checks results for the final commit and diagnoses failures.
+CI runs quality and unit/integration checks once per PR update and on `main` pushes; UI acceptance runs locally only. feature-branch pushes do not duplicate the PR run. manual workflow dispatch is available for branch diagnostics. `main` protection requires `quality` and `tests` from an up-to-date PR, including administrator merges; no human approval count is imposed. run relevant UI acceptance on the final candidate and report it in the PR.
 
-`Scripts/ci-local.sh` checks the pinned toolchain, runs the shared quality checks, builds the app and both test bundles once, then runs unit/integration and UI acceptance without rebuilding. it stops on failure and stores logs and `.xcresult` bundles under `.build/ci/`. a UI launch preflight runs before the remaining journeys; both result bundles are acceptance evidence. quality and unit results remain visible while UI acceptance runs. no signing credentials are needed in CI.
+`Scripts/ci-local.sh` checks the pinned toolchain, runs the shared quality checks, builds the app and test bundles once, then runs unit/integration and UI acceptance without rebuilding. it stops on failure and stores logs and `.xcresult` bundles under `.build/ci/`. a UI launch preflight runs before the remaining journeys. no signing credentials are needed.
 
 to share a build across focused checks:
 

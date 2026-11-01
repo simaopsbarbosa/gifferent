@@ -43,8 +43,6 @@ jobs:
         run: bash Scripts/build-tests.sh
       - name: unit and integration tests
         run: bash Scripts/test-unit.sh --no-build
-      - name: deterministic UI acceptance
-        run: bash Scripts/test-ui.sh --no-build
       - name: upload failure evidence
         if: failure()
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1

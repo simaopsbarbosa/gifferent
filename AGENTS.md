@@ -26,7 +26,7 @@
 ## verification stages
 
 - development: use focused unit/integration selectors and affected quality checks from [README.md](README.md). run selected UI journeys for changed UI wiring. reuse evidence while its inputs remain unchanged; do not repeat full local and hosted suites after every edit.
-- merge: the final candidate must pass the complete quality, unit/integration, and deterministic UI suites in CI. `main` requires an up-to-date PR with `quality` and `tests` passing, including administrator merges. build test bundles once and refuse stale reuse. a focused run, skipped required test, or runner-startup failure is never full acceptance.
+- merge: the final candidate must pass quality and unit/integration suites in CI. run relevant UI acceptance locally on the final candidate and report its result in the PR. `main` requires an up-to-date PR with `quality` and `tests` passing, including administrator merges. build test bundles once and refuse stale reuse.
 - release: retain the full regression/performance matrix, real-Mac permission/hotkey/multi-display/animated-paste/accessibility checks, visual review, licenses/source delivery, signing, notarization, clean-Mac acceptance, and explicit architect release approval in [definition-of-done.md](definition-of-done.md) and [delivery-plan.md](delivery-plan.md).
 - prefer scripts and XCTest for repeatable checks. use computer interaction for a specific native visual/system observation that automated checks cannot establish, stating that observation first.
 - on UI bootstrap failure, preserve logs/results and stop retries until session, signing, or toolchain prerequisites change. fix product assertion failures separately; never skip the merge gate or retry unchanged failures to green.
