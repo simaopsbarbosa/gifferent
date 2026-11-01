@@ -141,3 +141,12 @@
 - the candidate encoder license screen is an engineering risk review, not legal advice or an encoder choice. exact release builds still require locked dependency, runtime, notice, corresponding-source, signature, and notarization review.
 - the limited equal-work still-frame review found faint native-size speckling in optimized ImageMagick output at 100% diffusion. the architect confirmed that this sample holds against the approved floor; the review does not assess temporal quality or select an encoder.
 - destination file limits can change. the limits quoted in [mvp.md](mvp.md) are a 2026-10-20 research snapshot and need verification before release.
+
+## frame rate and speed feature requested on 2026-11-01
+
+- the architect requested a 60 fps capture target, a preview FPS menu beside speed and loop, and a speed preset menu replacing the slider, extending from 0.25× to 3×. this supersedes the previous 24 fps capture target and slider interaction once implemented and verified.
+- pending: confirm the proposed FPS presets (60/45/30/24/20/15/10), speed presets (0.25× increments through 3×), and whether new recordings reset export selections or remember them.
+- pending: confirm whether FPS targets final playback after speed changes (recommended) or samples source time before speed changes.
+- pending: confirm that manual compression preserves selected FPS while automatic size search keeps only the existing approved 24/18 fps pairs, filtered by selected FPS as an upper bound (recommended), or instead preserves FPS for all compression.
+- GIF timing is stored in whole centiseconds; a nominal 60 fps target requires nonuniform delays, and viewer playback compatibility must be verified. do not silently replace the requested rate or claim exact 60 fps playback in every viewer.
+- implementation and acceptance sequence: [frame rate and speed plan](fps-implementation-plan.md). dependent implementation awaits the architect's answers.
