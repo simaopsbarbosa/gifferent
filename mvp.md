@@ -15,6 +15,7 @@
 - guided screen-recording permission setup; clear failures for missing permissions, hotkey conflict, unavailable display/window, full disk, encoder failure, and failed clipboard or save operations.
 - retain temporary completed media while its preview is active. remove it when the preview closes after export or after confirmed discard; remove orphaned preview media on the next launch after a crash without touching exported files.
 - subtle optional interaction sounds, brief motion feedback, reduced-motion support, keyboard navigation, and accessible labels.
+- the unused space behind the preview contains a subtle, continuously animated dithered pattern. it is decorative, may show through transparent GIF pixels, and becomes still with reduced motion or low power mode; it is not part of the exported GIF.
 
 ## acceptance journeys
 

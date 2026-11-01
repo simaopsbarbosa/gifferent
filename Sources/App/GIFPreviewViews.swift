@@ -22,6 +22,14 @@ struct GIFPreviewReadyView: View {
     coordinator.displayedPreviewGIF ?? gif
   }
 
+  private var fittedGIFSize: CGSize {
+    let width = CGFloat(displayedGIF.width)
+    let height = CGFloat(displayedGIF.height)
+    guard width > 0, height > 0, previewWidth > 0 else { return .zero }
+    let scale = min(previewWidth / width, 280 / height)
+    return CGSize(width: width * scale, height: height * scale)
+  }
+
   var body: some View {
     VStack(spacing: 9) {
       AnimatedGIFView(url: displayedGIF.url)
@@ -29,7 +37,16 @@ struct GIFPreviewReadyView: View {
           width: previewWidth,
           height: 280
         )
-        .background(Color(nsColor: .controlBackgroundColor))
+        .background { PreviewDitherBackground() }
+        .overlay {
+          Rectangle()
+            .strokeBorder(.quaternary, lineWidth: 1)
+            .frame(width: fittedGIFSize.width, height: fittedGIFSize.height)
+            .shadow(color: .black.opacity(0.35), radius: 6, x: -3)
+            .shadow(color: .black.opacity(0.35), radius: 6, x: 3)
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
         .clipShape(RoundedRectangle(cornerRadius: 7, style: .continuous))
         .overlay {
           RoundedRectangle(cornerRadius: 7, style: .continuous)
@@ -73,6 +90,7 @@ struct GIFPreviewReadyView: View {
             || coordinator.compressedPreview != nil
         )
       GIFCompressionControls(coordinator: coordinator)
+        .padding(.top, 6)
 
       HStack(spacing: 28) {
         metadata(
@@ -162,6 +180,136 @@ struct GIFPreviewReadyView: View {
   private func duration(_ centiseconds: Int) -> String {
     let seconds = Double(centiseconds) / 100
     return String(format: "%.2f seconds", seconds)
+  }
+}
+
+private struct PreviewDitherBackground: View {
+  @Environment(\.accessibilityReduceMotion) private var reduceMotion
+  @Environment(\.colorScheme) private var colorScheme
+  @State private var canAnimate = false
+
+  var body: some View {
+    TimelineView(.animation(minimumInterval: 1.0 / 12.0, paused: reduceMotion || !canAnimate)) {
+      timeline in
+      PreviewDitherCanvas(
+        time: reduceMotion || !canAnimate ? 0 : timeline.date.timeIntervalSinceReferenceDate,
+        dark: colorScheme == .dark
+      )
+    }
+    .background(Color(nsColor: .controlBackgroundColor))
+    .background { PreviewAnimationVisibility(canAnimate: $canAnimate) }
+    .accessibilityHidden(true)
+    .allowsHitTesting(false)
+  }
+}
+
+private struct PreviewDitherCanvas: View {
+  let time: TimeInterval
+  let dark: Bool
+
+  var body: some View {
+    Canvas { context, size in
+      if let image = PreviewDitherArtwork.image(size: size, time: time, dark: dark) {
+        context.draw(
+          Image(decorative: image, scale: 1, orientation: .up).interpolation(.none),
+          in: CGRect(origin: .zero, size: size)
+        )
+      }
+    }
+  }
+}
+
+enum PreviewDitherArtwork {
+  private static let bayer = [
+    0, 32, 8, 40, 2, 34, 10, 42,
+    48, 16, 56, 24, 50, 18, 58, 26,
+    12, 44, 4, 36, 14, 46, 6, 38,
+    60, 28, 52, 20, 62, 30, 54, 22,
+    3, 35, 11, 43, 1, 33, 9, 41,
+    51, 19, 59, 27, 49, 17, 57, 25,
+    15, 47, 7, 39, 13, 45, 5, 37,
+    63, 31, 55, 23, 61, 29, 53, 21,
+  ]
+
+  static func image(size: CGSize, time: TimeInterval, dark: Bool) -> CGImage? {
+    guard size.width > 0, size.height > 0 else { return nil }
+    let width = max(1, min(256, Int(size.width / 3)))
+    let height = max(1, min(128, Int(size.height / 3)))
+    var pixels = [UInt8](repeating: 0, count: width * height * 4)
+    let base: UInt8 = dark ? 35 : 228
+    let highlight: UInt8 = dark ? 46 : 213
+
+    for y in 0..<height {
+      let vertical = Double(y) / Double(height)
+      let centers = (0..<8).map { vine in
+        let phase = Double(vine) * 2.1
+        return Double(width) * (0.06 + Double(vine) * 0.125)
+          + Double(width) * 0.075 * sin(vertical * 7 + phase + time * 0.10)
+          + Double(width) * 0.035 * sin(vertical * 15 - phase + time * 0.07)
+      }
+      for x in 0..<width {
+        var nearest = Double.greatestFiniteMagnitude
+        for center in centers {
+          nearest = min(nearest, abs(Double(x) - center))
+        }
+        let distance = nearest / max(1, Double(width) * 0.014)
+        let intensity = 0.8 / (1 + distance * distance)
+        let threshold = (Double(bayer[(y % 8) * 8 + x % 8]) + 0.5) / 64
+        let value = intensity > threshold ? highlight : base
+        let offset = (y * width + x) * 4
+        pixels[offset] = value
+        pixels[offset + 1] = value
+        pixels[offset + 2] = value
+        pixels[offset + 3] = 255
+      }
+    }
+
+    guard let provider = CGDataProvider(data: Data(pixels) as CFData) else { return nil }
+    return CGImage(
+      width: width, height: height, bitsPerComponent: 8, bitsPerPixel: 32,
+      bytesPerRow: width * 4, space: CGColorSpaceCreateDeviceRGB(),
+      bitmapInfo: CGBitmapInfo(rawValue: CGImageAlphaInfo.last.rawValue),
+      provider: provider, decode: nil, shouldInterpolate: false, intent: .defaultIntent
+    )
+  }
+}
+
+private struct PreviewAnimationVisibility: NSViewRepresentable {
+  @Binding var canAnimate: Bool
+
+  func makeNSView(context: Context) -> VisibilityView {
+    let view = VisibilityView()
+    view.onChange = { value in
+      DispatchQueue.main.async { canAnimate = value }
+    }
+    return view
+  }
+
+  func updateNSView(_ view: VisibilityView, context: Context) {}
+
+  final class VisibilityView: NSView {
+    var onChange: ((Bool) -> Void)?
+    override func viewDidMoveToWindow() {
+      super.viewDidMoveToWindow()
+      NotificationCenter.default.removeObserver(self)
+      if let window {
+        for name in [NSWindow.didChangeOcclusionStateNotification, NSWindow.willCloseNotification] {
+          NotificationCenter.default.addObserver(
+            self, selector: #selector(updateVisibility), name: name, object: window)
+        }
+        NotificationCenter.default.addObserver(
+          self, selector: #selector(updateVisibility), name: .NSProcessInfoPowerStateDidChange,
+          object: nil)
+      }
+      updateVisibility()
+    }
+
+    @objc private func updateVisibility() {
+      onChange?(
+        window?.occlusionState.contains(.visible) == true
+          && !ProcessInfo.processInfo.isLowPowerModeEnabled
+      )
+    }
   }
 }
 

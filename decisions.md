@@ -125,6 +125,10 @@
 
 ## UI refactor verification on 2026-11-01
 
+- on 2026-11-01, the architect approved continuous, softly moving dithered vines behind the GIF preview as an exception to the brief-motion rule. the background may show through transparent GIF pixels. reduce motion and low power mode use a still frame.
+- on 2026-11-01, the architect requested more, narrower vines at the same speed, lower pattern contrast, and an outline and subtle side shadows around the fitted GIF to distinguish it from the background.
+- on 2026-11-01, the architect approved the resulting preview direction and requested slightly more space above the compression controls.
+
 - the audit restored the previously approved Xcode 27.1/27A9275 pin, fixed real-Gifski fixture discovery, and covered pending-quality publication, pointer-release debounce, retained results on failure/cancellation, and cancelling delayed compression on back.
 - the [verification report](ui-refactor-verification-2026-11-01.md) records local checks, benchmark evidence, and the signing/hosted-CI/real-Mac acceptance gates that remain open. it does not waive definition-of-done requirements.
 - the architect explicitly approved a local commit with those acceptance gates pending on 2026-11-01. merge, release, and definition-of-done completion remain gated on the outstanding evidence.

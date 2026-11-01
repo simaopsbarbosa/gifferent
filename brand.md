@@ -46,7 +46,7 @@ the architect approved the static orange mark shown in the [production-mark revi
 - use native macOS hierarchy, materials, typography, focus rings, menus, dialogs, and keyboard behavior as the base. custom chrome stays around capture selection, preview progress, and small brand moments.
 - distinguish idle, choosing, ready, recording, processing, compressed, saved, copied, and error states with clear text and shape. color and sound are secondary.
 - keep the selected region legible over bright, dark, and moving backgrounds. the magnifier shows the exact pixels under a dragged corner and never appears in the output.
-- motion is brief and purposeful: selection snaps into place, recording begins with one clear beat, the preview resolves without a long spinner, and successful copy/save gets a short confirmation. respect reduced motion and low power mode.
+- motion is brief and purposeful: selection snaps into place, recording begins with one clear beat, the preview resolves without a long spinner, and successful copy/save gets a short confirmation. the preview's dithered background is an approved exception: its organic lines move continuously while visible. respect reduced motion and low power mode by showing a still background.
 - optimize for keyboard use and VoiceOver. every icon needs an accessible name; every sound has a visible equivalent; every interaction works without hover.
 - use a compact `compress for` menu with each destination name and published size maximum; do not bundle third-party destination marks unless written permission is obtained.
 
