@@ -217,10 +217,12 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(selectionWindow.waitForExistence(timeout: 10))
     let windowPicker = selectionWindow.descendants(matching: .any)["select-window-picker"]
     XCTAssertTrue(windowPicker.waitForExistence(timeout: 5))
+    let placeholderWidth = windowPicker.frame.width
     windowPicker.click()
     let fixtureWindow = app.menuItems["gifferent fixture · fixture window"]
     XCTAssertTrue(fixtureWindow.waitForExistence(timeout: 5))
     fixtureWindow.click()
+    XCTAssertGreaterThan(windowPicker.frame.width, placeholderWidth)
 
     XCTAssertTrue(selectionWindow.buttons["confirm-selection-button"].isEnabled)
     selectionWindow.buttons["confirm-selection-button"].click()
