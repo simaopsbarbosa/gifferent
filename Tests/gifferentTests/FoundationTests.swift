@@ -27,6 +27,14 @@ final class FoundationTests: XCTestCase {
     controller.fitInitialReadyContent(height: 600)
     XCTAssertEqual(window.contentMinSize.height, min(600, availableHeight - 32 - titleBarHeight))
     let fittedHeight = window.frame.height
+    XCTAssertTrue(window.delegate === controller)
+    // exercise the actual resize delegate rather than only inspecting size constraints.
+    for proposedHeight in [fittedHeight - 150, fittedHeight + 200] {
+      let resized = window.delegate?.windowWillResize?(
+        window, to: NSSize(width: 700, height: proposedHeight))
+      XCTAssertEqual(resized?.height, fittedHeight)
+      XCTAssertEqual(resized?.width, 700)
+    }
     XCTAssertEqual(window.contentMinSize.height, window.contentMaxSize.height)
     XCTAssertEqual(
       window.contentMinSize.height, window.contentRect(forFrameRect: window.frame).height)

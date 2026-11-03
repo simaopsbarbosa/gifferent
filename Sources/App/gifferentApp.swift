@@ -161,6 +161,7 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
   let window: NSWindow
   private var mayClose = false
   private var hasFittedReadyContent = false
+  private var fixedFrameHeight: CGFloat?
 
   init(runtime: GifferentRuntime, coordinator: RecordingCoordinator) {
     self.runtime = runtime
@@ -207,9 +208,14 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
   }
 
   private func lockContentHeight() {
+    fixedFrameHeight = window.frame.height
     let height = window.contentRect(forFrameRect: window.frame).height
     window.contentMinSize.height = height
     window.contentMaxSize.height = height
+  }
+
+  func windowWillResize(_ sender: NSWindow, to frameSize: NSSize) -> NSSize {
+    NSSize(width: frameSize.width, height: fixedFrameHeight ?? sender.frame.height)
   }
 
   private func positionWithinVisibleFrame() {
