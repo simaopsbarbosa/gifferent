@@ -47,6 +47,10 @@
 - use the light and dark SVG production assets at `Brand/mark-light.svg` and `Brand/mark-dark.svg`. keep the mark static; the optional motion study and sound are not approved.
 - validate at real menu-bar sizes, materials, and accessibility settings on supported macOS versions before release.
 
+## menu bar rebrand comparison on 2026-11-03
+
+- the architect requested a separate branch to compare a larger menu bar icon based on supplied nested rounded-square artwork. use a static, monochrome template candidate at 20 points for this comparison. final identity approval and real menu bar review remain pending.
+
 ## compression behavior confirmed on 2026-10-24
 
 - the minimum acceptable compression quality keeps text legible at native scale, keeps cursor edges clear, and has no distracting banding or flicker in gradients. minor differences visible only at 2× are acceptable.

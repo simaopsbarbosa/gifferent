@@ -41,6 +41,10 @@ the accessible [palette review](Brand/Studies/palette-review/index.html) holds t
 
 the architect approved the static orange mark shown in the [production-mark review sheet](Brand/Studies/production-mark-review/index.html): compact orbit 03, breathing-room treatment 02, 0.7 px curve-to-tip gap at 16 px, and direction tips in `#D45D21`. the optional motion concept remains unapproved. production assets are [light appearance](Brand/mark-light.svg) and [dark appearance](Brand/mark-dark.svg); the approved orange direction tips sit on a monochrome frame and loop.
 
+## menu bar comparison candidate
+
+on 2026-11-03, the architect requested a separate comparison branch using supplied nested rounded-square artwork and a larger menu bar icon. [the candidate](Brand/menu-bar-candidate.svg) simplifies the supplied artwork for small sizes and uses system template tinting at 20 points. this is a comparison candidate; final visual approval and real menu bar review remain pending. the earlier approved assets remain available for comparison.
+
 ## interface rules
 
 - use native macOS hierarchy, materials, typography, focus rings, menus, dialogs, and keyboard behavior as the base. custom chrome stays around capture selection, preview progress, and small brand moments.
