@@ -183,6 +183,7 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
     hostingView.sizingOptions = []
     window.contentView = hostingView
     positionWithinVisibleFrame()
+    lockContentHeight()
   }
 
   func showWindow() {
@@ -202,6 +203,13 @@ final class GIFPreviewWindowController: NSObject, NSWindowDelegate {
     frame.origin.y = max(frame.maxY - height, visibleFrame?.minY ?? frame.maxY - height)
     frame.size.height = height
     window.setFrame(frame, display: true)
+    lockContentHeight()
+  }
+
+  private func lockContentHeight() {
+    let height = window.contentRect(forFrameRect: window.frame).height
+    window.contentMinSize.height = height
+    window.contentMaxSize.height = height
   }
 
   private func positionWithinVisibleFrame() {
