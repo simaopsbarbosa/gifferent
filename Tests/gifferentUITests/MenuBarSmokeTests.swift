@@ -32,8 +32,8 @@ final class MenuBarSmokeTests: XCTestCase {
     let preview = openFixturePreview(in: app)
     let copyImage = preview.buttons["copy-preview-button"]
     let copyFile = preview.buttons["copy-file-preview-button"]
-    XCTAssertTrue(copyImage.label.contains("copy image"))
-    XCTAssertTrue(copyFile.label.contains("copy file"))
+    XCTAssertTrue(copyImage.label.contains("copy (⌘C)"))
+    XCTAssertTrue(copyFile.label.contains("copy as file"))
     copyFile.click()
     XCTAssertTrue(waitForPreviewAction("file copied", in: preview))
     let file = exportDirectory.appendingPathComponent("clipboard-files/gifferent.gif")

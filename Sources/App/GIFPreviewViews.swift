@@ -140,12 +140,12 @@ struct GIFPreviewReadyView: View {
           .help("back to original")
           .accessibilityIdentifier("back-to-original-button")
         }
-        Button("copy image (⌘C)") { runtime.copyPreview() }
+        Button("copy (⌘C)") { runtime.copyPreview() }
           .keyboardShortcut("c", modifiers: .command)
           .disabled(exportIsDisabled)
           .accessibilityIdentifier("copy-preview-button")
           .help("copy gif image data; some browsers paste a still image")
-        Button("copy file (⌘⇧C)") { runtime.copyPreview(as: .file) }
+        Button("copy as file (⌘⇧C)") { runtime.copyPreview(as: .file) }
           .keyboardShortcut("c", modifiers: [.command, .shift])
           .disabled(exportIsDisabled)
           .accessibilityIdentifier("copy-file-preview-button")
