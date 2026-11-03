@@ -73,20 +73,24 @@ final class GifferentRuntime: ObservableObject {
           workspace: workspace,
           compressor: UITestGIFCompressor.configured() ?? compressor,
           clipboard: UITestGIFClipboardWriter(),
-          fileSaver: UITestGIFSavePanelSaver()
+          fileSaver: UITestGIFSavePanelSaver(),
+          exportSettings: GIFExportSettingsStore(
+            defaults: UserDefaults(suiteName: "gifferent.ui-testing"))
         )
       } else {
         recordingCoordinator = RecordingCoordinator(
           streamFactory: ScreenCaptureRecordingStreamFactory(sourceService: service),
           workspace: workspace,
-          compressor: compressor
+          compressor: compressor,
+          exportSettings: GIFExportSettingsStore(defaults: .standard)
         )
       }
     #else
       recordingCoordinator = RecordingCoordinator(
         streamFactory: ScreenCaptureRecordingStreamFactory(sourceService: service),
         workspace: workspace,
-        compressor: compressor
+        compressor: compressor,
+        exportSettings: GIFExportSettingsStore(defaults: .standard)
       )
     #endif
     recordingStateObservation = recordingCoordinator.$state.sink { [weak self] state in

@@ -9,7 +9,7 @@
 gifferent lives in your menu bar. choose a display, window, or region, record what happens, then preview and share the result without leaving your Mac.
 
 - capture with keyboard shortcuts and keep using your Mac while recording.
-- trim, change playback speed, and choose whether the GIF loops.
+- trim, choose playback speed and output fps from preset menus, and choose whether the GIF loops. capture targets 60 fps; export defaults to 50 fps and remembers speed and fps.
 - copy or save the GIF, or compress it for sharing.
 - keep captures and GIF processing local.
 

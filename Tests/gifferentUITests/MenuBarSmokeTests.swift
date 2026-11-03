@@ -349,8 +349,8 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(startHandle.label, "trim start")
     XCTAssertTrue(endHandle.exists)
     XCTAssertEqual(endHandle.label, "trim end")
-    let speedSlider = previewWindow.sliders["playback-speed-slider"]
-    XCTAssertTrue(speedSlider.exists)
+    let speedPicker = previewWindow.popUpButtons["playback-speed-picker"]
+    XCTAssertTrue(speedPicker.exists)
     let loopSelector = previewWindow.segmentedControls["loop-mode-picker"]
     XCTAssertTrue(loopSelector.exists)
     XCTAssertTrue(loopSelector.buttons["once"].exists)
@@ -379,10 +379,9 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertFalse(previewWindow.otherElements["preview-processing-overlay"].exists)
     XCTAssertEqual(previewWindow.frame.minX, movedFrame.minX, accuracy: 1)
     XCTAssertEqual(previewWindow.frame.minY, movedFrame.minY, accuracy: 1)
-    speedSlider.adjust(toNormalizedSliderPosition: 0.666)
-    XCTAssertTrue(
-      waitForValue(containing: "1.5×", in: previewWindow.staticTexts["playback-speed-value"])
-    )
+    speedPicker.click()
+    app.menuItems["1.5×"].click()
+    XCTAssertTrue(waitForValue(containing: "1.5×", in: speedPicker))
     XCTAssertTrue(waitForEnabled(previewWindow.buttons["copy-preview-button"]))
     let previewScrollView = previewWindow.scrollViews.firstMatch
     XCTAssertTrue(previewScrollView.exists)
@@ -413,6 +412,66 @@ final class MenuBarSmokeTests: XCTestCase {
     previewWindow.buttons["close-preview-button"].click()
     XCTAssertFalse(previewWindow.waitForExistence(timeout: 5))
     waitForStatus("selection ready", in: testWindow)
+  }
+
+  func testFPSAndSpeedMenusPersistAndCopiedSavedTimingAgrees() throws {
+    let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] = exportDirectory.path
+    app.launchArguments.append(contentsOf: [
+      "--ui-testing", "-AppleLanguages", "(en)", "-AppleLocale", "en_US",
+    ])
+    app.launch()
+    let menu = app.windows["gifferent test menu"]
+    XCTAssertTrue(menu.waitForExistence(timeout: 10))
+    menu.buttons["recording-action-button"].click()
+    let selection = app.windows["capture selection"]
+    XCTAssertTrue(selection.waitForExistence(timeout: 10))
+    selection.buttons["select-display-button"].click()
+    selection.buttons["confirm-selection-button"].click()
+    waitForStatus("recording", in: menu)
+    menu.buttons["recording-action-button"].click()
+    let preview = app.windows["gif preview"]
+    XCTAssertTrue(preview.waitForExistence(timeout: 10))
+    XCTAssertTrue(waitForEnabled(preview.buttons["copy-preview-button"]))
+    let fps = preview.popUpButtons["output-frame-rate-picker"]
+    let speed = preview.popUpButtons["playback-speed-picker"]
+    XCTAssertEqual(fps.value as? String, "50")
+    fps.click()
+    XCTAssertFalse(app.menuItems["60"].exists)
+    app.menuItems["10"].click()
+    XCTAssertTrue(waitForValue(containing: "10", in: fps))
+    XCTAssertTrue(waitForEnabled(preview.buttons["copy-preview-button"]))
+    speed.click()
+    app.menuItems["0.25×"].click()
+    XCTAssertTrue(waitForValue(containing: "0.25×", in: speed))
+    XCTAssertTrue(waitForEnabled(preview.buttons["copy-preview-button"]))
+    XCTAssertFalse(preview.menuButtons["compression-destination-menu"].isEnabled)
+    preview.radioButtons["loop-once-button"].click()
+    XCTAssertTrue(waitForEnabled(preview.buttons["copy-preview-button"]))
+    preview.typeKey("c", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("copied", in: preview))
+    preview.typeKey("s", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("saved", in: preview))
+    let copied = exportDirectory.appendingPathComponent("gifferent-preview-ui-copy.gif")
+    let saved = exportDirectory.appendingPathComponent("gifferent-preview-ui-save.gif")
+    XCTAssertTrue(waitForFile(saved))
+    XCTAssertEqual(try Data(contentsOf: copied), try Data(contentsOf: saved))
+    let metadata = try gifMetadata(at: saved)
+    XCTAssertEqual(metadata.durationCentiseconds, 50)
+    XCTAssertEqual(metadata.frameCount, 3)
+    XCTAssertFalse(metadata.loopsForever)
+    preview.buttons["close-preview-button"].click()
+    waitForStatus("selection ready", in: menu)
+    menu.buttons["recording-action-button"].click()
+    waitForStatus("recording", in: menu)
+    menu.buttons["recording-action-button"].click()
+    XCTAssertTrue(preview.waitForExistence(timeout: 10))
+    XCTAssertTrue(waitForEnabled(preview.buttons["copy-preview-button"]))
+    XCTAssertEqual(fps.value as? String, "10")
+    XCTAssertEqual(speed.value as? String, "0.25×")
+    let forever = preview.radioButtons["loop-forever-button"]
+    XCTAssertTrue(
+      (forever.value as? String) == "1" || (forever.value as? NSNumber)?.boolValue == true)
   }
 
   func testCompressionTargetsAreVisibleAndBundledEncoderWorks() {

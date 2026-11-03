@@ -176,3 +176,20 @@
 - preserve all release gates. do not disable UI acceptance, hide assertion failures, alter GitHub email preferences, or close user chats. the integration owner reports the final commit's CI evidence and failures. detailed commands, evidence, and remaining limits are in [pipeline verification](pipeline-verification-2026-11-01.md).
 
 - repository enforcement was verified and repaired in this change: `main` previously had no branch protection or active ruleset. it now requires up-to-date PR checks `quality` and `tests`, including administrator merges, with force pushes/deletion disabled and no human approval count.
+
+## frame rate and speed feature requested on 2026-11-01
+
+- the architect requested a 60 fps capture target, a preview FPS menu beside speed and loop, and a speed preset menu replacing the slider, extending from 0.25× to 3×. this supersedes the previous 24 fps capture target and slider interaction once implemented and verified.
+- the architect approved remembering the last export FPS and speed, applying FPS to final playback after speed changes, and retaining the approved automatic size-search pairs under the selected FPS ceiling. manual compression preserves selected FPS.
+- after reviewing GIF/browser timing constraints, the architect approved a 50 fps export ceiling and default while capture still targets 60 fps. export presets are 50/45/30/24/20/15/10 fps; speed presets are 0.25× through 3× in 0.25× steps, initially 1×. trim and loop reset for a new recording; FPS and speed persist after a validated edit, including across launches.
+- sample the speed-adjusted timeline on cumulative frame-rate boundaries; hold sparse source frames rather than interpolating pixels. round cumulative output boundaries to GIF centiseconds. a clip shorter than 20 ms retains one 20 ms frame to avoid the browser short-delay clamp. higher requested rates do not imply more captured visual detail.
+- size search retains only original/24, 75%/24, 50%/24, and original/18, filtered by selected resolution and FPS ceilings. selections below 18 fps have no approved search candidates; manual compression remains available. original recovery restores the selected export FPS ceiling.
+- capture remains local with the existing bounded transport, 512 mib workspace quota, cursor preference, permission recovery, cancellation, and cleanup. the higher capture target requires new resource and real-Mac evidence; no capture-throughput guarantee is implied.
+- timing references: [GIF89a centisecond format](https://www.w3.org/Graphics/GIF/spec-gif89a.txt) and [Chromium's short-delay handling](https://raw.githubusercontent.com/chromium/chromium/main/third_party/blink/renderer/platform/graphics/deferred_image_decoder.cc). Chromium maps delays at or below 10 ms to 100 ms; the approved 50 fps ceiling avoids generating those delays in the edit pipeline.
+- implementation and acceptance sequence: [frame rate and speed plan](../fps-implementation-plan.md). merge and definition-of-done completion remain gated on actual test, performance, and visual evidence.
+
+- performance tradeoff approved on 2026-11-01: after reviewing the [50 fps benchmark](../Benchmarks/frame-rate-presets-2026-11-01.md), the architect explicitly accepted the measured encoding cost and retained the 50 fps default. the 10-second motion fixture takes 2.28 seconds median / 2.31 seconds p90 (24 fps baseline 1.07 / 1.08 seconds), creates 23.3 MB (baseline 11.2 MB), and peaks around 1 GiB encoder RSS. this accepts these fixture encoder measurements for the feature; it does not establish the under-two-second preview target or waive live capture, automated UI, final visual/accessibility, or release acceptance.
+
+- on 2026-11-01, the architect instructed “skip acceptance for now”. acceptance work is deferred; retain pending automated UI/real-Mac checks and the draft PR. this is not a claim that acceptance passed or that definition-of-done/release gates are complete.
+
+- on 2026-11-03, restore this approved behavior after the workflow simplification commit removed its implementation. retain the new trim filmstrip and current CI workflow; acceptance remains deferred.

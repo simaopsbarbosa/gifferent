@@ -26,7 +26,7 @@ a feature is complete only when all applicable checks below have evidence. an ex
 ## performance and quality
 
 - for capture, encoding, compression, or UI latency changes, run repeatable benchmarks with the same source fixtures, machine, OS, and power mode. record median and high-percentile time, peak memory, output bytes, and visual comparison. compare at least two credible approaches before committing to an important encoder or pipeline choice.
-- measure hotkey-to-ready, stop-to-preview, sustained 24 fps capture, CPU and memory during normal use, and compression time for short and long fixtures. meet the agreed thresholds or document the architect-approved tradeoff.
+- measure hotkey-to-ready, stop-to-preview, sustained 60 fps capture, CPU and memory during normal use, and compression time for short and long fixtures. meet the agreed thresholds or document the architect-approved tradeoff.
 - validate GIF duration, frame ordering, loop behavior, final dimensions, size, and animation in the destinations used for acceptance.
 
 ## tooling and continuous integration

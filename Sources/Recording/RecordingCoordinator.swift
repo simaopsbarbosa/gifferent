@@ -160,7 +160,16 @@ final class RecordingCoordinator: ObservableObject {
     private(set) var uiTestStartupFailure = ""
   #endif
   private(set) var diagnostics = RecordingDiagnostics()
-  @Published private(set) var previewAction: PreviewAction = .idle
+  @Published private(set) var previewFeedbackRevision: UInt64 = 0
+  @Published private(set) var previewAction: PreviewAction = .idle {
+    didSet {
+      switch previewAction {
+      case .copied, .saved, .failed, .cancelled, .updateFailed:
+        previewFeedbackRevision &+= 1
+      case .idle, .updated, .copying, .saving: break
+      }
+    }
+  }
   @Published private(set) var editParameters: GIFEditParameters?
   @Published private(set) var isPreviewUpdateInProgress = false
   @Published private(set) var isQualityCompressionScheduled = false
@@ -185,6 +194,7 @@ final class RecordingCoordinator: ObservableObject {
   private let compressor: (any GIFCompressing)?
   private let clipboard: any GIFClipboardWriting
   private let fileSaver: any GIFSaving
+  private let exportSettings: GIFExportSettingsStore
   private let diagnosticsClock: any RecordingDiagnosticsClock
 
   private var generation: UUID?
@@ -219,8 +229,10 @@ final class RecordingCoordinator: ObservableObject {
     compressor: (any GIFCompressing)? = nil,
     clipboard: any GIFClipboardWriting = NSPasteboardGIFWriter(),
     fileSaver: any GIFSaving = SavePanelGIFSaver(),
-    diagnosticsClock: any RecordingDiagnosticsClock = SystemRecordingDiagnosticsClock()
+    diagnosticsClock: any RecordingDiagnosticsClock = SystemRecordingDiagnosticsClock(),
+    exportSettings: GIFExportSettingsStore = GIFExportSettingsStore()
   ) {
+    self.exportSettings = exportSettings
     self.streamFactory = streamFactory
     self.workspace = workspace
     self.encoder = encoder
@@ -356,7 +368,14 @@ final class RecordingCoordinator: ObservableObject {
   func updatePlaybackSpeed(_ speed: Double) {
     guard compressedPreview == nil, !isCompressionInProgress else { return }
     guard var parameters = editParameters else { return }
-    parameters.playbackSpeed = (speed * 10).rounded() / 10
+    parameters.playbackSpeed = speed
+    requestPreviewUpdate(parameters)
+  }
+
+  func updateFrameRate(_ frameRate: GIFCompressionFrameRate) {
+    guard compressedPreview == nil, !isCompressionInProgress else { return }
+    guard var parameters = editParameters else { return }
+    parameters.frameRate = frameRate
     requestPreviewUpdate(parameters)
   }
 
@@ -469,6 +488,7 @@ final class RecordingCoordinator: ObservableObject {
     if compressedPreview == nil {
       originalPreviewExportedBeforeCompression = previewExported
     }
+    if let rate = editParameters?.frameRate { compressionSettings.frameRate = rate }
     let settings = compressionSettings
     compressionTask = Task { @MainActor [weak self] in
       guard let self else { return }
@@ -522,6 +542,7 @@ final class RecordingCoordinator: ObservableObject {
         try await workspace.removeCompressedPreviewOutput(for: id, at: compressedPreview.url)
       }
       self.compressedPreview = nil
+      if let rate = editParameters?.frameRate { compressionSettings.frameRate = rate }
       sizeSearchProgress = nil
       sizeSearchSummary = nil
       previewExported = originalPreviewExportedBeforeCompression ?? false
@@ -752,9 +773,11 @@ final class RecordingCoordinator: ObservableObject {
       editFrameCount = sequence.frames.count
       let initialParameters = GIFEditParameters(
         frameRange: GIFFrameRange(startIndex: 0, endIndexExclusive: sequence.frames.count),
-        playbackSpeed: 1,
-        loopMode: .forever
+        playbackSpeed: exportSettings.playbackSpeed,
+        loopMode: .forever,
+        frameRate: exportSettings.frameRate
       )
+      compressionSettings.frameRate = initialParameters.frameRate
       editParameters = initialParameters
       currentPreviewParameters = initialParameters
       let edited = try GIFEditModel.apply(initialParameters, to: sequence)
@@ -962,9 +985,8 @@ final class RecordingCoordinator: ObservableObject {
       parameters.frameRange.startIndex >= 0,
       parameters.frameRange.endIndexExclusive <= originalSequence.frames.count,
       parameters.frameRange.startIndex < parameters.frameRange.endIndexExclusive,
-      parameters.playbackSpeed >= 0.5,
-      parameters.playbackSpeed <= 2,
-      (parameters.playbackSpeed * 10).rounded() == parameters.playbackSpeed * 10
+      GIFEditParameters.speedPresets.contains(parameters.playbackSpeed),
+      GIFCompressionFrameRate.exportPresets.contains(parameters.frameRate)
     else { return }
     editParameters = parameters
     previewExported = false
@@ -1021,6 +1043,8 @@ final class RecordingCoordinator: ObservableObject {
       }
       state = .previewReady(id, committed, encoded)
       currentPreviewParameters = parameters
+      compressionSettings.frameRate = parameters.frameRate
+      exportSettings.remember(parameters)
       // publishing the validated output must not fail because an obsolete file could not be pruned.
       // the workspace keeps those bytes accounted and removes them when the session closes.
       try? await workspace.keepEditedPreviewOutput(for: id, at: output.url)

@@ -87,15 +87,6 @@ struct GIFCompressionSettings: Equatable, Sendable {
   }
 }
 
-enum GIFCompressionFrameRate: Int, CaseIterable, Identifiable, Sendable {
-  case fps24 = 24
-  case fps18 = 18
-
-  var id: Self { self }
-  var framesPerSecond: Double { Double(rawValue) }
-  var label: String { String(format: "%g", framesPerSecond) }
-}
-
 struct GIFSizeSearchCandidate: Equatable, Sendable {
   let scale: GIFCompressionScale
   let frameRate: GIFCompressionFrameRate
@@ -118,7 +109,8 @@ struct GIFSizeSearchPlan: Sendable {
     let scales = (eligibleScales ?? [.original, .seventyFivePercent, .fiftyPercent])
       .filter { $0.rawValue <= settings.scale.rawValue }
       .sorted { $0.rawValue > $1.rawValue }
-    let rates = Array(Set(frameRates)).sorted { $0.rawValue > $1.rawValue }
+    let rates = Array(Set(frameRates)).filter { $0.rawValue <= settings.frameRate.rawValue }.sorted
+    { $0.rawValue > $1.rawValue }
     let approvedPairs = Set(["100-24", "100-18", "75-24", "50-24"])
     let pairs = rates.flatMap { rate in
       scales.filter { approvedPairs.contains("\($0.rawValue)-\(rate.rawValue)") }

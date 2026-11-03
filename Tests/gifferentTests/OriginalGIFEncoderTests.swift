@@ -256,7 +256,7 @@ final class OriginalGIFEncoderTests: XCTestCase {
       frames: [0.0, 0.02, 0.07, 0.15].map {
         CapturedPNGFrame(url: frame, timestamp: $0)
       })
-    for (range, expectedDelays) in [(1..<3, [5, 8]), (2..<3, [8]), (3..<4, [8])] {
+    for (range, expectedDelays) in [(1..<3, [6, 7]), (2..<3, [8]), (3..<4, [8])] {
       let edited = try GIFEditModel.apply(
         GIFEditParameters(
           frameRange: GIFFrameRange(
@@ -268,6 +268,44 @@ final class OriginalGIFEncoderTests: XCTestCase {
           url: directory.appendingPathComponent(UUID().uuidString + ".gif"), maximumBytes: 10_000))
       XCTAssertEqual(result.delaysCentiseconds, expectedDelays)
       XCTAssertEqual(result.durationCentiseconds, expectedDelays.reduce(0, +))
+    }
+  }
+
+  func testSixtyFPSCaptureExportsEveryPresetAndSpeedWithValidTimingAndFrameOrder() async throws {
+    let directory = uniqueTemporaryDirectory()
+    defer { try? FileManager.default.removeItem(at: directory) }
+    try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+    let colors: [[UInt8]] = [
+      [255, 0, 0, 255], [0, 255, 0, 255], [0, 0, 255, 255],
+      [255, 255, 0, 255], [255, 0, 255, 255], [0, 255, 255, 255],
+    ]
+    let frames = try (0..<60).map { index in
+      let url = directory.appendingPathComponent("\(index).png")
+      try png(color: colors[index % colors.count]).write(to: url)
+      return CapturedPNGFrame(url: url, timestamp: Double(index) / 60)
+    }
+    let source = CapturedPNGSequence(frames: frames, finalFrameDuration: 1.0 / 60)
+    for speed in GIFEditParameters.speedPresets {
+      for rate in GIFCompressionFrameRate.exportPresets {
+        let edited = try GIFEditModel.apply(
+          GIFEditParameters(
+            frameRange: GIFFrameRange(startIndex: 0, endIndexExclusive: 60),
+            playbackSpeed: speed, loopMode: speed > 1 ? .once : .forever, frameRate: rate),
+          to: source)
+        let url = directory.appendingPathComponent("\(speed)-\(rate.rawValue).gif")
+        let result = try await ImageIOOriginalGIFEncoder().encode(
+          edited.sequence, loopMode: edited.loopMode,
+          to: PreviewOutputReservation(url: url, maximumBytes: 1_000_000))
+        XCTAssertEqual(result.durationCentiseconds, Int((100 / speed).rounded()))
+        XCTAssertTrue(result.delaysCentiseconds.allSatisfy { $0 >= 2 })
+        XCTAssertEqual(result.loopsForever, speed <= 1)
+        let decoded = try XCTUnwrap(CGImageSourceCreateWithURL(url as CFURL, nil))
+        for (index, frame) in edited.sequence.frames.enumerated() {
+          let sourceIndex = try XCTUnwrap(Int(frame.url.deletingPathExtension().lastPathComponent))
+          let image = try XCTUnwrap(CGImageSourceCreateImageAtIndex(decoded, index, nil))
+          XCTAssertEqual(try rgbaPixel(image), colors[sourceIndex % colors.count])
+        }
+      }
     }
   }
 
