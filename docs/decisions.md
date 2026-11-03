@@ -53,7 +53,7 @@
 
 ## menu bar rebrand comparison on 2026-11-03
 
-- the architect requested a separate branch to compare a larger menu bar icon based on supplied nested rounded-square artwork. use a static, monochrome template candidate at 20 points for this comparison. final identity approval and real menu bar review remain pending.
+- the architect requested a separate branch to compare a larger menu bar icon based on supplied nested rounded-square artwork. use a static, monochrome template candidate at 20 points for this comparison. the architect supplied the original six-outline SVG for the candidate; final identity approval and real menu bar review remain pending.
 
 ## compression behavior confirmed on 2026-10-24
 

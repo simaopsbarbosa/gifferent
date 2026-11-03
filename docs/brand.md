@@ -43,7 +43,7 @@ the architect approved the static orange mark shown in the [production-mark revi
 
 ## menu bar comparison candidate
 
-on 2026-11-03, the architect requested a separate comparison branch using supplied nested rounded-square artwork and a larger menu bar icon. [the candidate](../Brand/menu-bar-candidate.svg) simplifies the supplied artwork for small sizes and uses system template tinting at 20 points. this is a comparison candidate; final visual approval and real menu bar review remain pending. the earlier approved assets remain available for comparison.
+on 2026-11-03, the architect requested a separate comparison branch using supplied nested rounded-square artwork and a larger menu bar icon. [the candidate](../Brand/menu-bar-candidate.svg) uses the supplied six-outline SVG with system template tinting at 20 points. this is a comparison candidate; final visual approval and real menu bar review remain pending. the earlier approved assets remain available for comparison.
 
 ## formal logo
 

@@ -25,7 +25,7 @@ try:
     source = root / "Brand" / "menu-bar-candidate.svg"
     if source.read_bytes() != (imageset / "menu-bar-candidate.svg").read_bytes():
         errors.append("bundled menu bar candidate differs from source artwork")
-    if ElementTree.parse(source).getroot().attrib.get("viewBox") != "0 0 20 20":
+    if ElementTree.parse(source).getroot().attrib.get("viewBox") != "0 0 464 464":
         errors.append("menu bar candidate has an unexpected viewBox")
 except (OSError, json.JSONDecodeError, ElementTree.ParseError) as error:
     errors.append(f"invalid menu bar candidate: {error}")
