@@ -4,6 +4,22 @@ import XCTest
 @testable import gifferent
 
 final class CaptureSelectionOverlayTests: XCTestCase {
+  func testDragIntentPrioritizesCornersThenInterior() {
+    let region = CGRect(x: 20, y: 20, width: 100, height: 80)
+    if case .resize(.topLeft) = RegionDragIntent.at(CGPoint(x: 16, y: 16), region: region) {
+    } else {
+      XCTFail("corner should resize")
+    }
+    if case .move = RegionDragIntent.at(CGPoint(x: 60, y: 60), region: region) {
+    } else {
+      XCTFail("interior should move")
+    }
+    if case .create = RegionDragIntent.at(CGPoint(x: 2, y: 2), region: region) {
+    } else {
+      XCTFail("outside should create")
+    }
+  }
+
   func testRestorationRejectsMissingOrChangedDisplay() throws {
     let original = try XCTUnwrap(
       DisplayGeometry(
