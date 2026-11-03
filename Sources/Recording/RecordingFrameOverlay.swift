@@ -167,8 +167,8 @@ private struct RecordingFrameView: View {
   let targetRect: CGRect
 
   var body: some View {
-    let outerOutline = targetRect.insetBy(dx: -2.5, dy: -2.5)
-    let innerOutline = targetRect.insetBy(dx: -0.5, dy: -0.5)
+    let outerOutline = RecordingFrameGeometry.outlineRect(around: targetRect, centerOffset: 2.5)
+    let innerOutline = RecordingFrameGeometry.outlineRect(around: targetRect, centerOffset: 0.5)
 
     ZStack(alignment: .topLeading) {
       RoundedRectangle(cornerRadius: 2)

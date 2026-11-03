@@ -1,8 +1,14 @@
 import CoreGraphics
 
 enum RecordingFrameGeometry {
-  static let outsideInset: CGFloat = 4
+  // Leave room for pixel rounding and antialiasing outside the capture boundary.
+  static let outlineGap: CGFloat = 2
+  static let outsideInset: CGFloat = outlineGap + 4
   static let labelHeight: CGFloat = 18
+
+  static func outlineRect(around targetRect: CGRect, centerOffset: CGFloat) -> CGRect {
+    targetRect.insetBy(dx: -(outlineGap + centerOffset), dy: -(outlineGap + centerOffset))
+  }
 
   static func regionFrame(
     _ regionInDisplayPoints: CGRect,
