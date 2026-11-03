@@ -105,6 +105,10 @@
 - prose is lowercase except proper names. all features need unit, integration, and automated end-to-end acceptance tests. CI gates build, tests, format, and lint; release includes real-Mac manual acceptance.
 - public project under AGPL-3.0-or-later; captured pixels never leave the Mac. benchmark speed goals on a baseline Apple Silicon laptop. clear partial recordings after a crash rather than restoring them. when a detail is undecided, record it and ask the architect.
 
+## window selector sizing confirmed on 2026-11-03
+
+- size the window dropdown to the currently displayed option, including `choose a window` when no window is selected.
+
 ## region selection interaction confirmed on 2026-11-01
 
 - keep the existing selection overlay UI. remove the redundant `select a window` picker label and retain `choose a window` as its default value.

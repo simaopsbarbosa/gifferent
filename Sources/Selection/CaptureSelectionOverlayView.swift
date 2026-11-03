@@ -64,15 +64,23 @@ struct CaptureSelectionOverlayView: View {
         .accessibilityLabel("select this display")
         .accessibilityIdentifier("select-display-button")
 
-      Picker("select a window", selection: selectedWindowBinding) {
-        Text("choose a window").tag(nil as CGWindowID?)
+      Menu {
+        Button("choose a window") {}.disabled(true)
         ForEach(coordinator.inventory.windows, id: \.id) { window in
-          Text(windowLabel(window)).tag(Optional(window.id))
+          Button {
+            coordinator.selectWindow(window.id)
+          } label: {
+            if selectedWindowID == window.id {
+              Label(windowLabel(window), systemImage: "checkmark")
+            } else {
+              Text(windowLabel(window))
+            }
+          }
         }
+      } label: {
+        Text(selectedWindowLabel)
       }
-      .labelsHidden()
       .accessibilityLabel("select a window")
-      .pickerStyle(.menu)
       .accessibilityIdentifier("select-window-picker")
 
       Button("region") {
@@ -115,17 +123,16 @@ struct CaptureSelectionOverlayView: View {
     return "\(application) · \(title)"
   }
 
-  private var selectedWindowBinding: Binding<CGWindowID?> {
-    Binding(
-      get: {
-        guard case .window(let id) = coordinator.selection else { return nil }
-        return id
-      },
-      set: { id in
-        guard let id else { return }
-        coordinator.selectWindow(id)
-      }
-    )
+  private var selectedWindowID: CGWindowID? {
+    guard case .window(let id) = coordinator.selection else { return nil }
+    return id
+  }
+
+  private var selectedWindowLabel: String {
+    guard let id = selectedWindowID,
+      let window = coordinator.inventory.windows.first(where: { $0.id == id })
+    else { return "choose a window" }
+    return windowLabel(window)
   }
 
   private var selectionDescription: String {
