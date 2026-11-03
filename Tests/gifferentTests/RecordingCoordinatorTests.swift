@@ -1,3 +1,4 @@
+import AppKit
 import Combine
 import Foundation
 import XCTest
@@ -600,6 +601,73 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(stream.stopCalls, 1)
   }
 
+  func testFileCopyKeepsCurrentEditedGIFAfterSessionCleanup() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let pasteboard = NSPasteboard.withUniqueName()
+    defer { pasteboard.releaseGlobally() }
+    let imageClipboard = RecordingTestClipboard()
+    let coordinator = RecordingCoordinator(
+      streamFactory: FakeRecordingStreamFactory(
+        stream: FakeRecordingStream(framesOnStart: [validFrame(at: 1), validFrame(at: 100_000_001)])
+      ),
+      workspace: fixture.workspace,
+      clipboard: imageClipboard,
+      fileClipboard: NSPasteboardGIFFileWriter(
+        pasteboard: pasteboard,
+        store: GIFClipboardFileStore(directory: fixture.base.appendingPathComponent("clipboard"))))
+    await coordinator.start(target: .display(1), showsCursor: false)
+    await coordinator.stop()
+    await waitForPreview(coordinator)
+    coordinator.updateLoopMode(.once)
+    await waitUntil(timeout: .seconds(5)) { !coordinator.isPreviewUpdateInProgress }
+    let gif = try XCTUnwrap(coordinator.displayedPreviewGIF)
+    let expected = try Data(contentsOf: gif.url)
+    await coordinator.copyPreview(as: .file)
+    XCTAssertEqual(coordinator.previewAction, .copiedFile)
+    XCTAssertTrue(imageClipboard.urls.isEmpty)
+    let file = try XCTUnwrap(pasteboard.string(forType: .fileURL).flatMap(URL.init(string:)))
+    XCTAssertEqual(try Data(contentsOf: file), expected)
+    let closed = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertTrue(closed)
+    try await coordinator.cleanOrphanedSessions()
+    XCTAssertFalse(FileManager.default.fileExists(atPath: gif.url.path))
+    XCTAssertEqual(try Data(contentsOf: file), expected)
+  }
+
+  func testFileCopyUsesCompressedPreviewAndImageCopyStaysSeparate() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let imageClipboard = RecordingTestClipboard()
+    let fileClipboard = RecordingTestClipboard()
+    let (coordinator, _, _, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace, compressor: FakeGIFCompressor(),
+      clipboard: imageClipboard, fileClipboard: fileClipboard)
+    coordinator.startCompression()
+    await waitForCompression(coordinator)
+    let compressed = try XCTUnwrap(coordinator.compressedPreview)
+    await coordinator.copyPreview(as: .file)
+    XCTAssertEqual(coordinator.previewAction, .copiedFile)
+    XCTAssertEqual(fileClipboard.urls, [compressed.url])
+    XCTAssertTrue(imageClipboard.urls.isEmpty)
+    await coordinator.copyPreview()
+    XCTAssertEqual(coordinator.previewAction, .copied)
+    XCTAssertEqual(imageClipboard.urls, [compressed.url])
+  }
+
+  func testFileCopyFailureDoesNotMarkPreviewExported() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let (coordinator, _, original, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace, compressor: FakeGIFCompressor(),
+      fileClipboard: CoordinatorTestClipboard(shouldFail: true))
+    await coordinator.copyPreview(as: .file)
+    XCTAssertEqual(coordinator.previewAction, .failed)
+    let closed = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertFalse(closed)
+    XCTAssertEqual(coordinator.displayedPreviewGIF, original)
+  }
+
   func testNewestEditRequestWinsAndClipboardUsesTheEditedGIF() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
@@ -992,6 +1060,41 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fixture.root.path), [])
   }
 
+  func testPreviewCannotBeClosedWhileFileCopyIsInProgress() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let clipboard = BlockingCoordinatorTestClipboard()
+    let coordinator = RecordingCoordinator(
+      streamFactory: FakeRecordingStreamFactory(
+        stream: FakeRecordingStream(framesOnStart: [validFrame(at: 1)])),
+      workspace: fixture.workspace,
+      fileClipboard: clipboard
+    )
+    await coordinator.start(target: .display(1), showsCursor: false)
+    await coordinator.stop()
+    await waitForPreview(coordinator)
+
+    let copy = Task { await coordinator.copyPreview(as: .file) }
+    while !clipboard.isWaiting { await Task.yield() }
+    XCTAssertTrue(coordinator.isPreviewActionInProgress)
+    let closedDuringCopy = await coordinator.closePreview(discardUnexported: true)
+    XCTAssertFalse(closedDuringCopy)
+    guard case .previewReady = coordinator.state else {
+      return XCTFail("preview must remain available while copy is in progress")
+    }
+    guard case .previewReady(_, _, let gif) = coordinator.state else {
+      return XCTFail("expected preview media to remain while copy is in progress")
+    }
+    XCTAssertTrue(FileManager.default.fileExists(atPath: gif.url.path))
+
+    clipboard.resume()
+    await copy.value
+    XCTAssertEqual(coordinator.previewAction, .copiedFile)
+    let closedAfterCopy = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertTrue(closedAfterCopy)
+    XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: fixture.root.path), [])
+  }
+
   func testPreviewCannotBeDiscardedWhileSaveIsInProgress() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }
@@ -1040,7 +1143,8 @@ final class RecordingCoordinatorTests: XCTestCase {
   private func makeReadyCoordinator(
     workspace: SessionWorkspaceStore,
     compressor: any GIFCompressing,
-    clipboard: RecordingTestClipboard = RecordingTestClipboard()
+    clipboard: RecordingTestClipboard = RecordingTestClipboard(),
+    fileClipboard: any GIFClipboardWriting = RecordingTestClipboard()
   ) async throws -> (
     coordinator: RecordingCoordinator,
     sessionID: RecordingSessionID,
@@ -1052,7 +1156,8 @@ final class RecordingCoordinatorTests: XCTestCase {
         stream: FakeRecordingStream(framesOnStart: [validFrame(at: 1)])),
       workspace: workspace,
       compressor: compressor,
-      clipboard: clipboard
+      clipboard: clipboard,
+      fileClipboard: fileClipboard
     )
     await coordinator.start(target: .display(1), showsCursor: false)
     await coordinator.stop()

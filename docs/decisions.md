@@ -193,3 +193,11 @@
 - on 2026-11-01, the architect instructed “skip acceptance for now”. acceptance work is deferred; retain pending automated UI/real-Mac checks and the draft PR. this is not a claim that acceptance passed or that definition-of-done/release gates are complete.
 
 - on 2026-11-03, restore this approved behavior after the workflow simplification commit removed its implementation. retain the new trim filmstrip and current CI workflow; acceptance remains deferred.
+
+## separate image and file copy approved on 2026-11-03
+
+- the architect requested two preview actions: `copy image` with `⌘C`, retaining existing GIF image-data behavior, and `copy file` with `⌘⇧C`, publishing the current GIF as a native file attachment. this supersedes the earlier single-copy shortcut requirement.
+- both actions use the currently displayed original, edited, or compressed GIF. disable both while encoding, optimizing, or exporting. success permits preview closure; a failed copy keeps the preview available and does not mark it exported.
+- retain one private backing file outside the recording workspace, at `gifferent/clipboard-file/gifferent.gif` in the user's cache directory. replace it on the next file copy; keep it across preview closure and app restarts so a clipboard file URL does not immediately expire. this is an explicit exception to preview temporary-media cleanup. cap the retained file at 512 mib; atomic replacement temporarily permits one additional file of at most 512 mib, with staging cleaned on failure/cancellation and before the next attempt.
+- image copy retains raw GIF pasteboard data; file copy publishes a file URL without a flattened PNG/TIFF alternative. a successful native write proves the representation, not browser compatibility. GitHub animation must still be verified in the actual destination browser; no automatic upload or new screen permission is introduced.
+- acceptance scenarios: both buttons and shortcuts route correctly; original, edited and compressed bytes match the preview; animation bytes survive source cleanup; repeated file copies do not accumulate exports; missing/oversized sources and cancellation preserve the prior copy; failed export keeps the preview; pending export blocks closure. UI and real-Mac acceptance remain deferred under the existing architect instruction.

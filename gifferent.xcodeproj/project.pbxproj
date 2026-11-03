@@ -10,6 +10,7 @@
 		0E4EEAC639BB613FE8693F5B /* gifferentApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */; };
 		18A3DD66F086C88BED0CC4CC /* MenuBarSmokeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8280944F649D87921ECE18EA /* MenuBarSmokeTests.swift */; };
 		791857B04814FECFF2C7738E /* FoundationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 65197CF250A3B835861EEADE /* FoundationTests.swift */; };
+		B00000000000000000000004 /* GIFClipboardTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000003 /* GIFClipboardTests.swift */; };
 		A00000000000000000000001 /* CaptureSources.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000011 /* CaptureSources.swift */; };
 		A00000000000000000000002 /* CarbonHotkeyBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000012 /* CarbonHotkeyBackend.swift */; };
 		A00000000000000000000003 /* GlobalHotkeyController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000013 /* GlobalHotkeyController.swift */; };
@@ -25,6 +26,7 @@
 		A0000000000000000000000D /* CaptureSelectionOverlayView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001D /* CaptureSelectionOverlayView.swift */; };
 		A0000000000000000000000E /* CaptureSelectionOverlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */; };
 		A0000000000000000000000F /* GifferentRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* GifferentRuntime.swift */; };
+		B00000000000000000000002 /* GIFClipboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000001 /* GIFClipboard.swift */; };
 		A00000000000000000000040 /* ScreenCaptureRecordingStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000050 /* ScreenCaptureRecordingStream.swift */; };
 		A00000000000000000000041 /* RecordingFrameTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000051 /* RecordingFrameTransport.swift */; };
 		A00000000000000000000042 /* RecordingTargetMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000052 /* RecordingTargetMonitor.swift */; };
@@ -79,6 +81,7 @@
 /* Begin PBXFileReference section */
 		376FC03193E927FB3537C6BF /* gifferentUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = gifferentUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		65197CF250A3B835861EEADE /* FoundationTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = FoundationTests.swift; sourceTree = "<group>"; };
+		B00000000000000000000003 /* GIFClipboardTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFClipboardTests.swift; sourceTree = "<group>"; };
 		6DA34E31B61360BD7E90802F /* gifferentTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = gifferentTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		8280944F649D87921ECE18EA /* MenuBarSmokeTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = MenuBarSmokeTests.swift; sourceTree = "<group>"; };
 		A00000000000000000000011 /* CaptureSources.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSources.swift; sourceTree = "<group>"; };
@@ -96,6 +99,7 @@
 		A0000000000000000000001D /* CaptureSelectionOverlayView.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSelectionOverlayView.swift; sourceTree = "<group>"; };
 		A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSelectionOverlayTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000001F /* GifferentRuntime.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GifferentRuntime.swift; sourceTree = "<group>"; };
+		B00000000000000000000001 /* GIFClipboard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFClipboard.swift; sourceTree = "<group>"; };
 		A00000000000000000000050 /* ScreenCaptureRecordingStream.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenCaptureRecordingStream.swift; sourceTree = "<group>"; };
 		A00000000000000000000051 /* RecordingFrameTransport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingFrameTransport.swift; sourceTree = "<group>"; };
 		A00000000000000000000052 /* RecordingTargetMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingTargetMonitor.swift; sourceTree = "<group>"; };
@@ -190,6 +194,7 @@
 			children = (
 				A00000000000000000000084 /* RecordingSettingsTests.swift */,
 				65197CF250A3B835861EEADE /* FoundationTests.swift */,
+				B00000000000000000000003 /* GIFClipboardTests.swift */,
 				A00000000000000000000015 /* CaptureSourceTests.swift */,
 				A00000000000000000000016 /* GlobalHotkeyTests.swift */,
 				A00000000000000000000017 /* SelectionGeometryTests.swift */,
@@ -238,6 +243,7 @@
 				C4C4FD60BCB3F0C0961A6FF4 /* gifferentApp.swift */,
 				A00000000000000000000076 /* GIFPreviewViews.swift */,
 				A0000000000000000000001F /* GifferentRuntime.swift */,
+				B00000000000000000000001 /* GIFClipboard.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -474,6 +480,7 @@
 			files = (
 				A00000000000000000000083 /* RecordingSettingsTests.swift in Sources */,
 				791857B04814FECFF2C7738E /* FoundationTests.swift in Sources */,
+				B00000000000000000000004 /* GIFClipboardTests.swift in Sources */,
 				A00000000000000000000005 /* CaptureSourceTests.swift in Sources */,
 				A00000000000000000000006 /* GlobalHotkeyTests.swift in Sources */,
 				A00000000000000000000007 /* SelectionGeometryTests.swift in Sources */,
@@ -509,6 +516,7 @@
 				A0000000000000000000000C /* CaptureSelectionCoordinator.swift in Sources */,
 				A0000000000000000000000D /* CaptureSelectionOverlayView.swift in Sources */,
 				A0000000000000000000000F /* GifferentRuntime.swift in Sources */,
+				B00000000000000000000002 /* GIFClipboard.swift in Sources */,
 				A00000000000000000000040 /* ScreenCaptureRecordingStream.swift in Sources */,
 				A00000000000000000000060 /* RecordingFrameGeometry.swift in Sources */,
 				A00000000000000000000062 /* RecordingFrameOverlay.swift in Sources */,

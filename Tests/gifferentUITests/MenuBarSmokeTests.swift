@@ -24,6 +24,36 @@ final class MenuBarSmokeTests: XCTestCase {
     try await super.tearDown()
   }
 
+  func testCopyImageAndFileActionsAndFileShortcutRetainCurrentGIFAfterClose() throws {
+    let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] = exportDirectory.path
+    app.launchArguments = ["--ui-testing", "--ui-testing-preview"]
+    app.launch()
+    let preview = openFixturePreview(in: app)
+    let copyImage = preview.buttons["copy-preview-button"]
+    let copyFile = preview.buttons["copy-file-preview-button"]
+    XCTAssertTrue(copyImage.label.contains("copy image"))
+    XCTAssertTrue(copyFile.label.contains("copy file"))
+    copyFile.click()
+    XCTAssertTrue(waitForPreviewAction("file copied", in: preview))
+    let file = exportDirectory.appendingPathComponent("clipboard-files/gifferent.gif")
+    XCTAssertTrue(waitForFile(file))
+    XCTAssertGreaterThan(try gifMetadata(at: file).frameCount, 1)
+    preview.radioButtons["loop-once-button"].click()
+    XCTAssertTrue(waitForEnabled(copyFile))
+    preview.typeKey("c", modifierFlags: [.command, .shift])
+    XCTAssertTrue(waitForPreviewAction("file copied", in: preview))
+    preview.typeKey("c", modifierFlags: .command)
+    XCTAssertTrue(waitForPreviewAction("copied", in: preview))
+    let image = exportDirectory.appendingPathComponent("gifferent-preview-ui-copy.gif")
+    let expected = try Data(contentsOf: image)
+    XCTAssertEqual(try Data(contentsOf: file), expected)
+    XCTAssertFalse(try gifMetadata(at: file).loopsForever)
+    preview.buttons["close-preview-button"].click()
+    XCTAssertTrue(waitForFile(file))
+    XCTAssertEqual(try Data(contentsOf: file), expected)
+  }
+
   func testLaunchShowsIdleContentAndQuitAction() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =

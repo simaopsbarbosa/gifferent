@@ -73,6 +73,11 @@ final class GifferentRuntime: ObservableObject {
           workspace: workspace,
           compressor: UITestGIFCompressor.configured() ?? compressor,
           clipboard: UITestGIFClipboardWriter(),
+          fileClipboard: NSPasteboardGIFFileWriter(
+            pasteboard: NSPasteboard(
+              name: .init("gifferent.ui-testing.\(ProcessInfo.processInfo.processIdentifier)")),
+            store: GIFClipboardFileStore(
+              directory: uiTestExportDirectory().appendingPathComponent("clipboard-files"))),
           fileSaver: UITestGIFSavePanelSaver(),
           exportSettings: GIFExportSettingsStore(
             defaults: UserDefaults(suiteName: "gifferent.ui-testing"))
@@ -314,8 +319,8 @@ final class GifferentRuntime: ObservableObject {
     Task { await recordingCoordinator.discardCapturedSession() }
   }
 
-  func copyPreview() {
-    Task { await recordingCoordinator.copyPreview() }
+  func copyPreview(as representation: GIFCopyRepresentation = .image) {
+    Task { await recordingCoordinator.copyPreview(as: representation) }
   }
 
   func savePreview() {
@@ -645,19 +650,6 @@ final class GifferentRuntime: ObservableObject {
       FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
       ?? FileManager.default.temporaryDirectory
     return cacheRoot.appendingPathComponent("gifferent/recording-sessions", isDirectory: true)
-  }
-}
-
-@MainActor
-struct NSPasteboardGIFWriter: GIFClipboardWriting {
-  func writeGIF(at url: URL) async throws {
-    let data = try await Task.detached(priority: .userInitiated) {
-      try Data(contentsOf: url, options: .mappedIfSafe)
-    }.value
-    let pasteboard = NSPasteboard.general
-    pasteboard.clearContents()
-    guard pasteboard.setData(data, forType: NSPasteboard.PasteboardType("com.compuserve.gif"))
-    else { throw NSError(domain: "gifferent.clipboard", code: 1) }
   }
 }
 

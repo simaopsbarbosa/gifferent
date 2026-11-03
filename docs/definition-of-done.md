@@ -21,7 +21,7 @@ a feature is complete only when all applicable checks below have evidence. an ex
 - integration tests cover the seams touched by the change, including ScreenCaptureKit adapters, frame processing, command-line encoding, metadata, clipboard, and disk export using controlled fixtures or suitable system integration. real-Mac animated clipboard compatibility is checked locally before the first release.
 - automated acceptance tests exercise representative end-to-end journeys and each affected UI interaction; exhaustive timing, metadata, and error combinations belong in unit/integration tests. exercise UI interactions with XCTest UI tests locally before merge. provide stable launch arguments and deterministic test fixtures. a real-Mac acceptance pass checks system permission, global hotkeys, multi-display selection, window movement, animated clipboard paste into GitHub, sound, and visual feel before release.
 - every existing feature remains covered by its unit, integration, and acceptance tests; run the full suite before merge. a regression gets a focused test.
-- build succeeds on the supported deployment target. no new compiler warnings, force unwraps in fallible capture paths, unhandled task failures, or persistent temporary media.
+- build succeeds on the supported deployment target. no new compiler warnings, force unwraps in fallible capture paths, unhandled task failures, or abandoned temporary media. the latest bounded clipboard file follows the retention policy in [decisions.md](decisions.md).
 
 ## performance and quality
 

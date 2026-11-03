@@ -104,6 +104,11 @@ protocol GIFSaving {
   func saveGIF(at url: URL) async throws -> PreviewSaveResult
 }
 
+enum GIFCopyRepresentation {
+  case image
+  case file
+}
+
 enum PreviewAction: Equatable {
   case idle
   case updated
@@ -111,6 +116,7 @@ enum PreviewAction: Equatable {
   case copying
   case saving
   case copied
+  case copiedFile
   case saved
   case cancelled
   case failed
@@ -164,7 +170,7 @@ final class RecordingCoordinator: ObservableObject {
   @Published private(set) var previewAction: PreviewAction = .idle {
     didSet {
       switch previewAction {
-      case .copied, .saved, .failed, .cancelled, .updateFailed:
+      case .copied, .copiedFile, .saved, .failed, .cancelled, .updateFailed:
         previewFeedbackRevision &+= 1
       case .idle, .updated, .copying, .saving: break
       }
@@ -193,6 +199,7 @@ final class RecordingCoordinator: ObservableObject {
   private let gifEncoder: any OriginalGIFEncoding
   private let compressor: (any GIFCompressing)?
   private let clipboard: any GIFClipboardWriting
+  private let fileClipboard: any GIFClipboardWriting
   private let fileSaver: any GIFSaving
   private let exportSettings: GIFExportSettingsStore
   private let diagnosticsClock: any RecordingDiagnosticsClock
@@ -228,6 +235,7 @@ final class RecordingCoordinator: ObservableObject {
     gifEncoder: any OriginalGIFEncoding = ImageIOOriginalGIFEncoder(),
     compressor: (any GIFCompressing)? = nil,
     clipboard: any GIFClipboardWriting = NSPasteboardGIFWriter(),
+    fileClipboard: any GIFClipboardWriting = NSPasteboardGIFFileWriter(),
     fileSaver: any GIFSaving = SavePanelGIFSaver(),
     diagnosticsClock: any RecordingDiagnosticsClock = SystemRecordingDiagnosticsClock(),
     exportSettings: GIFExportSettingsStore = GIFExportSettingsStore()
@@ -240,6 +248,7 @@ final class RecordingCoordinator: ObservableObject {
     self.compressor = compressor
     compressionAction = compressor == nil ? .unavailable : .idle
     self.clipboard = clipboard
+    self.fileClipboard = fileClipboard
     self.fileSaver = fileSaver
     self.diagnosticsClock = diagnosticsClock
   }
@@ -555,16 +564,17 @@ final class RecordingCoordinator: ObservableObject {
     }
   }
 
-  func copyPreview() async {
+  func copyPreview(as representation: GIFCopyRepresentation = .image) async {
     guard !isPreviewUpdateInProgress, !isPreviewActionInProgress,
       !isQualityCompressionScheduled,
       let gif = displayedPreviewGIF
     else { return }
     previewAction = .copying
     do {
-      try await clipboard.writeGIF(at: gif.url)
+      let writer = representation == .image ? clipboard : fileClipboard
+      try await writer.writeGIF(at: gif.url)
       previewExported = true
-      previewAction = .copied
+      previewAction = representation == .image ? .copied : .copiedFile
     } catch {
       previewAction = .failed
     }

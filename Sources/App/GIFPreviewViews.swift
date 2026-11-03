@@ -140,10 +140,16 @@ struct GIFPreviewReadyView: View {
           .help("back to original")
           .accessibilityIdentifier("back-to-original-button")
         }
-        Button("copy (⌘C)") { runtime.copyPreview() }
+        Button("copy image (⌘C)") { runtime.copyPreview() }
           .keyboardShortcut("c", modifiers: .command)
           .disabled(exportIsDisabled)
           .accessibilityIdentifier("copy-preview-button")
+          .help("copy gif image data; some browsers paste a still image")
+        Button("copy file (⌘⇧C)") { runtime.copyPreview(as: .file) }
+          .keyboardShortcut("c", modifiers: [.command, .shift])
+          .disabled(exportIsDisabled)
+          .accessibilityIdentifier("copy-file-preview-button")
+          .help("copy the gif as a file attachment, including its animation")
         Button("save… (⌘S)") { runtime.savePreview() }
           .keyboardShortcut("s", modifiers: .command)
           .disabled(exportIsDisabled)
@@ -340,6 +346,7 @@ private struct GIFPreviewActionNotice: View {
     }
     return switch action {
     case .copied: "copied"
+    case .copiedFile: "file copied"
     case .saved: "saved"
     case .cancelled: "save cancelled"
     case .updateFailed: "could not update gif; previous preview kept"
