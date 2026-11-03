@@ -3,6 +3,16 @@ import XCTest
 @testable import gifferent
 
 final class FoundationTests: XCTestCase {
+  @MainActor
+  func testHostedUnitTestsCannotStartTheProductionRuntime() {
+    XCTAssertTrue(GifferentRuntime.isUnitTestHost)
+    XCTAssertTrue(
+      GifferentRuntime.recordingWorkspaceURL().path.contains(
+        "gifferent-unit-host-\(ProcessInfo.processInfo.processIdentifier)"))
+    GifferentRuntime.shared.start()
+    XCTAssertEqual(GifferentRuntime.shared.recordingCoordinator.state, .idle)
+  }
+
   func testAppIsConfiguredWithoutDockPresence() {
     XCTAssertEqual(Bundle.main.object(forInfoDictionaryKey: "LSUIElement") as? Bool, true)
   }

@@ -104,6 +104,7 @@ final class GifferentRuntime: ObservableObject {
   }
 
   func start() {
+    guard !Self.isUnitTestHost else { return }
     guard !hasStarted else { return }
     hasStarted = true
     Task {
@@ -619,7 +620,21 @@ final class GifferentRuntime: ObservableObject {
     return window
   }
 
-  private static func recordingWorkspaceURL() -> URL {
+  /// a hosted unit test must never clean a live app's workspace or register its shortcuts.
+  static var isUnitTestHost: Bool {
+    #if DEBUG
+      NSClassFromString("XCTestCase") != nil
+    #else
+      false
+    #endif
+  }
+
+  static func recordingWorkspaceURL() -> URL {
+    if isUnitTestHost {
+      return FileManager.default.temporaryDirectory.appendingPathComponent(
+        "gifferent-unit-host-\(ProcessInfo.processInfo.processIdentifier)/recording-sessions",
+        isDirectory: true)
+    }
     #if DEBUG
       if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
         return uiTestExportDirectory().appendingPathComponent(

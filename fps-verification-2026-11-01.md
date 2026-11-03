@@ -82,3 +82,12 @@ on 2026-11-01, the architect explicitly instructed: â€œskip acceptance for nowâ€
 - the first sandboxed build could not execute SwiftUI macro plugins. an initial unsandboxed verification ran all 188 cases successfully but could not save its result bundle after the disk filled; the separate app build also failed from disk exhaustion. the final runs above occurred after space became available and supersede those incomplete runs.
 - the architect reports live capture startup showing `could not start recording; try again`. investigation is ongoing; restored the pre-existing local startup error logger, and requested a fresh attempt with the rebuilt app. unit success does not establish that this live failure is fixed.
 - UI and real-Mac acceptance remain deferred. earlier benchmark numbers and native UI observations in this document are historical evidence, not a new acceptance run on the restored branch.
+
+### live recording follow-up
+
+- the architect confirmed that recording starts after rebuilding. a later live preview could not edit, compress, copy, or save.
+- the live preview remained ready and its fps menu responded, but changing fps produced `could not update gif; previous preview kept`. the production recording workspace was empty while the preview remained open.
+- the full unit suite had launched the app host without `--ui-testing`; its application delegate invoked normal startup, including orphan cleanup in the shared production workspace. that explains the missing recording source files and failed editing/export.
+- prevent hosted unit tests from starting the normal runtime and give them a process-specific temporary workspace. add a regression test proving XCTest detection, the isolated path, and idle runtime state after `start()`. retain normal launch and explicit UI-fixture launch behavior.
+- the focused isolation check passes: 4 tests, zero failures/skips, `.build/ci/test-unit-qj7Rvi/Result.xcresult`. a fresh real recording is still required; the already-deleted files cannot be restored by this code change.
+- after the isolation fix, `bash Scripts/test-unit.sh --no-build` passes all 189 tests with zero failures/skips; evidence: `.build/ci/test-unit-QEBixV/Result.xcresult` and `/private/tmp/gifferent-unit-host-full-suite.log`. `bash Scripts/quality.sh` and `git diff --check` pass. the architect has been asked to verify a new recording after rebuilding; that confirmation is pending.
