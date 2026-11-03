@@ -21,9 +21,9 @@ final class RecordingFrameGeometryTests: XCTestCase {
     XCTAssertEqual(
       frame,
       CGRect(
-        x: 96,
-        y: 196,
-        width: 328,
+        x: target.minX - RecordingFrameGeometry.outsideInset,
+        y: target.minY - RecordingFrameGeometry.outsideInset,
+        width: target.width + RecordingFrameGeometry.outsideInset * 2,
         height: 180 + RecordingFrameGeometry.outsideInset * 2
           + RecordingFrameGeometry.labelHeight))
     XCTAssertEqual(targetRect.origin.x, RecordingFrameGeometry.outsideInset)
@@ -33,8 +33,7 @@ final class RecordingFrameGeometryTests: XCTestCase {
     XCTAssertEqual(targetRect.size, target.size)
 
     // Convert the SwiftUI top-left rect back into AppKit screen coordinates.
-    // Its bounds must coincide with the capture target; the complete 4 pt
-    // outline stroke remains outside that target.
+    // Its bounds must coincide with the capture target.
     let targetInScreen = CGRect(
       x: frame.minX + targetRect.minX,
       y: frame.minY + frame.height - targetRect.maxY,
@@ -44,6 +43,19 @@ final class RecordingFrameGeometryTests: XCTestCase {
     XCTAssertEqual(targetInScreen, target)
     XCTAssertEqual(targetInScreen.minX - RecordingFrameGeometry.outsideInset, frame.minX)
     XCTAssertEqual(targetInScreen.minY - RecordingFrameGeometry.outsideInset, frame.minY)
+  }
+
+  func testOutlineStrokesLeaveGapAroundFractionalTarget() {
+    let target = CGRect(x: 6.25, y: 24.75, width: 100.5, height: 50.25)
+    XCTAssertEqual(RecordingFrameGeometry.outlineGap, 4)
+    for (offset, width): (CGFloat, CGFloat) in [(2.5, 3), (0.5, 1)] {
+      let centerline = RecordingFrameGeometry.outlineRect(around: target, centerOffset: offset)
+      let innerEdge = centerline.insetBy(dx: width / 2, dy: width / 2)
+      XCTAssertLessThanOrEqual(innerEdge.minX, target.minX - RecordingFrameGeometry.outlineGap)
+      XCTAssertLessThanOrEqual(innerEdge.minY, target.minY - RecordingFrameGeometry.outlineGap)
+      XCTAssertGreaterThanOrEqual(innerEdge.maxX, target.maxX + RecordingFrameGeometry.outlineGap)
+      XCTAssertGreaterThanOrEqual(innerEdge.maxY, target.maxY + RecordingFrameGeometry.outlineGap)
+    }
   }
 
   func testInvalidGeometryDoesNotCreateAnOverlay() {
