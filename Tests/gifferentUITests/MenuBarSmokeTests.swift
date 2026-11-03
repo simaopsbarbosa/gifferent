@@ -186,6 +186,7 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertTrue(confirmButton.isEnabled, "drawing a region should enable confirmation")
 
     confirmButton.click()
+    waitForStatus("selection ready", in: testWindow)
     XCTAssertTrue(testWindow.staticTexts["selection-status"].waitForExistence(timeout: 5))
     let status = testWindow.staticTexts["selection-status"]
     XCTAssertEqual(status.value as? String, "region selected")

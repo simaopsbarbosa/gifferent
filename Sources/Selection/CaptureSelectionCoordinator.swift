@@ -59,6 +59,8 @@ final class CaptureSelectionCoordinator: ObservableObject {
   private var presentationTask: Task<Void, Never>?
   private var previousApplication: NSRunningApplication?
 
+  var isPresenting: Bool { !windows.isEmpty }
+
   init(sourceService: CaptureSourceService = CaptureSourceService()) {
     self.sourceService = sourceService
   }
@@ -196,7 +198,15 @@ final class CaptureSelectionCoordinator: ObservableObject {
     }
     let callback = onSelection
     cancel(notify: false)
-    callback?(selection)
+    // allow the window server to present the dismissed overlay before capture begins.
+    presentationTask = Task {
+      do {
+        try await Task.sleep(for: .milliseconds(200))
+      } catch {
+        return
+      }
+      callback?(selection)
+    }
   }
 
   func selectDisplay(_ id: CGDirectDisplayID) {

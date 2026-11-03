@@ -296,6 +296,11 @@ final class GifferentRuntime: ObservableObject {
     case .preparingPreview, .previewReady:
       break
     case .idle, .failed:
+      if selectionCoordinator.isPresenting {
+        recordAfterSelection = true
+        selectionCoordinator.confirm()
+        return
+      }
       guard let lastSelection else {
         recordAfterSelection = true
         presentSelection()
