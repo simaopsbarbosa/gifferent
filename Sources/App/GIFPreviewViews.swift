@@ -144,6 +144,12 @@ struct GIFPreviewReadyView: View {
           .keyboardShortcut("c", modifiers: .command)
           .disabled(exportIsDisabled)
           .accessibilityIdentifier("copy-preview-button")
+          .help("copy gif image data; some browsers paste a still image")
+        Button("copy as file (⌘⇧C)") { runtime.copyPreview(as: .file) }
+          .keyboardShortcut("c", modifiers: [.command, .shift])
+          .disabled(exportIsDisabled)
+          .accessibilityIdentifier("copy-file-preview-button")
+          .help("copy the gif as a file attachment, including its animation")
         Button("save… (⌘S)") { runtime.savePreview() }
           .keyboardShortcut("s", modifiers: .command)
           .disabled(exportIsDisabled)
@@ -167,6 +173,7 @@ struct GIFPreviewReadyView: View {
         sizeSearchUnavailable: GIFSizeSearchPlan(settings: coordinator.compressionSettings)
           .candidates.isEmpty
       )
+      .id(coordinator.previewFeedbackRevision)
       .padding(.top, 8)
     }
   }
@@ -179,12 +186,13 @@ struct GIFPreviewReadyView: View {
 
   private func metadata(_ label: String, value: String, id: String) -> some View {
     VStack(alignment: .leading, spacing: 3) {
-      Text(label).font(.caption).foregroundStyle(.secondary)
-      Text(value).accessibilityIdentifier(id).accessibilityValue(value)
+      Text(label).font(.caption).foregroundStyle(.secondary).accessibilityHidden(true)
+      Text(value)
+        .accessibilityLabel(label)
+        .accessibilityValue(value)
+        .accessibilityIdentifier(id)
     }
-    .accessibilityElement(children: .combine)
-    .accessibilityLabel(label)
-    .accessibilityValue(value)
+    .accessibilityElement(children: .contain)
     .padding(.vertical, 12)
   }
 
@@ -334,10 +342,11 @@ private struct GIFPreviewActionNotice: View {
 
   private var message: String {
     if showsSizeSearchNotice {
-      return "automatic size search is unavailable at this resolution"
+      return "automatic size search is unavailable at this resolution or fps"
     }
     return switch action {
     case .copied: "copied"
+    case .copiedFile: "file copied"
     case .saved: "saved"
     case .cancelled: "save cancelled"
     case .updateFailed: "could not update gif; previous preview kept"
@@ -366,11 +375,14 @@ private struct GIFPreviewActionNotice: View {
     }
     .allowsHitTesting(false)
     .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isVisible)
+    .onAppear {
+      showsSizeSearchNotice = sizeSearchUnavailable && (action == .idle || action == .updated)
+    }
     .onChange(of: sizeSearchUnavailable) { _, unavailable in
       showsSizeSearchNotice = unavailable
     }
-    .onChange(of: action) { _, _ in
-      showsSizeSearchNotice = false
+    .onChange(of: action) { _, value in
+      if value != .updated && value != .idle { showsSizeSearchNotice = false }
     }
     .task(id: message) {
       isVisible = !message.isEmpty
@@ -388,7 +400,6 @@ private struct GIFPreviewActionNotice: View {
 @MainActor
 private struct GIFEditControls: View {
   @ObservedObject var coordinator: RecordingCoordinator
-  @State private var playbackSpeed = 1.0
   @Binding var inspectedFrame: URL?
   @Binding var trimDraftActive: Bool
 
@@ -411,20 +422,43 @@ private struct GIFEditControls: View {
 
           HStack(spacing: 8) {
             Text("speed")
-            Slider(
-              value: $playbackSpeed,
-              in: 0.5...2,
-              step: 0.1
-            )
-            .accessibilityLabel("playback speed")
-            .accessibilityIdentifier("playback-speed-slider")
-            .onChange(of: playbackSpeed) { _, value in
-              updateCoordinatorAfterViewUpdate {
-                coordinator.updatePlaybackSpeed(value)
+            Picker(
+              "playback speed",
+              selection: Binding(
+                get: { parameters.playbackSpeed },
+                set: { value in
+                  updateCoordinatorAfterViewUpdate { coordinator.updatePlaybackSpeed(value) }
+                }
+              )
+            ) {
+              ForEach(GIFEditParameters.speedPresets, id: \.self) { speed in
+                Text("\(speed.formatted(.number.precision(.fractionLength(0...2))))×").tag(speed)
               }
             }
-            Text(String(format: "%.1f×", parameters.playbackSpeed))
-              .accessibilityIdentifier("playback-speed-value")
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .accessibilityIdentifier("playback-speed-picker")
+            Spacer(minLength: 0)
+            Text("fps")
+            Picker(
+              "output frame rate",
+              selection: Binding(
+                get: { parameters.frameRate },
+                set: { value in
+                  updateCoordinatorAfterViewUpdate { coordinator.updateFrameRate(value) }
+                }
+              )
+            ) {
+              ForEach(GIFCompressionFrameRate.exportPresets) { rate in
+                Text(rate.label).tag(rate)
+              }
+            }
+            .labelsHidden()
+            .pickerStyle(.menu)
+            .fixedSize()
+            .accessibilityIdentifier("output-frame-rate-picker")
+            Spacer(minLength: 0)
             Text("loop")
             Picker(
               "loop",
@@ -452,12 +486,7 @@ private struct GIFEditControls: View {
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .disabled(coordinator.isPreviewActionInProgress)
-        .onAppear {
-          playbackSpeed = coordinator.editParameters?.playbackSpeed ?? 1
-        }
-        .onChange(of: coordinator.editParameters?.playbackSpeed) { _, value in
-          if let value { playbackSpeed = value }
-        }
+
       }
     }
   }
@@ -526,7 +555,10 @@ private struct GIFCompressionDestinationControl: View {
         || !hasApprovedCandidates
     )
     .accessibilityIdentifier("compression-destination-menu")
-    .help("choose a destination and start size optimization")
+    .help(
+      hasApprovedCandidates
+        ? "choose a destination and start size optimization"
+        : "automatic size search is unavailable at this resolution or fps")
   }
 
   private func destinationHelp(for destination: GIFCompressionDestination) -> String {

@@ -21,12 +21,12 @@ a feature is complete only when all applicable checks below have evidence. an ex
 - integration tests cover the seams touched by the change, including ScreenCaptureKit adapters, frame processing, command-line encoding, metadata, clipboard, and disk export using controlled fixtures or suitable system integration. real-Mac animated clipboard compatibility is checked locally before the first release.
 - automated acceptance tests exercise representative end-to-end journeys and each affected UI interaction; exhaustive timing, metadata, and error combinations belong in unit/integration tests. exercise UI interactions with XCTest UI tests locally before merge. provide stable launch arguments and deterministic test fixtures. a real-Mac acceptance pass checks system permission, global hotkeys, multi-display selection, window movement, animated clipboard paste into GitHub, sound, and visual feel before release.
 - every existing feature remains covered by its unit, integration, and acceptance tests; run the full suite before merge. a regression gets a focused test.
-- build succeeds on the supported deployment target. no new compiler warnings, force unwraps in fallible capture paths, unhandled task failures, or persistent temporary media.
+- build succeeds on the supported deployment target. no new compiler warnings, force unwraps in fallible capture paths, unhandled task failures, or abandoned temporary media. the latest bounded clipboard file follows the retention policy in [decisions.md](decisions.md).
 
 ## performance and quality
 
 - for capture, encoding, compression, or UI latency changes, run repeatable benchmarks with the same source fixtures, machine, OS, and power mode. record median and high-percentile time, peak memory, output bytes, and visual comparison. compare at least two credible approaches before committing to an important encoder or pipeline choice.
-- measure hotkey-to-ready, stop-to-preview, sustained 24 fps capture, CPU and memory during normal use, and compression time for short and long fixtures. meet the agreed thresholds or document the architect-approved tradeoff.
+- measure hotkey-to-ready, stop-to-preview, sustained 60 fps capture, CPU and memory during normal use, and compression time for short and long fixtures. meet the agreed thresholds or document the architect-approved tradeoff.
 - validate GIF duration, frame ordering, loop behavior, final dimensions, size, and animation in the destinations used for acceptance.
 
 ## tooling and continuous integration

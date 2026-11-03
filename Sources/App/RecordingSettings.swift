@@ -74,3 +74,34 @@ struct RecordingSettingsView: View {
     .padding(.vertical, 8)
   }
 }
+
+/// only validated, successfully published export selections are remembered.
+@MainActor
+final class GIFExportSettingsStore {
+  static let frameRateKey = "gifferent.export.frameRate"
+  static let speedKey = "gifferent.export.speed"
+  private let defaults: UserDefaults?
+  private(set) var frameRate: GIFCompressionFrameRate
+  private(set) var playbackSpeed: Double
+
+  init(defaults: UserDefaults? = nil) {
+    self.defaults = defaults
+    let storedRate = defaults.flatMap {
+      GIFCompressionFrameRate(rawValue: $0.integer(forKey: Self.frameRateKey))
+    }
+    frameRate =
+      storedRate.flatMap { GIFCompressionFrameRate.exportPresets.contains($0) ? $0 : nil } ?? .fps50
+    let speed = defaults?.double(forKey: Self.speedKey) ?? 1
+    playbackSpeed = GIFEditParameters.speedPresets.contains(speed) ? speed : 1
+  }
+
+  func remember(_ parameters: GIFEditParameters) {
+    guard GIFCompressionFrameRate.exportPresets.contains(parameters.frameRate),
+      GIFEditParameters.speedPresets.contains(parameters.playbackSpeed)
+    else { return }
+    frameRate = parameters.frameRate
+    playbackSpeed = parameters.playbackSpeed
+    defaults?.set(frameRate.rawValue, forKey: Self.frameRateKey)
+    defaults?.set(playbackSpeed, forKey: Self.speedKey)
+  }
+}

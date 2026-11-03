@@ -28,6 +28,7 @@ private final class GifferentAppDelegate: NSObject, NSApplicationDelegate {
     private var testingWindow: NSWindow?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+      guard !GifferentRuntime.isUnitTestHost else { return }
       if !ProcessInfo.processInfo.arguments.contains("--ui-testing") {
         GifferentRuntime.shared.start()
         return

@@ -73,20 +73,29 @@ final class GifferentRuntime: ObservableObject {
           workspace: workspace,
           compressor: UITestGIFCompressor.configured() ?? compressor,
           clipboard: UITestGIFClipboardWriter(),
-          fileSaver: UITestGIFSavePanelSaver()
+          fileClipboard: NSPasteboardGIFFileWriter(
+            pasteboard: NSPasteboard(
+              name: .init("gifferent.ui-testing.\(ProcessInfo.processInfo.processIdentifier)")),
+            store: GIFClipboardFileStore(
+              directory: uiTestExportDirectory().appendingPathComponent("clipboard-files"))),
+          fileSaver: UITestGIFSavePanelSaver(),
+          exportSettings: GIFExportSettingsStore(
+            defaults: UserDefaults(suiteName: "gifferent.ui-testing"))
         )
       } else {
         recordingCoordinator = RecordingCoordinator(
           streamFactory: ScreenCaptureRecordingStreamFactory(sourceService: service),
           workspace: workspace,
-          compressor: compressor
+          compressor: compressor,
+          exportSettings: GIFExportSettingsStore(defaults: .standard)
         )
       }
     #else
       recordingCoordinator = RecordingCoordinator(
         streamFactory: ScreenCaptureRecordingStreamFactory(sourceService: service),
         workspace: workspace,
-        compressor: compressor
+        compressor: compressor,
+        exportSettings: GIFExportSettingsStore(defaults: .standard)
       )
     #endif
     recordingStateObservation = recordingCoordinator.$state.sink { [weak self] state in
@@ -100,6 +109,7 @@ final class GifferentRuntime: ObservableObject {
   }
 
   func start() {
+    guard !Self.isUnitTestHost else { return }
     guard !hasStarted else { return }
     hasStarted = true
     Task {
@@ -309,8 +319,8 @@ final class GifferentRuntime: ObservableObject {
     Task { await recordingCoordinator.discardCapturedSession() }
   }
 
-  func copyPreview() {
-    Task { await recordingCoordinator.copyPreview() }
+  func copyPreview(as representation: GIFCopyRepresentation = .image) {
+    Task { await recordingCoordinator.copyPreview(as: representation) }
   }
 
   func savePreview() {
@@ -615,7 +625,21 @@ final class GifferentRuntime: ObservableObject {
     return window
   }
 
-  private static func recordingWorkspaceURL() -> URL {
+  /// a hosted unit test must never clean a live app's workspace or register its shortcuts.
+  static var isUnitTestHost: Bool {
+    #if DEBUG
+      NSClassFromString("XCTestCase") != nil
+    #else
+      false
+    #endif
+  }
+
+  static func recordingWorkspaceURL() -> URL {
+    if isUnitTestHost {
+      return FileManager.default.temporaryDirectory.appendingPathComponent(
+        "gifferent-unit-host-\(ProcessInfo.processInfo.processIdentifier)/recording-sessions",
+        isDirectory: true)
+    }
     #if DEBUG
       if ProcessInfo.processInfo.arguments.contains("--ui-testing") {
         return uiTestExportDirectory().appendingPathComponent(
@@ -626,19 +650,6 @@ final class GifferentRuntime: ObservableObject {
       FileManager.default.urls(for: .cachesDirectory, in: .userDomainMask).first
       ?? FileManager.default.temporaryDirectory
     return cacheRoot.appendingPathComponent("gifferent/recording-sessions", isDirectory: true)
-  }
-}
-
-@MainActor
-struct NSPasteboardGIFWriter: GIFClipboardWriting {
-  func writeGIF(at url: URL) async throws {
-    let data = try await Task.detached(priority: .userInitiated) {
-      try Data(contentsOf: url, options: .mappedIfSafe)
-    }.value
-    let pasteboard = NSPasteboard.general
-    pasteboard.clearContents()
-    guard pasteboard.setData(data, forType: NSPasteboard.PasteboardType("com.compuserve.gif"))
-    else { throw NSError(domain: "gifferent.clipboard", code: 1) }
   }
 }
 

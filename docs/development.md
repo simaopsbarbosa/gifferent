@@ -37,3 +37,5 @@ deterministic UI tests use synthetic frames and injected clipboard/save adapters
 test builds use ad hoc signing by default. when local policy requires the project's configured Apple Development identity, set `GIFFERENT_TEST_DEVELOPMENT_TEAM` consistently for build and test commands. a blocked runner never counts as passing UI acceptance.
 
 for a reliable local Screen Recording permission check, choose an Apple Development team in Xcode's signing settings and run `bash Scripts/build.sh`. unsigned or ad hoc builds may lose the permission association after a rebuild. after enabling access in System Settings, quit and reopen gifferent before checking again. release signing and notarization remain separate from test builds.
+
+hosted unit tests must not run the normal application startup routine: it cleans orphaned recordings and registers global shortcuts. the debug app detects its XCTest host before runtime startup and assigns that host a process-specific temporary workspace. UI fixtures continue using their explicit export directory. this prevents local verification from removing a recording still open in another app instance.
