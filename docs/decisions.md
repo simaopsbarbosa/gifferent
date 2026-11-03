@@ -105,6 +105,12 @@
 - prose is lowercase except proper names. all features need unit, integration, and automated end-to-end acceptance tests. CI gates build, tests, format, and lint; release includes real-Mac manual acceptance.
 - public project under AGPL-3.0-or-later; captured pixels never leave the Mac. benchmark speed goals on a baseline Apple Silicon laptop. clear partial recordings after a crash rather than restoring them. when a detail is undecided, record it and ask the architect.
 
+## region selection interaction confirmed on 2026-11-01
+
+- keep the existing selection overlay UI. remove the redundant `select a window` picker label and retain `choose a window` as its default value.
+- on an existing region, dragging a corner resizes that corner and shows the magnifier. dragging inside moves the region without the magnifier. dragging outside creates a new region with the magnifier.
+- see the focused [region selection implementation plan](region-selection-plan.md) for hit routing, failure/cancellation coverage, and verification evidence.
+
 ## thumbnail trim interaction confirmed on 2026-11-01
 
 - keep the thumbnail trim control inline. show the active boundary frame in the main preview while dragging and encode the selected GIF when the handle is released.

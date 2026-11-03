@@ -7,6 +7,7 @@ struct CaptureSelectionOverlayView: View {
 
   @State private var draftRegion: CGRect?
   @State private var dragStart: CGPoint?
+  @State private var dragIntent: RegionDragIntent?
   @State private var magnifierPoint: CGPoint?
 
   private var displaySize: CGSize { screen.geometry.localBounds.size }
@@ -27,7 +28,7 @@ struct CaptureSelectionOverlayView: View {
 
       Color.black.opacity(0.16)
         .contentShape(Rectangle())
-        .gesture(regionCreationGesture)
+        .gesture(regionGesture)
 
       if case .display(let id) = coordinator.selection, id == screen.geometry.id {
         Rectangle()
@@ -39,10 +40,12 @@ struct CaptureSelectionOverlayView: View {
 
       if let region = draftRegion ?? selectedRegion?.regionInDisplayPoints {
         regionOutline(region)
+          .allowsHitTesting(false)
       }
 
       if let magnifierPoint {
         cornerMagnifier(at: magnifierPoint)
+          .allowsHitTesting(false)
       }
     }
     .frame(width: displaySize.width, height: displaySize.height)
@@ -67,6 +70,8 @@ struct CaptureSelectionOverlayView: View {
           Text(windowLabel(window)).tag(Optional(window.id))
         }
       }
+      .labelsHidden()
+      .accessibilityLabel("select a window")
       .pickerStyle(.menu)
       .accessibilityIdentifier("select-window-picker")
 
@@ -146,7 +151,6 @@ struct CaptureSelectionOverlayView: View {
         .strokeBorder(.white, lineWidth: 2)
         .background(Color.white.opacity(0.06))
         .contentShape(Rectangle())
-        .gesture(regionMoveGesture(region))
 
       ForEach(OverlayCorner.allCases, id: \.self) { corner in
         Circle()
@@ -155,7 +159,7 @@ struct CaptureSelectionOverlayView: View {
           .overlay(Circle().strokeBorder(.black, lineWidth: 1))
           .position(corner.position(in: region.size))
           .contentShape(Rectangle())
-          .gesture(regionResizeGesture(corner))
+
           .accessibilityLabel("resize region from \(corner.label) corner")
       }
     }
@@ -167,85 +171,60 @@ struct CaptureSelectionOverlayView: View {
     )
   }
 
-  private var regionCreationGesture: some Gesture {
+  private var regionGesture: some Gesture {
     DragGesture(minimumDistance: 2, coordinateSpace: .local)
       .onChanged { value in
-        let start = clamped(value.startLocation)
-        let current = clamped(value.location)
-        dragStart = start
-        draftRegion = normalizedRegion(from: start, to: current)
-        magnifierPoint = current
+        if dragIntent == nil {
+          dragStart = clamped(value.startLocation)
+          dragIntent = RegionDragIntent.at(
+            value.startLocation, region: selectedRegion?.regionInDisplayPoints)
+        }
+        updateDrag(value, commit: false)
       }
       .onEnded { value in
-        let start = dragStart ?? clamped(value.startLocation)
-        let end = clamped(value.location)
-        let rectangle = normalizedRegion(from: start, to: end)
-        if let region = SelectionGeometry(
-          display: screen.geometry,
-          regionInDisplayPoints: rectangle
-        ), rectangle.width >= 2, rectangle.height >= 2 {
-          coordinator.selectRegion(region)
-        }
+        updateDrag(value, commit: true)
         draftRegion = nil
         dragStart = nil
+        dragIntent = nil
         magnifierPoint = nil
       }
   }
 
-  private func regionMoveGesture(_ original: CGRect) -> some Gesture {
-    DragGesture(minimumDistance: 1)
-      .onChanged { value in
-        guard let region = selectedRegion else { return }
-        let proposed = CGPoint(
-          x: original.minX + value.translation.width,
-          y: original.minY + value.translation.height
-        )
-        if let moved = region.moved(to: proposed) {
-          draftRegion = moved.regionInDisplayPoints
-        }
+  private func updateDrag(_ value: DragGesture.Value, commit: Bool) {
+    guard let intent = dragIntent, let start = dragStart else { return }
+    let current = clamped(value.location)
+    var result: SelectionGeometry?
+    switch intent {
+    case .create:
+      let rectangle = normalizedRegion(from: start, to: current)
+      if rectangle.width >= 2, rectangle.height >= 2 {
+        result = SelectionGeometry(display: screen.geometry, regionInDisplayPoints: rectangle)
       }
-      .onEnded { value in
-        guard let region = selectedRegion else { return }
-        let proposed = CGPoint(
-          x: original.minX + value.translation.width,
-          y: original.minY + value.translation.height
+      magnifierPoint = current
+    case .move:
+      if let region = selectedRegion {
+        let original = region.regionInDisplayPoints
+        result = region.moved(
+          to: CGPoint(
+            x: original.minX + value.translation.width, y: original.minY + value.translation.height)
         )
-        if let moved = region.moved(to: proposed) {
-          coordinator.selectRegion(moved)
-        }
-        draftRegion = nil
       }
-  }
-
-  private func regionResizeGesture(_ corner: OverlayCorner) -> some Gesture {
-    DragGesture(minimumDistance: 1)
-      .onChanged { value in
-        guard let region = selectedRegion else { return }
+      magnifierPoint = nil
+    case .resize(let corner):
+      if let region = selectedRegion {
         let origin = corner.position(in: region.regionInDisplayPoints)
         let proposed = clamped(
           CGPoint(
-            x: origin.x + value.translation.width,
-            y: origin.y + value.translation.height
-          ))
-        if let resized = region.resized(dragging: corner.geometryCorner, to: proposed) {
-          draftRegion = resized.regionInDisplayPoints
-          magnifierPoint = proposed
-        }
+            x: origin.x + value.translation.width, y: origin.y + value.translation.height))
+        result = region.resized(dragging: corner.geometryCorner, to: proposed)
+        if let result { magnifierPoint = corner.position(in: result.regionInDisplayPoints) }
       }
-      .onEnded { value in
-        guard let region = selectedRegion else { return }
-        let origin = corner.position(in: region.regionInDisplayPoints)
-        let proposed = clamped(
-          CGPoint(
-            x: origin.x + value.translation.width,
-            y: origin.y + value.translation.height
-          ))
-        if let resized = region.resized(dragging: corner.geometryCorner, to: proposed) {
-          coordinator.selectRegion(resized)
-        }
-        draftRegion = nil
-        magnifierPoint = nil
-      }
+    }
+    if commit {
+      if let result { coordinator.selectRegion(result) }
+    } else {
+      draftRegion = result?.regionInDisplayPoints
+    }
   }
 
   private func cornerMagnifier(at point: CGPoint) -> some View {
@@ -292,7 +271,23 @@ struct CaptureSelectionOverlayView: View {
   }
 }
 
-private enum OverlayCorner: CaseIterable {
+enum RegionDragIntent {
+  case create, move
+  case resize(OverlayCorner)
+
+  static func at(_ point: CGPoint, region: CGRect?) -> RegionDragIntent {
+    guard let region else { return .create }
+    for corner in OverlayCorner.allCases {
+      let position = corner.position(in: region)
+      if abs(point.x - position.x) <= 12 && abs(point.y - position.y) <= 12 {
+        return .resize(corner)
+      }
+    }
+    return region.contains(point) ? .move : .create
+  }
+}
+
+enum OverlayCorner: CaseIterable {
   case topLeft, topRight, bottomLeft, bottomRight
 
   var label: String {
