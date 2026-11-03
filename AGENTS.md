@@ -3,8 +3,8 @@
 ## authority and source of truth
 
 - the architect owns settled product behavior, final visual/sound identity, and release policy. the lead engineer owns architecture, implementation, task order, integration, verification, and CI/CD. proceed with routine engineering choices; ask only about unresolved product decisions, grouping questions and explaining tradeoffs.
-- read the documents relevant to the change, in this order of authority: [vision.md](vision.md), [brand.md](brand.md), [mvp.md](mvp.md), [architecture.md](architecture.md), [definition-of-done.md](definition-of-done.md), [decisions.md](decisions.md), and [delivery-plan.md](delivery-plan.md). the latest explicit architect answer overrides older prose; update affected documents. stop dependent work on an unresolved conflict.
-- planning is complete. follow the delivery dependency order, preserve approved scope, and record new decisions and unresolved product questions in `decisions.md`. recommendations become product requirements only after the architect answers.
+- read the documents relevant to the change, in this order of authority: [vision.md](docs/vision.md), [brand.md](docs/brand.md), [mvp.md](docs/mvp.md), [architecture.md](docs/architecture.md), [definition-of-done.md](docs/definition-of-done.md), [decisions.md](docs/decisions.md), and [delivery-plan.md](docs/delivery-plan.md). the latest explicit architect answer overrides older prose; update affected documents. stop dependent work on an unresolved conflict.
+- planning is complete. follow the delivery dependency order, preserve approved scope, and record new decisions and unresolved product questions in `docs/decisions.md`. recommendations become product requirements only after the architect answers.
 - keep one integration owner and one working chat by default. reuse a suitable checkout. isolate independent delegated work when warranted; serialize shared UI state, project, signing, and capture-pipeline edits. never close or archive user chats as verification housekeeping.
 
 ## implementation
@@ -25,9 +25,9 @@
 
 ## verification stages
 
-- development: use focused unit/integration selectors and affected quality checks from [README.md](README.md). run selected UI journeys for changed UI wiring. reuse evidence while its inputs remain unchanged; do not repeat full local and hosted suites after every edit.
+- development: use focused unit/integration selectors and affected quality checks from [development guide](docs/development.md). run selected UI journeys for changed UI wiring. reuse evidence while its inputs remain unchanged; do not repeat full local and hosted suites after every edit.
 - merge: the final candidate must pass quality and unit/integration suites in CI. run relevant UI acceptance locally on the final candidate and report its result in the PR. `main` requires an up-to-date PR with `quality` and `tests` passing, including administrator merges. build test bundles once and refuse stale reuse.
-- release: retain the full regression/performance matrix, real-Mac permission/hotkey/multi-display/animated-paste/accessibility checks, visual review, licenses/source delivery, signing, notarization, clean-Mac acceptance, and explicit architect release approval in [definition-of-done.md](definition-of-done.md) and [delivery-plan.md](delivery-plan.md).
+- release: retain the full regression/performance matrix, real-Mac permission/hotkey/multi-display/animated-paste/accessibility checks, visual review, licenses/source delivery, signing, notarization, clean-Mac acceptance, and explicit architect release approval in [definition-of-done.md](docs/definition-of-done.md) and [delivery-plan.md](docs/delivery-plan.md).
 - prefer scripts and XCTest for repeatable checks. use computer interaction for a specific native visual/system observation that automated checks cannot establish, stating that observation first.
 - on UI bootstrap failure, preserve logs/results and stop retries until session, signing, or toolchain prerequisites change. fix product assertion failures separately; never skip the merge gate or retry unchanged failures to green.
 - the integration owner checks CI for the final commit, reads failed-job logs, and reports results and next actions. use bounded waits at sensible intervals and do independent work while checks run. rerun only failed jobs when their failure was transient; do not push unchanged code merely to retrigger CI or change GitHub notification preferences.

@@ -46,7 +46,7 @@ UI acceptance assertions cover compact initial fit, copy notice expiry without h
 
 ## quality-default benchmark
 
-the [reproducible comparison](Benchmarks/compare_quality_defaults.py) compares quality 90 with 100 on the same two 10-second, 640 by 360, 24 fps synthetic fixtures used in the published quality sweep. regenerated manifest and frame-set hashes must match that baseline. each setting has one cold and seven warm runs. p90 uses nearest rank, which is the largest of seven warm samples; these timings are indicative, not a latency guarantee.
+the [reproducible comparison](../Benchmarks/compare_quality_defaults.py) compares quality 90 with 100 on the same two 10-second, 640 by 360, 24 fps synthetic fixtures used in the published quality sweep. regenerated manifest and frame-set hashes must match that baseline. each setting has one cold and seven warm runs. p90 uses nearest rank, which is the largest of seven warm samples; these timings are indicative, not a latency guarantee.
 
 machine: Mac14,2; macOS 27.0.1; Xcode 27.1/27A9275; battery power, 61% at the start. memory is command peak RSS from `/usr/bin/time -l`, not total app memory. timings include launching the encoder. compare the contemporaneous quality-90 and quality-100 samples rather than assuming equal power conditions to the historical run.
 
@@ -61,7 +61,7 @@ every sample has valid dimensions, 240 frames, exact 10-second duration, and inf
 
 the default bounded destination plan now tries 12 candidates instead of four because quality starts at 100 and steps through 95 and 90 for each approved pair. unit tests verify this bound. this benchmark measures the encoder stage, not complete destination-search latency, screen capture, hotkey response, stop-to-preview latency, native UI responsiveness, or memory for the whole app.
 
-raw per-sample timings, RSS, hashes, and metadata: [quality-default results](Benchmarks/results/ui-refactor-quality-default-2026-11-01.json).
+raw per-sample timings, RSS, hashes, and metadata: [quality-default results](../Benchmarks/results/ui-refactor-quality-default-2026-11-01.json).
 
 reproduce with a fresh directory:
 

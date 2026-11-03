@@ -1,60 +1,33 @@
-# gifferent
+<p align="center">
+  <img src="Brand/gifferent.png" alt="gifferent logo" width="200">
+</p>
 
-a fast, native GIF maker for macOS. summon capture, record while using your Mac, then copy, save, or compress locally.
+<h1 align="center">gifferent</h1>
 
-the app and its test suite are being built in tested iterations. capture selection has a permission guide, configurable global shortcuts, and a display, window, and region selection overlay. recording writes a private temporary workspace and opens an animated GIF preview with metadata, trim, speed, loop, copy, save, and local Gifski compression. the bundled Gifski 1.34.0 helper supports Apple Silicon and Intel; destination search uses the approved bounded settings. animated paste into GitHub and the remaining real-Mac/release gates still need acceptance.
+<p align="center">a native macOS app for turning screen recordings into shareable GIFs.</p>
 
-the source license is [AGPL-3.0-or-later](LICENSE). [third-party notices](THIRD-PARTY-NOTICES.md) track bundled dependencies and tools.
+gifferent lives in your menu bar. choose a display, window, or region, record what happens, then preview and share the result without leaving your Mac.
 
-- [agent hub](AGENTS.md)
-- [vision](vision.md)
-- [brand direction](brand.md)
-- [first release scope](mvp.md)
-- [architecture and experiments](architecture.md)
-- [definition of done](definition-of-done.md)
-- [decisions and open questions](decisions.md)
-- [delivery plan](delivery-plan.md)
-- [editing and optimization acceptance](editing-optimization-evidence-2026-10-25.md)
-- [preview UI refactor verification](ui-refactor-verification-2026-11-01.md)
+- capture with keyboard shortcuts and keep using your Mac while recording.
+- trim, change playback speed, and choose whether the GIF loops.
+- copy or save the GIF, or compress it for sharing.
+- keep captures and GIF processing local.
 
-## local development
+## status
 
-use Xcode 27.1 (build 27A9275) for local development. open `gifferent.xcodeproj` with the shared `gifferent` scheme, or run:
+gifferent is in development for macOS 14 and later. some real-Mac acceptance and release checks are still pending; see the [delivery plan](docs/delivery-plan.md) for details.
 
-during development, run the tests and quality checks affected by the change:
+## development
 
-```sh
-bash Scripts/quality.sh
-bash Scripts/test-unit.sh gifferentTests/GIFEditModelTests
-bash Scripts/test-ui.sh gifferentUITests/MenuBarSmokeTests/testRecordingActionOpensPreviewAndKeepsExportAfterClose
-```
+open `gifferent.xcodeproj` with Xcode 27.1 (build 27A9275). setup, test commands, and verification notes are in the [development guide](docs/development.md).
 
-selectors run only the named class or method, after building the test bundles. use `gifferentTests/ClassName/testMethod` or `gifferentUITests/ClassName/testMethod`; omit selectors for the full target. UI runs always include a launch preflight.
+## documentation
 
-for a full local rehearsal of the merge gate:
+- [vision](docs/vision.md) and [first release scope](docs/mvp.md)
+- [architecture](docs/architecture.md) and [decisions](docs/decisions.md)
+- [delivery plan](docs/delivery-plan.md) and [definition of done](docs/definition-of-done.md)
+- [brand direction](docs/brand.md) and [agent instructions](AGENTS.md)
 
-```sh
-bash Scripts/ci-local.sh
-```
+## license
 
-CI runs quality and unit/integration checks once per PR update and on `main` pushes; UI acceptance runs locally only. feature-branch pushes do not duplicate the PR run. manual workflow dispatch is available for branch diagnostics. `main` protection requires `quality` and `tests` from an up-to-date PR, including administrator merges; no human approval count is imposed. run relevant UI acceptance on the final candidate and report it in the PR.
-
-`Scripts/ci-local.sh` checks the pinned toolchain, runs the shared quality checks, builds the app and test bundles once, then runs unit/integration and UI acceptance without rebuilding. it stops on failure and stores logs and `.xcresult` bundles under `.build/ci/`. a UI launch preflight runs before the remaining journeys. no signing credentials are needed.
-
-to share a build across focused checks:
-
-```sh
-bash Scripts/build-tests.sh
-bash Scripts/test-unit.sh --no-build gifferentTests/GIFEditModelTests
-bash Scripts/test-ui.sh --no-build gifferentUITests/MenuBarSmokeTests/testLaunchShowsIdleContentAndQuitAction
-```
-
-`--no-build` rejects missing or changed source, project, resource, toolchain, or signing inputs. rebuild after those inputs change. test artifacts use `.build/ci/TestDerivedData`, separate from manual app builds. `GIFFERENT_ARTIFACTS_DIR` changes the evidence root. `GIFFERENT_SKIP_TOOLCHAIN_CHECK=1 bash Scripts/ci-local.sh` permits a local diagnostic run with another Xcode; that result does not establish CI compatibility.
-
-UI tests need a logged-in graphical macOS session that permits Xcode automation. scripts check that session, then run one launch test. a failure before any UI case starts records a local bootstrap blocker and stops the remaining suite. subsequent attempts in the same environment fail immediately with the evidence path. after repairing the session/signing policy, use `bash Scripts/test-ui.sh --retry-bootstrap` once to verify the repair. product assertion failures remain failures and do not create an environment blocker. test timeouts bound individual cases; there are no automatic retries to green.
-
-deterministic UI tests use synthetic frames and injected clipboard/save adapters without screen permission. compression journeys start at an encoded fixture preview; separate journeys retain selection, record-to-export, keyboard editing, cancellation, and cleanup coverage. actual menu bar interaction, permissions, shortcut delivery, animated paste, visual feel, and release checks remain real-Mac acceptance gates in [delivery-plan.md](delivery-plan.md).
-
-test builds use ad hoc signing by default. when local policy requires the project's configured Apple Development identity, set `GIFFERENT_TEST_DEVELOPMENT_TEAM` consistently for build and test commands. a blocked runner never counts as passing UI acceptance.
-
-for a reliable local Screen Recording permission check, choose an Apple Development team in Xcode's signing settings and run `bash Scripts/build.sh`. unsigned or ad hoc builds may lose the permission association after a rebuild. after enabling access in System Settings, quit and reopen gifferent before checking again. release signing and notarization remain separate from test builds.
+gifferent is licensed under [AGPL-3.0-or-later](LICENSE). see [third-party notices](THIRD-PARTY-NOTICES.md) for bundled dependencies.
