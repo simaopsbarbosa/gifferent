@@ -247,8 +247,8 @@ enum PreviewDitherArtwork {
     let width = max(1, min(256, Int(size.width / 3)))
     let height = max(1, min(128, Int(size.height / 3)))
     var pixels = [UInt8](repeating: 0, count: width * height * 4)
-    let base: UInt8 = dark ? 35 : 228
-    let highlight: UInt8 = dark ? 46 : 213
+    let base: UInt8 = dark ? 27 : 216
+    let highlight: UInt8 = dark ? 37 : 201
 
     for y in 0..<height {
       let vertical = Double(y) / Double(height)
