@@ -54,6 +54,22 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(try Data(contentsOf: file), expected)
   }
 
+  func testPreviewRejectsVerticalResizeButAllowsWidthResize() {
+    let app = XCUIApplication()
+    app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] = exportDirectory.path
+    app.launchArguments = ["--ui-testing", "--ui-testing-preview"]
+    app.launch()
+    let preview = openFixturePreview(in: app)
+    let initial = preview.frame
+    let bottom = preview.coordinate(withNormalizedOffset: CGVector(dx: 0.5, dy: 1))
+    bottom.press(forDuration: 0.1, thenDragTo: bottom.withOffset(CGVector(dx: 0, dy: 100)))
+    XCTAssertEqual(preview.frame.height, initial.height, accuracy: 1)
+    let right = preview.coordinate(withNormalizedOffset: CGVector(dx: 1, dy: 0.5))
+    right.press(forDuration: 0.1, thenDragTo: right.withOffset(CGVector(dx: 100, dy: 0)))
+    XCTAssertGreaterThan(preview.frame.width, initial.width + 30)
+    XCTAssertEqual(preview.frame.height, initial.height, accuracy: 1)
+  }
+
   func testLaunchShowsIdleContentAndQuitAction() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] =

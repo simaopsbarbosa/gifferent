@@ -1,3 +1,4 @@
+import AppKit
 import XCTest
 
 @testable import gifferent
@@ -11,6 +12,39 @@ final class FoundationTests: XCTestCase {
         "gifferent-unit-host-\(ProcessInfo.processInfo.processIdentifier)"))
     GifferentRuntime.shared.start()
     XCTAssertEqual(GifferentRuntime.shared.recordingCoordinator.state, .idle)
+  }
+
+  @MainActor
+  func testPreviewHeightLocksAfterInitialFitWhileWidthRemainsResizable() {
+    let runtime = GifferentRuntime.shared
+    let controller = GIFPreviewWindowController(
+      runtime: runtime, coordinator: runtime.recordingCoordinator)
+    defer { controller.closeAfterCleanup() }
+    let window = controller.window
+    XCTAssertEqual(window.contentMinSize.height, window.contentMaxSize.height)
+    let titleBarHeight = window.frame.height - window.contentRect(forFrameRect: window.frame).height
+    let availableHeight = (window.screen ?? NSScreen.main)?.visibleFrame.height ?? 10_000
+    controller.fitInitialReadyContent(height: 600)
+    XCTAssertEqual(window.contentMinSize.height, min(600, availableHeight - 32 - titleBarHeight))
+    let fittedHeight = window.frame.height
+    XCTAssertTrue(window.delegate === controller)
+    // exercise the actual resize delegate rather than only inspecting size constraints.
+    for proposedHeight in [fittedHeight - 150, fittedHeight + 200] {
+      let resized = window.delegate?.windowWillResize?(
+        window, to: NSSize(width: 700, height: proposedHeight))
+      XCTAssertEqual(resized?.height, fittedHeight)
+      XCTAssertEqual(resized?.width, 700)
+    }
+    XCTAssertEqual(window.contentMinSize.height, window.contentMaxSize.height)
+    XCTAssertEqual(
+      window.contentMinSize.height, window.contentRect(forFrameRect: window.frame).height)
+    XCTAssertTrue(window.styleMask.contains(.resizable))
+    XCTAssertLessThan(window.contentMinSize.width, window.contentMaxSize.width)
+    controller.fitInitialReadyContent(height: 900)
+    XCTAssertEqual(window.frame.height, fittedHeight)
+    if let screen = window.screen ?? NSScreen.main {
+      XCTAssertLessThanOrEqual(fittedHeight, screen.visibleFrame.height - 32)
+    }
   }
 
   func testAppIsConfiguredWithoutDockPresence() {
