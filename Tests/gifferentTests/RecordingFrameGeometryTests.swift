@@ -47,6 +47,7 @@ final class RecordingFrameGeometryTests: XCTestCase {
 
   func testOutlineStrokesLeaveGapAroundFractionalTarget() {
     let target = CGRect(x: 6.25, y: 24.75, width: 100.5, height: 50.25)
+    XCTAssertEqual(RecordingFrameGeometry.outlineGap, 4)
     for (offset, width): (CGFloat, CGFloat) in [(2.5, 3), (0.5, 1)] {
       let centerline = RecordingFrameGeometry.outlineRect(around: target, centerOffset: offset)
       let innerEdge = centerline.insetBy(dx: width / 2, dy: width / 2)

@@ -2,7 +2,7 @@ import CoreGraphics
 
 enum RecordingFrameGeometry {
   // Leave room for pixel rounding and antialiasing outside the capture boundary.
-  static let outlineGap: CGFloat = 2
+  static let outlineGap: CGFloat = 4
   static let outsideInset: CGFloat = outlineGap + 4
   static let labelHeight: CGFloat = 18
 
