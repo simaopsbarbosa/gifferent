@@ -25,8 +25,11 @@ try:
     source = root / "Brand" / "menu-bar-candidate.svg"
     if source.read_bytes() != (imageset / "menu-bar-candidate.svg").read_bytes():
         errors.append("bundled menu bar candidate differs from source artwork")
-    if ElementTree.parse(source).getroot().attrib.get("viewBox") != "0 0 464 464":
+    artwork = ElementTree.parse(source).getroot()
+    if artwork.attrib.get("viewBox") != "0 0 464 464":
         errors.append("menu bar candidate has an unexpected viewBox")
+    if artwork.attrib.get("width") != "18" or artwork.attrib.get("height") != "18":
+        errors.append("menu bar candidate must have an 18-point intrinsic size")
 except (OSError, json.JSONDecodeError, ElementTree.ParseError) as error:
     errors.append(f"invalid menu bar candidate: {error}")
 
@@ -47,12 +50,12 @@ app_source = (root / "Sources" / "App" / "gifferentApp.swift").read_text()
 required_label_parts = (
     'MenuBarExtra {',
     'Image("MenuBarMark")',
-    '.frame(width: 20, height: 20)',
+    '.frame(width: 18, height: 18)',
     '.renderingMode(.template)',
     '.accessibilityLabel("gifferent")',
 )
 if any(part not in app_source for part in required_label_parts):
-    errors.append("menu bar mark must remain static, system-tinted, 20-point, and accessible")
+    errors.append("menu bar mark must remain static, system-tinted, 18-point, and accessible")
 
 if errors:
     print("\n".join(errors), file=sys.stderr)
