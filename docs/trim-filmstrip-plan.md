@@ -10,9 +10,9 @@ the architect confirmed that trimming must stay inline. prefer Apple's native co
 
 ## current behavior and integration seams
 
-- [GIFPreviewViews.swift](Sources/App/GIFPreviewViews.swift) contains `GIFEditControls`, `GIFTimelineControl`, and `GIFTimelineHandle`. the track currently spaces handles by frame index, has no thumbnails, and sends each handle movement to `RecordingCoordinator.updateTrim`.
+- [GIFPreviewViews.swift](../Sources/App/GIFPreviewViews.swift) contains `GIFEditControls`, `GIFTimelineControl`, and `GIFTimelineHandle`. the track currently spaces handles by frame index, has no thumbnails, and sends each handle movement to `RecordingCoordinator.updateTrim`.
 - the main preview uses an animated `NSImageView`, not an `AVPlayer`. the retained editing source is a `CapturedPNGSequence`, not a movie asset.
-- [RecordingCoordinator.swift](Sources/Recording/RecordingCoordinator.swift) cancels superseded edit requests, validates replacement GIFs, retains the previous preview during work, and disables export until the newest edit is ready. failed edits restore the last validated parameters.
+- [RecordingCoordinator.swift](../Sources/Recording/RecordingCoordinator.swift) cancels superseded edit requests, validates replacement GIFs, retains the previous preview during work, and disables export until the newest edit is ready. failed edits restore the last validated parameters.
 - [editing-model.md](editing-model.md) defines the authoritative range: inclusive start, exclusive end, at least one source frame, original ordering, timestamp-based timing, and explicit terminal-frame duration. preserve that contract, speed, loop, compression restrictions, original recovery, and cleanup.
 
 inspect the current working tree again before implementation; this plan does not approve or replace other work in progress.
@@ -76,4 +76,4 @@ for this documentation-only change, run `python3 Scripts/check-docs.py` and `git
 
 after implementation, run `bash Scripts/ci-local.sh`, which includes the pinned-toolchain check, documentation/brand/notice checks, benchmark harness tests, format check, strict lint, build, unit/integration tests, and UI acceptance. record exact commands and results; a skipped or unavailable UI run is pending evidence, not a pass. validate the native candidate and final control on macOS 14 and a current supported macOS release, including a real-Mac visual and keyboard/VoiceOver pass.
 
-update [mvp.md](mvp.md), [architecture.md](architecture.md), [editing-model.md](editing-model.md), [decisions.md](decisions.md), and [brand.md](brand.md) where approved details affect them. link benchmark evidence from [Benchmarks/README.md](Benchmarks/README.md). keep current product specifications unchanged until the proposed details are approved. merge and release remain subject to all existing gates.
+update [mvp.md](mvp.md), [architecture.md](architecture.md), [editing-model.md](editing-model.md), [decisions.md](decisions.md), and [brand.md](brand.md) where approved details affect them. link benchmark evidence from [Benchmarks/README.md](../Benchmarks/README.md). keep current product specifications unchanged until the proposed details are approved. merge and release remain subject to all existing gates.

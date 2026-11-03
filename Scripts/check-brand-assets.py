@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""validate the approved adaptive menu bar mark and its app resource wiring."""
+"""validate the menu bar comparison mark and its app resource wiring."""
 
 import json
 from pathlib import Path
@@ -11,46 +11,24 @@ from xml.etree import ElementTree
 root = Path(__file__).resolve().parent.parent
 imageset = root / "Assets.xcassets" / "MenuBarMark.imageset"
 catalog = imageset / "Contents.json"
-variants = {
-    "light": (root / "Brand" / "mark-light.svg", "mark-light.svg"),
-    "dark": (root / "Brand" / "mark-dark.svg", "mark-dark.svg"),
-}
 errors = []
-
 try:
     contents = json.loads(catalog.read_text())
-except (OSError, json.JSONDecodeError) as error:
-    print(f"invalid menu bar asset catalog: {error}", file=sys.stderr)
-    sys.exit(1)
-
-actual_variants = {}
-for image in contents.get("images", []):
-    appearances = image.get("appearances", [])
-    if len(appearances) == 1 and appearances[0].get("appearance") == "luminosity":
-        actual_variants[appearances[0].get("value")] = image
-
-if set(actual_variants) != set(variants):
-    errors.append("asset catalog must contain exactly one light and one dark variant")
-
-for appearance, (source, filename) in variants.items():
-    image = actual_variants.get(appearance)
-    if image is None:
-        continue
-    if image.get("filename") != filename or image.get("idiom") != "universal" or image.get(
-        "scale"
-    ) != "1x":
-        errors.append(f"{appearance} variant has unexpected catalog metadata")
-    bundled = imageset / filename
-    try:
-        if source.read_bytes() != bundled.read_bytes():
-            errors.append(f"{filename} differs from the approved source artwork")
-        document = ElementTree.parse(source)
-        if document.getroot().attrib.get("viewBox") != "0 0 64 64":
-            errors.append(f"{filename} has an unexpected viewBox")
-        if "#D45D21" not in source.read_text():
-            errors.append(f"{filename} is missing the approved orange accent")
-    except (OSError, ElementTree.ParseError) as error:
-        errors.append(f"{filename} is missing or invalid: {error}")
+    images = contents.get("images", [])
+    properties = contents.get("properties", {})
+    if images != [{"filename": "menu-bar-candidate.svg", "idiom": "universal"}]:
+        errors.append("menu bar catalog must contain the universal vector candidate")
+    if properties.get("template-rendering-intent") != "template" or not properties.get(
+        "preserves-vector-representation"
+    ):
+        errors.append("menu bar candidate must preserve its vector and use template tinting")
+    source = root / "Brand" / "menu-bar-candidate.svg"
+    if source.read_bytes() != (imageset / "menu-bar-candidate.svg").read_bytes():
+        errors.append("bundled menu bar candidate differs from source artwork")
+    if ElementTree.parse(source).getroot().attrib.get("viewBox") != "0 0 464 464":
+        errors.append("menu bar candidate has an unexpected viewBox")
+except (OSError, json.JSONDecodeError, ElementTree.ParseError) as error:
+    errors.append(f"invalid menu bar candidate: {error}")
 
 project_path = root / "gifferent.xcodeproj" / "project.pbxproj"
 project = project_path.read_text()
@@ -69,15 +47,15 @@ app_source = (root / "Sources" / "App" / "gifferentApp.swift").read_text()
 required_label_parts = (
     'MenuBarExtra {',
     'Image("MenuBarMark")',
-    '.frame(width: 16, height: 16)',
-    '.renderingMode(.original)',
+    '.frame(width: 20, height: 20)',
+    '.renderingMode(.template)',
     '.accessibilityLabel("gifferent")',
 )
 if any(part not in app_source for part in required_label_parts):
-    errors.append("menu bar mark must remain static, original-color, 16-point, and accessible")
+    errors.append("menu bar mark must remain static, system-tinted, 20-point, and accessible")
 
 if errors:
     print("\n".join(errors), file=sys.stderr)
     sys.exit(1)
 
-print("approved light and dark menu bar mark resources validate")
+print("menu bar comparison mark resources validate")

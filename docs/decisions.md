@@ -43,9 +43,17 @@
 
 ## static brand mark approved on 2026-10-24
 
-- this approval supersedes the provisional states recorded during brand exploration: use the static orange mark in [the production-mark review](Brand/Studies/production-mark-review/index.html), compact orbit 03, breathing-room treatment 02, a 0.7 px curve-to-tip gap at 16 px, and `#D45D21` direction tips on a monochrome frame and loop.
+- this approval supersedes the provisional states recorded during brand exploration: use the static orange mark in [the production-mark review](../Brand/Studies/production-mark-review/index.html), compact orbit 03, breathing-room treatment 02, a 0.7 px curve-to-tip gap at 16 px, and `#D45D21` direction tips on a monochrome frame and loop.
 - use the light and dark SVG production assets at `Brand/mark-light.svg` and `Brand/mark-dark.svg`. keep the mark static; the optional motion study and sound are not approved.
 - validate at real menu-bar sizes, materials, and accessibility settings on supported macOS versions before release.
+
+## formal logo selected on 2026-11-03
+
+- use [the supplied formal logo](../Brand/gifferent.png) for high-detail uses such as the README and documentation.
+
+## menu bar rebrand comparison on 2026-11-03
+
+- the architect requested a separate branch to compare a larger menu bar icon based on supplied nested rounded-square artwork. use a static, monochrome template candidate at 20 points for this comparison. the architect supplied the original six-outline SVG for the candidate; final identity approval and real menu bar review remain pending.
 
 ## compression behavior confirmed on 2026-10-24
 
@@ -53,18 +61,18 @@
 - original choice, superseded below: the architect approved an ImageMagick diffusion slider from 0% to 100% in 5% steps, default 35%. after full-path benchmarking, the architect replaced it with Gifski quality control.
 - size goals target 90% of each published cap using decimal megabytes: 9 MB for GitHub image/GIF uploads and 18 MB for Discord's non-Nitro attachment cap. these are optimization targets, not guarantees; show the current cap and account caveat.
 - do not bundle third-party destination marks unless written permission is obtained.
-- after reviewing the native-size animated examples for mostly-static UI and high-motion content in [the encoder review](Benchmarks/reviews/gifski-magick-35-2026-10-24/index.html), the architect confirmed that both samples hold against the approved quality floor. this is a visual-quality judgment for these samples, not an encoder selection or a claim that the full search matrix passes.
+- after reviewing the native-size animated examples for mostly-static UI and high-motion content in [the encoder review](../Benchmarks/reviews/gifski-magick-35-2026-10-24/index.html), the architect confirmed that both samples hold against the approved quality floor. this is a visual-quality judgment for these samples, not an encoder selection or a claim that the full search matrix passes.
 
 ## Gifski quality control approved on 2026-10-24
 
 - after reviewing the complete available-path benchmark, the architect approved replacing the ImageMagick diffusion slider with a Gifski quality slider from 1 to 100, defaulting to 90. use one-point slider steps and map the value directly to Gifski `--quality`.
 - use Gifski 1.34.0 for backend integration and size-search prototyping. the search may vary resolution, sampled frame rate, and Gifski quality; Gifski owns palette generation. preserve the approved quality floor. for `gif-dispose` 5.0.1, use the declared Apache-2.0 option and include its canonical license text; this avoids relying on the absent MIT copyright placeholder. direct distribution remains gated on the complete dependency/notice and corresponding-source review, pinned build provenance, and final bundle verification. do not release the executable until those gates close.
-- on 2026-10-29, the architect authorized enabling Gifski in normal local app builds. the universal 1.34.0 helper and full notice inventory are now embedded by Xcode; this does not approve release distribution, which remains gated on corresponding-source/build materials and final signed/notarized bundle verification. implementation and current build evidence are recorded in the [Gifski build audit](Benchmarks/gifski-1.34.0-build-audit-2026-10-24.md).
-- the four-profile full matrix and its resource measurements are in [the benchmark report](Benchmarks/gifski-magick-35-full-matrix-2026-10-24.md). the existing two-profile animated review passed the floor at quality 90; the four-profile still review adds spatial checks but does not establish flicker or full-animation quality.
+- on 2026-10-29, the architect authorized enabling Gifski in normal local app builds. the universal 1.34.0 helper and full notice inventory are now embedded by Xcode; this does not approve release distribution, which remains gated on corresponding-source/build materials and final signed/notarized bundle verification. implementation and current build evidence are recorded in the [Gifski build audit](../Benchmarks/gifski-1.34.0-build-audit-2026-10-24.md).
+- the four-profile full matrix and its resource measurements are in [the benchmark report](../Benchmarks/gifski-magick-35-full-matrix-2026-10-24.md). the existing two-profile animated review passed the floor at quality 90; the four-profile still review adds spatial checks but does not establish flicker or full-animation quality.
 
 ## Quality-search floor confirmed on 2026-10-24
 
-- after reviewing the animated [Gifski quality sweep](Benchmarks/reviews/gifski-quality-sweep-2026-10-24/index.html), the architect set quality 90 as the lowest value the automatic size search may use for now. the existing quality-90 animations remain the approved floor reference. keep the manual quality slider at 1–100; do not lower the automatic search floor without a later architect decision based on visual review.
+- after reviewing the animated [Gifski quality sweep](../Benchmarks/reviews/gifski-quality-sweep-2026-10-24/index.html), the architect set quality 90 as the lowest value the automatic size search may use for now. the existing quality-90 animations remain the approved floor reference. keep the manual quality slider at 1–100; do not lower the automatic search floor without a later architect decision based on visual review.
 - the sweep records quality 70, 80, 90, and 100 outputs for mostly-static and high-motion profiles. its measurements are evidence, not approval of qualities below 90; three-run timings are indicative only.
 
 ## Size-search candidates approved on 2026-10-24
@@ -73,7 +81,7 @@
 - filter those pairs by the selected maximum: original permits all four; 75% permits 75%/24 and 50%/24; 50% permits only 50%/24. 18 fps is only approved at original scale.
 - exclude 25% and 12/8 fps from the automatic candidate set. do not infer approval for other scale/rate combinations.
 - keep quality at or above 90, try candidates serially, preserve exact edited duration and loop mode, and keep the original usable throughout the search.
-- the [representative visual review](Benchmarks/reviews/size-search-quality-floor-2026-10-24/index.html) records the samples that informed this decision. candidate-specific visual approval applies only to the points listed above.
+- the [representative visual review](../Benchmarks/reviews/size-search-quality-floor-2026-10-24/index.html) records the samples that informed this decision. candidate-specific visual approval applies only to the points listed above.
 
 ## Superseded size-search candidate review on 2026-10-24
 
@@ -107,8 +115,8 @@
 
 **thumbnail trim control, 2026-11-01:** the architect requested macOS-style yellow end handles around a recording-thumbnail filmstrip and confirmed that trimming stays inline; use SwiftUI if Apple's native control requires a separate trim/cancel step. the [feature plan](trim-filmstrip-plan.md) defines a native feasibility check, a SwiftUI fallback, and acceptance evidence. the architect subsequently approved boundary-frame inspection, encoding on release, and independent interior scrubbing, as recorded above. final visual details remain subject to review.
 
-1. **bundled tool license:** the candidate-level engineering screen is recorded in [the encoder license audit](Benchmarks/encoder-license-audit.md). exact source, dependency, and binary audits remain required before packaging; Gifsicle's distribution terms remain unresolved for this app bundle.
-2. **encoder distribution:** Gifski 1.34.0 is approved for backend integration and search. `gif-dispose` can use its manifest-declared Apache-2.0 option, documented in [package license evidence](Benchmarks/encoder-package-license-evidence-2026-10-24.md). direct distribution remains blocked until complete dependency license/attribution texts, corresponding source obligations, pinned build provenance, and final bundle contents are verified. ImageMagick is not the release path; its measured time/resource costs and distributable dependency closure are recorded in the benchmark and package-evidence reports.
+1. **bundled tool license:** the candidate-level engineering screen is recorded in [the encoder license audit](../Benchmarks/encoder-license-audit.md). exact source, dependency, and binary audits remain required before packaging; Gifsicle's distribution terms remain unresolved for this app bundle.
+2. **encoder distribution:** Gifski 1.34.0 is approved for backend integration and search. `gif-dispose` can use its manifest-declared Apache-2.0 option, documented in [package license evidence](../Benchmarks/encoder-package-license-evidence-2026-10-24.md). direct distribution remains blocked until complete dependency license/attribution texts, corresponding source obligations, pinned build provenance, and final bundle contents are verified. ImageMagick is not the release path; its measured time/resource costs and distributable dependency closure are recorded in the benchmark and package-evidence reports.
 3. **clipboard representation:** verify the chosen pasteboard representations by pasting an animated GIF into GitHub on a real Mac. a successful local pasteboard write alone does not establish destination compatibility.
 
 ## preview window UI approved on 2026-10-31
@@ -145,7 +153,7 @@
 
 - [ScreenCaptureKit](https://developer.apple.com/documentation/screencapturekit/capturing-screen-content-in-macos) supports display, app, and window filters. selected-window capture fits the architect's answer.
 - [gifski](https://github.com/ImageOptim/gifski/blob/main/README.md) uses temporal dithering and has a C API, but the architect asked for a bundled CLI. [gifsicle](https://github.com/kohler/gifsicle/blob/master/gifsicle.1) exposes dither methods including Floyd–Steinberg, Atkinson, and ordered variants. performance and visual quality must be benchmarked before selecting one or both.
-- the installed exploratory ImageMagick build changed encoded pixels and output size at 0%, 35%, and 70% diffusion on sparse samples from two synthetic fixtures; see the [prototype report](Benchmarks/imagemagick-dither-control-prototype-2026-10-24.md). this confirms only that the slider mapping has an observable effect in that build.
+- the installed exploratory ImageMagick build changed encoded pixels and output size at 0%, 35%, and 70% diffusion on sparse samples from two synthetic fixtures; see the [prototype report](../Benchmarks/imagemagick-dither-control-prototype-2026-10-24.md). this confirms only that the slider mapping has an observable effect in that build.
 - the candidate encoder license screen is an engineering risk review, not legal advice or an encoder choice. exact release builds still require locked dependency, runtime, notice, corresponding-source, signature, and notarization review.
 - the limited equal-work still-frame review found faint native-size speckling in optimized ImageMagick output at 100% diffusion. the architect confirmed that this sample holds against the approved floor; the review does not assess temporal quality or select an encoder.
 - destination file limits can change. the limits quoted in [mvp.md](mvp.md) are a 2026-10-20 research snapshot and need verification before release.

@@ -47,7 +47,7 @@ for each run, record:
 - validity and visual review of animation, text, motion, dithering, and color; include reviewer and known limits;
 - baseline and candidate results on the same input and machine, with a conclusion tied to measured evidence.
 
-the speed goals in [vision.md](../vision.md) remain targets until runs on an agreed reference Mac and fixture set establish them. the architect approved the minimum visual quality floor in [decisions.md](../decisions.md); reviewed Gifski/ImageMagick sample profiles hold against it, while broader profile and 2× review remains open.
+the speed goals in [vision.md](../docs/vision.md) remain targets until runs on an agreed reference Mac and fixture set establish them. the architect approved the minimum visual quality floor in [decisions.md](../docs/decisions.md); reviewed Gifski/ImageMagick sample profiles hold against it, while broader profile and 2× review remains open.
 
 ## exploratory encoder run
 

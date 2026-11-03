@@ -8,10 +8,10 @@ import sys
 
 
 root = Path(__file__).resolve().parent.parent
-link_pattern = re.compile(r"(?<!!)\[[^\]]*\]\(([^)]+)\)")
+link_pattern = re.compile(r"\[[^\]]*\]\(([^)]+)\)")
 errors = []
 
-for document in sorted(root.glob("*.md")):
+for document in sorted([*root.glob("*.md"), *(root / "docs").rglob("*.md")]):
     for line_number, line in enumerate(document.read_text().splitlines(), start=1):
         for match in link_pattern.finditer(line):
             raw_link = match.group(1).split(maxsplit=1)[0].strip("<>")
@@ -20,7 +20,7 @@ for document in sorted(root.glob("*.md")):
                 continue
             target = (document.parent / unquote(parsed.path)).resolve()
             if not target.is_relative_to(root) or not target.exists():
-                errors.append(f"{document.name}:{line_number}: missing {raw_link}")
+                errors.append(f"{document.relative_to(root)}:{line_number}: missing {raw_link}")
 
 if errors:
     print("\n".join(errors), file=sys.stderr)
