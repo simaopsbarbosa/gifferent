@@ -20,6 +20,19 @@ struct GIFPreviewReadyView: View {
   let previewWidth: CGFloat
   @State private var inspectedFrame: URL?
   @State private var trimDraftActive = false
+  private static let bugReportClient = BugReportClient.configured(
+    environment: ProcessInfo.processInfo.environment)
+  @State private var bugReportFields = BugReportFields()
+  @State private var bugReportSubmission: BugReportSubmission?
+  @State private var showsBugReport = false
+
+  private var showsShareMenu: Bool {
+    #if DEBUG
+      true
+    #else
+      Self.bugReportClient != nil
+    #endif
+  }
 
   private var displayedGIF: EncodedGIF {
     coordinator.displayedPreviewGIF ?? gif
@@ -98,7 +111,7 @@ struct GIFPreviewReadyView: View {
       )
       .disabled(
         coordinator.isCompressionInProgress || coordinator.isQualityCompressionScheduled
-          || coordinator.compressedPreview != nil
+          || coordinator.compressedPreview != nil || coordinator.isBugReportUploadInProgress
       )
       GIFCompressionControls(coordinator: coordinator)
         .padding(.top, 6)
@@ -154,10 +167,40 @@ struct GIFPreviewReadyView: View {
           .keyboardShortcut("s", modifiers: .command)
           .disabled(exportIsDisabled)
           .accessibilityIdentifier("save-preview-button")
+        if showsShareMenu {
+          Menu {
+            Button("share as bug report…") { showsBugReport = true }
+              .accessibilityIdentifier("share-bug-report-action")
+          } label: {
+            Image(systemName: "square.and.arrow.up")
+              .accessibilityLabel("share")
+          }
+          .fixedSize()
+          .disabled(exportIsDisabled)
+          .accessibilityIdentifier("preview-share-menu")
+        }
         Button("close") { runtime.requestPreviewClose() }
           .accessibilityIdentifier("close-preview-button")
       }
       .frame(maxWidth: .infinity)
+    }
+    .sheet(isPresented: $showsBugReport) {
+      if let client = Self.bugReportClient {
+        BugReportSheet(
+          client: client, coordinator: coordinator,
+          fields: $bugReportFields, previous: $bugReportSubmission
+        )
+      } else {
+        VStack(alignment: .leading, spacing: 12) {
+          Text("share as bug report").font(.title3.bold()).accessibilityAddTraits(.isHeader)
+          Text("set the report service address to connect GitHub.")
+          Text("see docs/bug-reports.md for local and hosted setup.")
+            .foregroundStyle(.secondary)
+          Button("done") { showsBugReport = false }.keyboardShortcut(.defaultAction)
+        }
+        .padding(20)
+        .frame(width: 440)
+      }
     }
     .background {
       Text("preview ready")
@@ -179,7 +222,7 @@ struct GIFPreviewReadyView: View {
   }
 
   private var exportIsDisabled: Bool {
-    trimDraftActive || coordinator.previewAction == .copying || coordinator.previewAction == .saving
+    trimDraftActive || coordinator.isExportInProgress
       || coordinator.isPreviewUpdateInProgress || coordinator.isCompressionInProgress
       || coordinator.isQualityCompressionScheduled
   }

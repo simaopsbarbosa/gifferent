@@ -209,3 +209,9 @@
 
 - follow-up: equal AppKit size constraints did not prevent the architect's actual vertical resize. enforce the captured frame height in `windowWillResize(_:to:)` while passing through requested width. regression coverage now exercises the installed resize delegate and a real edge-drag journey; property inspection alone is not sufficient evidence.
 - the architect confirmed “it works!” after the resize-delegate fix. the five focused native window/host tests and quality checks pass; evidence: `.build/ci/test-unit-6sGEgf/Result.xcresult`. the installed delegate is tested with both taller and shorter proposed frames while preserving requested width. the automated edge-drag journey is added and compiles but has not run; broader acceptance remains deferred.
+
+## direct bug report publishing, 2026-11-24
+
+- the architect approved direct publishing from the native preview. after connecting GitHub, the user chooses a repository and enters the report. clicking `publish to GitHub` authorizes upload and publication. the separate browser review is superseded.
+- use a GitHub App with expiring user authorization and an Issues permission. support public GitHub.com repositories with Issues enabled. keep GitHub credentials on the service and recent repositories on the Mac. the public GIF link requires separate access control before private repositories can be supported.
+- the Mac uploads only the displayed export. Cloudflare continues the approved job after the Mac closes and retries temporary failures. when GitHub may already have created the issue, reconcile by report ID before showing a result. see [bug reports](bug-reports.md) for setup, recovery, and verification.

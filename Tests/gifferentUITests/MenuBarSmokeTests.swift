@@ -54,6 +54,51 @@ final class MenuBarSmokeTests: XCTestCase {
     XCTAssertEqual(try Data(contentsOf: file), expected)
   }
 
+  func testBugReportShareShowsSetupWithoutReportService() {
+    let app = XCUIApplication()
+    app.launchEnvironment = [
+      "GIFFERENT_UI_TEST_EXPORT_DIRECTORY": exportDirectory.path,
+      "GIFFERENT_REPORT_ORIGIN": "",
+    ]
+    app.launchArguments = ["--ui-testing", "--ui-testing-preview"]
+    app.launch()
+    let preview = openFixturePreview(in: app)
+    let share = preview.menuButtons["preview-share-menu"]
+    XCTAssertTrue(share.waitForExistence(timeout: 5))
+    share.click()
+    let action = app.menuItems["share as bug report…"]
+    XCTAssertTrue(action.waitForExistence(timeout: 5))
+    action.click()
+    let setup = preview.sheets.staticTexts[
+      "set the report service address to connect GitHub."]
+    XCTAssertTrue(setup.waitForExistence(timeout: 5))
+    preview.sheets.buttons["done"].click()
+    XCTAssertTrue(setup.waitForNonExistence(timeout: 5))
+  }
+
+  func testBugReportShareOpensFormAndCanCloseBeforeUpload() {
+    let app = XCUIApplication()
+    app.launchEnvironment = [
+      "GIFFERENT_UI_TEST_EXPORT_DIRECTORY": exportDirectory.path,
+      "GIFFERENT_REPORT_ORIGIN": "http://127.0.0.1:49329",
+    ]
+    app.launchArguments = ["--ui-testing", "--ui-testing-preview"]
+    app.launch()
+    let preview = openFixturePreview(in: app)
+    let share = preview.menuButtons["preview-share-menu"]
+    XCTAssertTrue(share.waitForExistence(timeout: 5))
+    share.click()
+    let action = app.menuItems["share as bug report…"]
+    XCTAssertTrue(action.waitForExistence(timeout: 5))
+    action.click()
+    let connect = preview.sheets.buttons["connect GitHub"]
+    XCTAssertTrue(connect.waitForExistence(timeout: 5))
+    XCTAssertFalse(preview.sheets.buttons["publish to GitHub"].exists)
+    preview.sheets.buttons["close"].click()
+    XCTAssertTrue(connect.waitForNonExistence(timeout: 5))
+    XCTAssertTrue(preview.buttons["copy-preview-button"].isEnabled)
+  }
+
   func testPreviewRejectsVerticalResizeButAllowsWidthResize() {
     let app = XCUIApplication()
     app.launchEnvironment["GIFFERENT_UI_TEST_EXPORT_DIRECTORY"] = exportDirectory.path

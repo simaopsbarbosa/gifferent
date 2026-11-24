@@ -27,3 +27,10 @@ Benchmarks/outputs/
 *.p8
 *.p12
 *.keychain-db
+
+# Cloudflare bug report service
+/BugReports/node_modules/
+/BugReports/.wrangler/
+/BugReports/.dev.vars
+/BugReports/.dev.vars.*
+!/BugReports/.dev.vars.example

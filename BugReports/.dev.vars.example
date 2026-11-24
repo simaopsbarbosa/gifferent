@@ -1,0 +1,3 @@
+GITHUB_CLIENT_ID=fixture-client
+GITHUB_APP_SLUG=gifferent-fixture
+LOCAL_GITHUB_ORIGIN=http://127.0.0.1:8788

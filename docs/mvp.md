@@ -32,7 +32,7 @@
 
 ## release boundary
 
-- no account, cloud upload, screen-content analytics, video export, or captured audio.
+- no account is needed for recording or local exports. [bug reports](bug-reports.md) use a separate GitHub connection and upload the displayed export only after the user chooses to publish. no screen-content analytics, video export, or captured audio.
 - recording spans one monitor at a time. cross-display region recording is outside this release.
 - no Slack size-goal button until a useful target is defined. no restoration of unfinished recordings after a crash.
 - no promise of a specific size, frame rate, or latency until the benchmark environment and approved quality floor have been measured.

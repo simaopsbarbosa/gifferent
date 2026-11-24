@@ -30,7 +30,7 @@ gifferent turns something happening on a Mac into a shareable GIF with minimal i
 
 ## privacy and reliability
 
-- captured pixels and GIF processing stay local. do not upload captures, frames, or derived GIFs to a server.
+- capture, editing, and GIF processing stay local. when the user chooses to publish a bug report, gifferent uploads the displayed GIF and report to publish them to the selected public GitHub repository. see [bug reports](bug-reports.md).
 - guide screen-recording permission setup in the app. explain what is needed in one or two short steps, then recover cleanly when permission changes.
 - warn if a recording grows unusually long or large, while allowing the user to stop it. typical recording is under 30 seconds; no silent cutoff is approved.
 - restore the last selection on the next activation, with a quick way to reselect. account for a disconnected display or closed window.

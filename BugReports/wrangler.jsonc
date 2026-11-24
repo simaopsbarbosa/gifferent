@@ -1,0 +1,25 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "gifferent-bug-reports",
+  "main": "src/index.js",
+  "compatibility_date": "2026-11-20",
+  "workers_dev": true,
+  "preview_urls": false,
+  "vars": {
+    "PUBLIC_ORIGIN": "http://127.0.0.1:8787"
+  },
+  "ratelimits": [{ "name": "CONNECT_LIMIT", "namespace_id": "1001", "simple": { "limit": 10, "period": 60 } }],
+  "r2_buckets": [
+    { "binding": "CLIPS", "bucket_name": "gifferent-bug-report-clips" }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "REPORTS", "class_name": "Report" },
+      { "name": "SESSIONS", "class_name": "GitHubSession" }
+    ]
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["Report", "GitHubSession"] }],
+  "workflows": [
+    { "name": "gifferent-bug-report", "binding": "BUG_REPORT", "class_name": "BugReportWorkflow" }
+  ]
+}

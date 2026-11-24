@@ -27,6 +27,7 @@
 		A0000000000000000000000E /* CaptureSelectionOverlayTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */; };
 		A0000000000000000000000F /* GifferentRuntime.swift in Sources */ = {isa = PBXBuildFile; fileRef = A0000000000000000000001F /* GifferentRuntime.swift */; };
 		B00000000000000000000002 /* GIFClipboard.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000001 /* GIFClipboard.swift */; };
+		B00000000000000000000006 /* BugReportShare.swift in Sources */ = {isa = PBXBuildFile; fileRef = B00000000000000000000005 /* BugReportShare.swift */; };
 		A00000000000000000000040 /* ScreenCaptureRecordingStream.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000050 /* ScreenCaptureRecordingStream.swift */; };
 		A00000000000000000000041 /* RecordingFrameTransport.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000051 /* RecordingFrameTransport.swift */; };
 		A00000000000000000000042 /* RecordingTargetMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000052 /* RecordingTargetMonitor.swift */; };
@@ -100,6 +101,7 @@
 		A0000000000000000000001E /* CaptureSelectionOverlayTests.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = CaptureSelectionOverlayTests.swift; sourceTree = "<group>"; };
 		A0000000000000000000001F /* GifferentRuntime.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GifferentRuntime.swift; sourceTree = "<group>"; };
 		B00000000000000000000001 /* GIFClipboard.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = GIFClipboard.swift; sourceTree = "<group>"; };
+		B00000000000000000000005 /* BugReportShare.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = BugReportShare.swift; sourceTree = "<group>"; };
 		A00000000000000000000050 /* ScreenCaptureRecordingStream.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = ScreenCaptureRecordingStream.swift; sourceTree = "<group>"; };
 		A00000000000000000000051 /* RecordingFrameTransport.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingFrameTransport.swift; sourceTree = "<group>"; };
 		A00000000000000000000052 /* RecordingTargetMonitor.swift */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = sourcecode.swift; path = RecordingTargetMonitor.swift; sourceTree = "<group>"; };
@@ -244,6 +246,7 @@
 				A00000000000000000000076 /* GIFPreviewViews.swift */,
 				A0000000000000000000001F /* GifferentRuntime.swift */,
 				B00000000000000000000001 /* GIFClipboard.swift */,
+				B00000000000000000000005 /* BugReportShare.swift */,
 			);
 			path = App;
 			sourceTree = "<group>";
@@ -517,6 +520,7 @@
 				A0000000000000000000000D /* CaptureSelectionOverlayView.swift in Sources */,
 				A0000000000000000000000F /* GifferentRuntime.swift in Sources */,
 				B00000000000000000000002 /* GIFClipboard.swift in Sources */,
+				B00000000000000000000006 /* BugReportShare.swift in Sources */,
 				A00000000000000000000040 /* ScreenCaptureRecordingStream.swift in Sources */,
 				A00000000000000000000060 /* RecordingFrameGeometry.swift in Sources */,
 				A00000000000000000000062 /* RecordingFrameOverlay.swift in Sources */,

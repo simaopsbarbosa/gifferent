@@ -655,6 +655,45 @@ final class RecordingCoordinatorTests: XCTestCase {
     XCTAssertEqual(imageClipboard.urls, [compressed.url])
   }
 
+  func testBugReportUploadUsesDisplayedGIFAndProtectsPreviewUntilSuccess() async throws {
+    let fixture = makeFixture()
+    defer { try? FileManager.default.removeItem(at: fixture.base) }
+    let (coordinator, _, _, _) = try await makeReadyCoordinator(
+      workspace: fixture.workspace, compressor: FakeGIFCompressor())
+    coordinator.startCompression()
+    await waitForCompression(coordinator)
+    let compressed = try XCTUnwrap(coordinator.compressedPreview)
+    let expected = try Data(contentsOf: compressed.url)
+
+    do {
+      _ = try await coordinator.sharePreview { _ -> URL in throw CancellationError() }
+      XCTFail("expected cancellation")
+    } catch is CancellationError {}
+    XCTAssertFalse(coordinator.isExportInProgress)
+    let closedAfterCancellation = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertFalse(closedAfterCancellation)
+
+    let reviewURL = try XCTUnwrap(URL(string: "https://reports.example/reports/one"))
+    let result = try await coordinator.sharePreview { gif in
+      XCTAssertTrue(coordinator.isExportInProgress)
+      XCTAssertEqual(gif, compressed)
+      XCTAssertEqual(try Data(contentsOf: gif.url), expected)
+      let closedDuringUpload = await coordinator.closePreview(discardUnexported: true)
+      XCTAssertFalse(closedDuringUpload)
+      let duplicate = await coordinator.sharePreview { _ in
+        XCTFail("a second upload must not start")
+        return reviewURL
+      }
+      XCTAssertNil(duplicate)
+      return reviewURL
+    }
+    XCTAssertEqual(result, reviewURL)
+    XCTAssertFalse(coordinator.isExportInProgress)
+    let closedAfterUpload = await coordinator.closePreview(discardUnexported: false)
+    XCTAssertTrue(closedAfterUpload)
+    XCTAssertFalse(FileManager.default.fileExists(atPath: compressed.url.path))
+  }
+
   func testFileCopyFailureDoesNotMarkPreviewExported() async throws {
     let fixture = makeFixture()
     defer { try? FileManager.default.removeItem(at: fixture.base) }

@@ -177,6 +177,7 @@ final class RecordingCoordinator: ObservableObject {
     }
   }
   @Published private(set) var editParameters: GIFEditParameters?
+  @Published private(set) var isBugReportUploadInProgress = false
   @Published private(set) var isPreviewUpdateInProgress = false
   @Published private(set) var isQualityCompressionScheduled = false
   @Published private(set) var editFrameCount = 0
@@ -347,16 +348,15 @@ final class RecordingCoordinator: ObservableObject {
   }
 
   var isPreviewActionInProgress: Bool {
-    previewAction == .copying || previewAction == .saving || isCompressionInProgress
+    isExportInProgress || isCompressionInProgress
   }
 
   var isExportInProgress: Bool {
-    previewAction == .copying || previewAction == .saving
+    previewAction == .copying || previewAction == .saving || isBugReportUploadInProgress
   }
 
   var isCompressionSettingEditDisabled: Bool {
-    isCompressionInProgress || isPreviewUpdateInProgress
-      || previewAction == .copying || previewAction == .saving
+    isCompressionInProgress || isPreviewUpdateInProgress || isExportInProgress
   }
 
   func retryPreviewEncoding() {
@@ -597,6 +597,17 @@ final class RecordingCoordinator: ObservableObject {
     } catch {
       previewAction = .failed
     }
+  }
+
+  func sharePreview<Value>(_ upload: (EncodedGIF) async throws -> Value) async rethrows -> Value? {
+    guard !isPreviewUpdateInProgress, !isPreviewActionInProgress, !isQualityCompressionScheduled,
+      let gif = displayedPreviewGIF
+    else { return nil }
+    isBugReportUploadInProgress = true
+    defer { isBugReportUploadInProgress = false }
+    let result = try await upload(gif)
+    previewExported = true
+    return result
   }
 
   func closePreview(discardUnexported: Bool) async -> Bool {
