@@ -309,7 +309,10 @@ struct BugReportSheet: View {
       if let resultURL {
         Text("issue published")
         Link("open GitHub issue", destination: resultURL)
-        Button("new report") { clearTrackedReport() }
+        Button("new report") {
+          fields = BugReportFields(repositoryID: fields.repositoryID)
+          clearTrackedReport()
+        }
       } else if publicationFailed {
         Button("back to report") { clearTrackedReport() }
       } else if reportID != nil {
@@ -358,7 +361,7 @@ struct BugReportSheet: View {
   }
 
   private var reportForm: some View {
-    Form {
+    VStack(alignment: .leading, spacing: 8) {
       if let connection {
         LabeledContent("GitHub sign-in code", value: connection.code)
           .monospaced()
@@ -375,6 +378,7 @@ struct BugReportSheet: View {
           Link("grant repository access on GitHub", destination: account.grantURL)
         }
         TextField("search or paste a GitHub repository link", text: $search)
+          .textFieldStyle(.roundedBorder)
           .onChange(of: search) { _, _ in selectPastedRepo() }
         Picker("repository", selection: $fields.repositoryID) {
           Text("choose a repository").tag(Int64(0))
@@ -395,13 +399,33 @@ struct BugReportSheet: View {
       } else {
         Button("connect GitHub", action: connect)
       }
-      TextField("issue title", text: $fields.title).accessibilityIdentifier("bug-report-title")
-      TextField("steps to reproduce", text: $fields.steps, axis: .vertical).lineLimit(2...3)
-      TextField("expected behavior", text: $fields.expected, axis: .vertical).lineLimit(2...3)
-      TextField("actual behavior", text: $fields.actual, axis: .vertical).lineLimit(2...3)
+      Divider()
+      Grid(alignment: .leading, horizontalSpacing: 10, verticalSpacing: 8) {
+        GridRow {
+          Text("issue title").accessibilityHidden(true)
+          TextField("issue title", text: $fields.title, prompt: Text("")).accessibilityIdentifier(
+            "bug-report-title")
+        }
+        GridRow {
+          Text("steps to reproduce").accessibilityHidden(true)
+          TextField("steps to reproduce", text: $fields.steps, prompt: Text(""), axis: .vertical)
+            .lineLimit(2...3)
+        }
+        GridRow {
+          Text("expected behavior").accessibilityHidden(true)
+          TextField("expected behavior", text: $fields.expected, prompt: Text(""), axis: .vertical)
+            .lineLimit(2...3)
+        }
+        GridRow {
+          Text("actual behavior").accessibilityHidden(true)
+          TextField("actual behavior", text: $fields.actual, prompt: Text(""), axis: .vertical)
+            .lineLimit(2...3)
+        }
+      }
       Text("publishing uploads this GIF and report and makes both public.")
         .foregroundStyle(.secondary)
     }
+    .textFieldStyle(.roundedBorder)
     .disabled(uploading)
   }
 
